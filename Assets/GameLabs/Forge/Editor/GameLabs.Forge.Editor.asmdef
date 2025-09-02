@@ -1,0 +1,18 @@
+{
+    "name": "GameLabs.Forge.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:ba1d780fcdb574aac9e140dc5e5b298b"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
