@@ -98,7 +98,7 @@ namespace GameLabs.Forge.Integration.OpenAI
 
         public void Chat(string userPrompt, Action<OpenAIResponse> cb)
         {
-            EnsureKey();
+            AssertAPIKey();
             if (string.IsNullOrEmpty(apiKey)) { cb?.Invoke(null); return; }
 
             var msgs = new List<Message>
@@ -148,7 +148,7 @@ namespace GameLabs.Forge.Integration.OpenAI
             cb?.Invoke(parsed);
         }
 
-        void EnsureKey()
+        void AssertAPIKey()
         {
             if (!string.IsNullOrEmpty(apiKey)) return;
             apiKey = ForgeConfig.GetOpenAIKey();
