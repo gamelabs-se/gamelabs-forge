@@ -122,8 +122,8 @@ namespace GameLabs.Forge.Editor
                 return assets;
             }
             
-            // Find all assets of type
-            string[] guids = AssetDatabase.FindAssets($"t:{typeof(ForgeItemAsset<T>).Name}", new[] { folderPath });
+            // Find all ScriptableObject assets in the folder and filter by type
+            string[] guids = AssetDatabase.FindAssets("t:ScriptableObject", new[] { folderPath });
             
             foreach (string guid in guids)
             {
@@ -253,7 +253,8 @@ namespace GameLabs.Forge.Editor
             string fullPath = Path.Combine(folderPath, fileName + ".asset");
             int counter = 1;
             
-            while (File.Exists(fullPath))
+            // Use AssetDatabase to check for existing assets for better Unity integration
+            while (AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(fullPath) != null)
             {
                 fileName = $"{baseName}_{counter}";
                 fullPath = Path.Combine(folderPath, fileName + ".asset");

@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -243,7 +244,7 @@ namespace GameLabs.Forge.Editor
                     : availableTypes[selectedTypeIndex];
                     
                 var folderAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(
-                    $"{ForgeAssetExporter.GeneratedBasePath}/{folder}");
+                    Path.Combine(ForgeAssetExporter.GeneratedBasePath, folder));
                 if (folderAsset != null)
                 {
                     EditorGUIUtility.PingObject(folderAsset);

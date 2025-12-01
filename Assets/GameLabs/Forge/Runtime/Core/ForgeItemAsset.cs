@@ -99,7 +99,9 @@ namespace GameLabs.Forge
             }
             else
             {
-                name = $"{typeof(T).Name}_{DateTime.Now:yyyyMMdd_HHmmss}";
+                // Use the createdAt timestamp that was already set in OnCreated() for consistency
+                var timestamp = CreatedAt != DateTime.MinValue ? CreatedAt : DateTime.Now;
+                name = $"{typeof(T).Name}_{timestamp:yyyyMMdd_HHmmss}";
             }
         }
         
