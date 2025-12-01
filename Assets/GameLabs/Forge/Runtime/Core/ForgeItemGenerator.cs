@@ -275,14 +275,24 @@ CRITICAL RULES:
             // Remove markdown code blocks
             content = content.Trim();
             
-            // Remove ```json or ``` markers
+            // Remove ```json or ``` markers at the start
             if (content.StartsWith("```"))
             {
                 var firstNewline = content.IndexOf('\n');
                 if (firstNewline > 0)
+                {
                     content = content.Substring(firstNewline + 1);
+                }
+                else
+                {
+                    // No newline found, try to find the first { or [
+                    var jsonStart = content.IndexOfAny(new[] { '{', '[' });
+                    if (jsonStart > 0)
+                        content = content.Substring(jsonStart);
+                }
             }
             
+            // Remove trailing ``` markers
             if (content.EndsWith("```"))
             {
                 content = content.Substring(0, content.Length - 3);

@@ -110,9 +110,10 @@ namespace GameLabs.Forge
                         }
                     }
                 }
-                catch
+                catch (Exception e)
                 {
-                    // Skip assemblies that can't be inspected
+                    // Skip assemblies that can't be inspected - this is expected for some system assemblies
+                    ForgeLogger.Log($"Skipped assembly during auto-registration: {assembly.FullName} ({e.GetType().Name})");
                 }
             }
             

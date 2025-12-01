@@ -50,12 +50,38 @@ namespace GameLabs.Forge
             var wrapper = new ItemArrayWrapper<T> { items = new List<T>(items) };
             var json = JsonUtility.ToJson(wrapper, true);
             
-            // Remove wrapper and keep just the array
-            var startIndex = json.IndexOf('[');
-            var endIndex = json.LastIndexOf(']');
-            if (startIndex >= 0 && endIndex > startIndex)
+            // Find the array boundaries in the wrapper object
+            // The wrapper format is: {"items":[ ... ]}
+            // We need to find the array that follows "items":
+            const string itemsKey = "\"items\":";
+            var itemsIndex = json.IndexOf(itemsKey, StringComparison.Ordinal);
+            if (itemsIndex >= 0)
             {
-                json = json.Substring(startIndex, endIndex - startIndex + 1);
+                var arrayStart = json.IndexOf('[', itemsIndex + itemsKey.Length);
+                if (arrayStart >= 0)
+                {
+                    // Find matching closing bracket by counting brackets
+                    int depth = 0;
+                    int arrayEnd = -1;
+                    for (int i = arrayStart; i < json.Length; i++)
+                    {
+                        if (json[i] == '[') depth++;
+                        else if (json[i] == ']')
+                        {
+                            depth--;
+                            if (depth == 0)
+                            {
+                                arrayEnd = i;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (arrayEnd > arrayStart)
+                    {
+                        json = json.Substring(arrayStart, arrayEnd - arrayStart + 1);
+                    }
+                }
             }
             
             var fullPath = Path.Combine(path, filename);

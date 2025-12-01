@@ -383,7 +383,7 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.LabelField($"Audience: {targetAudience}");
             EditorGUILayout.LabelField($"Default Batch Size: {defaultBatchSize}");
             EditorGUILayout.LabelField($"Temperature: {temperature:F1}");
-            EditorGUILayout.LabelField($"API Key: {(string.IsNullOrEmpty(apiKey) ? "Not set" : "********" + apiKey.Substring(Math.Max(0, apiKey.Length - 4)))}");
+            EditorGUILayout.LabelField($"API Key: {(string.IsNullOrEmpty(apiKey) ? "Not configured" : "✓ Configured")}");
             EditorGUILayout.EndVertical();
             
             EditorGUILayout.Space(20);

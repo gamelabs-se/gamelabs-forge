@@ -6,7 +6,6 @@ using GameLabs.Forge;
 /// Demo controller showcasing ForgeItemGenerator usage.
 /// Demonstrates single item generation, batch generation, and using existing items as context.
 /// </summary>
-[ExecuteAlways]
 public class ForgeDemoController : MonoBehaviour
 {
     [Header("Generation Settings")]

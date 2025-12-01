@@ -83,23 +83,42 @@ namespace GameLabs.Forge
                 isRequired = true
             };
             
-            // Handle Range attribute for numeric types
-            var rangeAttr = field.GetCustomAttribute<RangeAttribute>();
-            if (rangeAttr != null)
+            // Handle ForgeConstraint attribute (takes priority)
+            var constraintAttr = field.GetCustomAttribute<ForgeConstraintAttribute>();
+            if (constraintAttr != null)
             {
-                schema.minValue = rangeAttr.min;
-                schema.maxValue = rangeAttr.max;
+                if (constraintAttr.MinValue != null)
+                    schema.minValue = constraintAttr.MinValue;
+                if (constraintAttr.MaxValue != null)
+                    schema.maxValue = constraintAttr.MaxValue;
+                if (constraintAttr.AllowedValues != null && constraintAttr.AllowedValues.Length > 0)
+                    schema.enumValues = constraintAttr.AllowedValues;
+                schema.isRequired = constraintAttr.Required;
+            }
+            
+            // Handle Range attribute for numeric types (if not already set by ForgeConstraint)
+            if (schema.minValue == null || schema.maxValue == null)
+            {
+                var rangeAttr = field.GetCustomAttribute<RangeAttribute>();
+                if (rangeAttr != null)
+                {
+                    schema.minValue ??= rangeAttr.min;
+                    schema.maxValue ??= rangeAttr.max;
+                }
             }
             
             // Handle Min attribute
-            var minAttr = field.GetCustomAttribute<MinAttribute>();
-            if (minAttr != null)
+            if (schema.minValue == null)
             {
-                schema.minValue = minAttr.min;
+                var minAttr = field.GetCustomAttribute<MinAttribute>();
+                if (minAttr != null)
+                {
+                    schema.minValue = minAttr.min;
+                }
             }
             
             // Handle enums
-            if (field.FieldType.IsEnum)
+            if (field.FieldType.IsEnum && (schema.enumValues == null || schema.enumValues.Length == 0))
             {
                 schema.enumValues = Enum.GetNames(field.FieldType);
             }
@@ -254,13 +273,36 @@ namespace GameLabs.Forge
     
     /// <summary>
     /// Attribute to specify constraints for field generation.
+    /// Used by ForgeSchemaExtractor to communicate constraints to the AI.
+    /// <example>
+    /// <code>
+    /// // Constrain damage to a specific range
+    /// [ForgeConstraint(MinValue = 10, MaxValue = 100)]
+    /// public int damage;
+    /// 
+    /// // Limit weapon types to specific values
+    /// [ForgeConstraint(AllowedValues = new[] { "Sword", "Axe", "Mace" })]
+    /// public string weaponType;
+    /// 
+    /// // Make a field optional
+    /// [ForgeConstraint(Required = false)]
+    /// public string optionalNote;
+    /// </code>
+    /// </example>
     /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public class ForgeConstraintAttribute : Attribute
     {
+        /// <summary>Minimum value for numeric fields.</summary>
         public object MinValue { get; set; }
+        
+        /// <summary>Maximum value for numeric fields.</summary>
         public object MaxValue { get; set; }
+        
+        /// <summary>Allowed values for string fields (creates an enum-like constraint).</summary>
         public string[] AllowedValues { get; set; }
+        
+        /// <summary>Whether this field is required (default: true).</summary>
         public bool Required { get; set; } = true;
         
         public ForgeConstraintAttribute() { }
