@@ -194,4 +194,57 @@ public class ForgeDemoController : MonoBehaviour
         existingWeapons.AddRange(generatedWeapons);
         ForgeLogger.Log($"Added {generatedWeapons.Count} generated weapons to existing items context");
     }
+    
+    [ContextMenu("Forge/Export All Weapons")]
+    public void ExportAllWeapons()
+    {
+        if (generatedWeapons.Count == 0)
+        {
+            ForgeLogger.Warn("No weapons to export");
+            return;
+        }
+        ForgeItemExporter.ExportItems(generatedWeapons, "weapons.json");
+    }
+    
+    [ContextMenu("Forge/Export All Consumables")]
+    public void ExportAllConsumables()
+    {
+        if (generatedConsumables.Count == 0)
+        {
+            ForgeLogger.Warn("No consumables to export");
+            return;
+        }
+        ForgeItemExporter.ExportItems(generatedConsumables, "consumables.json");
+    }
+    
+    [ContextMenu("Forge/Export All Collectibles")]
+    public void ExportAllCollectibles()
+    {
+        if (generatedCollectibles.Count == 0)
+        {
+            ForgeLogger.Warn("No collectibles to export");
+            return;
+        }
+        ForgeItemExporter.ExportItems(generatedCollectibles, "collectibles.json");
+    }
+    
+    [ContextMenu("Forge/Export All Armor")]
+    public void ExportAllArmor()
+    {
+        if (generatedArmor.Count == 0)
+        {
+            ForgeLogger.Warn("No armor to export");
+            return;
+        }
+        ForgeItemExporter.ExportItems(generatedArmor, "armor.json");
+    }
+    
+    [ContextMenu("Forge/Export All Items")]
+    public void ExportAllItems()
+    {
+        ExportAllWeapons();
+        ExportAllConsumables();
+        ExportAllCollectibles();
+        ExportAllArmor();
+    }
 }

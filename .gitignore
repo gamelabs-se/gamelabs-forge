@@ -17,6 +17,10 @@ Logs/*
 level.txt
 Assets/GameLabs/Forge/Settings/forge.config.json
 
+# Generated items (keep folder structure, ignore contents except .gitkeep)
+Assets/GameLabs/Forge/Generated/*.json
+Assets/GameLabs/Forge/Generated/*.json.meta
+
 #Core/
 #Core
 #*Core.meta

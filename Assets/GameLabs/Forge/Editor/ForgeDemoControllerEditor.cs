@@ -126,6 +126,16 @@ namespace GameLabs.Forge.Editor
             
             EditorGUILayout.Space(5);
             
+            // Export buttons
+            GUI.color = new Color(0.8f, 0.9f, 1f);
+            if (GUILayout.Button("📁 Export All Items to JSON", GUILayout.Height(25)))
+            {
+                controller.ExportAllItems();
+            }
+            GUI.color = Color.white;
+            
+            EditorGUILayout.Space(5);
+            
             // Open setup wizard button
             if (GUILayout.Button("Open Setup Wizard", GUILayout.Height(25)))
             {
