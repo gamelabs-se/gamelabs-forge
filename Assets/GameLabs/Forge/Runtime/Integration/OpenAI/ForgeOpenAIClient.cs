@@ -95,6 +95,7 @@ namespace GameLabs.Forge.Integration.OpenAI
         public void SetSystemRole(string role) => systemRole = role;
         public void SetBehavior(string desc) => behavior = desc;
         public void SetModel(string modelName) => model = modelName;
+        public void SetTemperature(float temp) => temperature = Mathf.Clamp(temp, 0f, 2f);
 
         public void Chat(string userPrompt, Action<OpenAIResponse> cb)
         {
