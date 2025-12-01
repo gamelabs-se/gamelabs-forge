@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using GameLabs.Forge.Integration.OpenAI;
 
@@ -48,6 +49,22 @@ namespace GameLabs.Forge
         [Serializable]
         public class ResponseData { public int statusCode; public string data; }
 
+        [Serializable]
+        public class ItemAttributes { public int attack; public int defense; public int healing; }
+
+        [Serializable]
+        public class GeneratedItem
+        {
+            public string name;
+            public string type;
+            public string rarity;
+            public ItemAttributes attributes;
+            public string description;
+        }
+
+        [Serializable]
+        class GeneratedItemArray { public GeneratedItem[] items; }
+
         void HandleResponse(ForgeOpenAIClient.OpenAIResponse r)
         {
             if (r == null) { ForgeLogger.Error("API call failed."); return; }
@@ -64,7 +81,37 @@ namespace GameLabs.Forge
                 if (dto?.statusCode == 200)
                 {
                     ForgeLogger.Log("Items payload (escaped JSON):\n" + dto.data);
-                    // TODO: Unescape and parse dto.data into items (JsonUtility or Newtonsoft).
+                    var unescaped = Regex.Unescape(dto.data ?? string.Empty).Trim();
+                    if (unescaped.Length >= 2 && unescaped[0] == '"' && unescaped[unescaped.Length - 1] == '"')
+                        unescaped = unescaped.Substring(1, unescaped.Length - 2);
+
+                    if (string.IsNullOrWhiteSpace(unescaped))
+                    {
+                        ForgeLogger.Warn("Items payload empty after unescaping.");
+                        return;
+                    }
+
+                    var wrapped = $"{{\"items\":{unescaped}}}";
+                    try
+                    {
+                        var parsed = JsonUtility.FromJson<GeneratedItemArray>(wrapped);
+                        if (parsed?.items == null || parsed.items.Length == 0)
+                        {
+                            ForgeLogger.Warn("No items parsed from payload.");
+                            return;
+                        }
+
+                        ForgeLogger.Log($"Parsed {parsed.items.Length} items:");
+                        foreach (var item in parsed.items)
+                        {
+                            if (item == null) continue;
+                            ForgeLogger.Log($"- {item.name} [{item.type}] ({item.rarity})");
+                        }
+                    }
+                    catch (Exception parseEx)
+                    {
+                        ForgeLogger.Error("Failed to parse generated items: " + parseEx.Message);
+                    }
                 }
                 else
                 {
