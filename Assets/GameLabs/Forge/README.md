@@ -7,8 +7,10 @@ Forge is a dynamic, AI-powered item generation system for Unity that uses OpenAI
 - **Item-Agnostic**: Define any item type as a C# class - Forge extracts the schema automatically
 - **Dynamic Schema Extraction**: Uses reflection to understand your item structure including ranges, enums, and descriptions
 - **Single & Batch Generation**: Generate one item or many at once
+- **ScriptableObject Assets**: Save generated items as ScriptableObject assets organized by type
 - **Context-Aware**: Provide existing items as reference to ensure variety
 - **JSON Export/Import**: Save generated items for use in your game
+- **Generator Window**: Easy-to-use editor window for generating and saving items
 - **Setup Wizard**: Easy first-time configuration with cost estimation
 - **Custom Attributes**: Fine-tune generation with `[ForgeDescription]` and `[ForgeConstraint]`
 
@@ -149,6 +151,72 @@ ForgeItemExporter.ExportItems(myWeapons, "weapons.json");
 var weapons = ForgeItemExporter.ImportItems<MeleeWeapon>("path/to/weapons.json");
 ```
 
+### 6. Save as ScriptableObject Assets
+
+The most powerful way to use generated items is to save them as ScriptableObject assets. These can be referenced directly in your game:
+
+#### Using the Generator Window (Recommended)
+
+1. Open **GameLabs → Forge → Generate Items**
+2. Select your item type from the dropdown
+3. Configure the count and optional context
+4. Enable "Auto-Save as Asset" (enabled by default)
+5. Click **🔥 Generate Items**
+
+Items are automatically saved in `Assets/GameLabs/Forge/Generated/{TypeName}/`
+
+#### Via Code
+
+```csharp
+#if UNITY_EDITOR
+using GameLabs.Forge;
+using GameLabs.Forge.Editor;
+
+// Generate and save in one step
+generator.GenerateSingle<MeleeWeapon>(result =>
+{
+    if (result.success)
+    {
+        // Save as ScriptableObject asset
+        var asset = ForgeAssetExporter.CreateAsset(result.items[0]);
+        Debug.Log($"Saved: {asset.name}");
+    }
+});
+
+// Save multiple items at once
+generator.GenerateBatch<MeleeWeapon>(5, result =>
+{
+    if (result.success)
+    {
+        // Saves to Generated/MeleeWeapon/ folder
+        var assets = ForgeAssetExporter.CreateAssets(result.items);
+        
+        // Or use a custom folder name
+        var customAssets = ForgeAssetExporter.CreateAssets(result.items, "MyWeapons");
+    }
+});
+#endif
+```
+
+#### Using Saved Assets in Your Game
+
+```csharp
+public class WeaponManager : MonoBehaviour
+{
+    // Reference assets directly in the Inspector
+    [SerializeField] private ForgeItemAsset<MeleeWeapon>[] weapons;
+    
+    void Start()
+    {
+        foreach (var weaponAsset in weapons)
+        {
+            MeleeWeapon weapon = weaponAsset.Data;
+            Debug.Log($"Loaded: {weapon.name} - {weapon.damage} damage");
+        }
+    }
+}
+```
+
 ## Supported Attributes
 
 ### Schema Attributes
@@ -234,6 +302,41 @@ static T ImportItem<T>(string filepath)
 static List<T> ImportItems<T>(string filepath)
 ```
 
+### ForgeAssetExporter (Editor Only)
+
+```csharp
+// Create a single ScriptableObject asset
+static ForgeItemAsset<T> CreateAsset<T>(T item, string customFolder = null)
+
+// Create multiple ScriptableObject assets
+static List<ForgeItemAsset<T>> CreateAssets<T>(IEnumerable<T> items, string customFolder = null)
+
+// Load all saved assets of a type
+static List<ForgeItemAsset<T>> LoadAssets<T>(string customFolder = null)
+
+// Get asset count for a type
+static int GetAssetCount<T>(string customFolder = null)
+
+// Clear all assets of a type
+static int ClearTypeAssets<T>(string customFolder = null)
+
+// Open folder in Project window
+static void RevealTypeFolder<T>(string customFolder = null)
+```
+
+### ForgeItemAsset<T>
+
+```csharp
+// The wrapped item data
+T Data { get; }
+
+// Item metadata
+string ItemTypeName { get; }
+string ItemId { get; }
+string ItemName { get; }
+DateTime CreatedAt { get; }
+```
+
 ## Demo Items Included
 
 The package includes example item types in `Assets/GameLabs/Forge/Demo/Items/`:
@@ -269,14 +372,20 @@ Assets/GameLabs/Forge/
 │   ├── Items/              # Sample item definitions
 │   └── ForgeDemoController.cs
 ├── Editor/                  # Unity Editor tools
-│   ├── ForgeSetupWizard.cs
+│   ├── ForgeSetupWizard.cs     # First-time setup
+│   ├── ForgeGeneratorWindow.cs # Item generation window
+│   ├── ForgeAssetExporter.cs   # ScriptableObject asset creation
 │   └── *Editor.cs files
-├── Generated/              # Export destination (gitignored)
+├── Generated/              # Saved ScriptableObject assets
+│   ├── MeleeWeapon/        # Organized by item type
+│   ├── Armor/
+│   └── ...
 ├── Runtime/
 │   ├── Core/               # Main system
 │   │   ├── ForgeItemGenerator.cs
 │   │   ├── ForgeSchemaExtractor.cs
 │   │   ├── ForgeItemExporter.cs
+│   │   ├── ForgeItemAsset.cs   # ScriptableObject wrapper
 │   │   └── ...
 │   └── Integration/
 │       └── OpenAI/         # OpenAI API client

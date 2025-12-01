@@ -1,10 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 using GameLabs.Forge;
+#if UNITY_EDITOR
+using GameLabs.Forge.Editor;
+#endif
 
 /// <summary>
 /// Demo controller showcasing ForgeItemGenerator usage.
-/// Demonstrates single item generation, batch generation, and using existing items as context.
+/// Demonstrates single item generation, batch generation, saving as ScriptableObjects, and using existing items as context.
 /// </summary>
 public class ForgeDemoController : MonoBehaviour
 {
@@ -16,6 +19,13 @@ public class ForgeDemoController : MonoBehaviour
     [Tooltip("Additional context for generation")]
     [TextArea(2, 4)]
     public string additionalContext = "Generate items suitable for a level 10-20 character";
+    
+    [Header("Save Options")]
+    [Tooltip("Automatically save generated items as ScriptableObject assets")]
+    public bool autoSaveAsAssets = true;
+    
+    [Tooltip("Custom folder name for saved assets (leave empty for type name)")]
+    public string customAssetFolder = "";
     
     [Header("Generated Items")]
     [SerializeField] private List<MeleeWeapon> generatedWeapons = new List<MeleeWeapon>();
@@ -44,6 +54,15 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedWeapons.Add(result.items[0]);
                 ForgeLogger.Log($"Generated weapon: {result.items[0].name} (Cost: ${result.estimatedCost:F6})");
+                
+                // Auto-save as ScriptableObject asset
+#if UNITY_EDITOR
+                if (autoSaveAsAssets)
+                {
+                    string folder = string.IsNullOrEmpty(customAssetFolder) ? null : customAssetFolder;
+                    ForgeAssetExporter.CreateAsset(result.items[0], folder);
+                }
+#endif
             }
             else
             {
@@ -66,6 +85,15 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedWeapons.AddRange(result.items);
                 ForgeLogger.Log($"Generated {result.items.Count} weapons (Cost: ${result.estimatedCost:F6})");
+                
+                // Auto-save as ScriptableObject assets
+#if UNITY_EDITOR
+                if (autoSaveAsAssets)
+                {
+                    string folder = string.IsNullOrEmpty(customAssetFolder) ? null : customAssetFolder;
+                    ForgeAssetExporter.CreateAssets(result.items, folder);
+                }
+#endif
             }
             else
             {
@@ -83,6 +111,14 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedConsumables.Add(result.items[0]);
                 ForgeLogger.Log($"Generated consumable: {result.items[0].name}");
+                
+#if UNITY_EDITOR
+                if (autoSaveAsAssets)
+                {
+                    string folder = string.IsNullOrEmpty(customAssetFolder) ? null : customAssetFolder;
+                    ForgeAssetExporter.CreateAsset(result.items[0], folder);
+                }
+#endif
             }
             else
             {
@@ -100,6 +136,14 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedConsumables.AddRange(result.items);
                 ForgeLogger.Log($"Generated {result.items.Count} consumables");
+                
+#if UNITY_EDITOR
+                if (autoSaveAsAssets)
+                {
+                    string folder = string.IsNullOrEmpty(customAssetFolder) ? null : customAssetFolder;
+                    ForgeAssetExporter.CreateAssets(result.items, folder);
+                }
+#endif
             }
             else
             {
@@ -117,6 +161,14 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedCollectibles.Add(result.items[0]);
                 ForgeLogger.Log($"Generated collectible: {result.items[0].name}");
+                
+#if UNITY_EDITOR
+                if (autoSaveAsAssets)
+                {
+                    string folder = string.IsNullOrEmpty(customAssetFolder) ? null : customAssetFolder;
+                    ForgeAssetExporter.CreateAsset(result.items[0], folder);
+                }
+#endif
             }
             else
             {
@@ -134,6 +186,14 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedCollectibles.AddRange(result.items);
                 ForgeLogger.Log($"Generated {result.items.Count} collectibles");
+                
+#if UNITY_EDITOR
+                if (autoSaveAsAssets)
+                {
+                    string folder = string.IsNullOrEmpty(customAssetFolder) ? null : customAssetFolder;
+                    ForgeAssetExporter.CreateAssets(result.items, folder);
+                }
+#endif
             }
             else
             {
@@ -151,6 +211,14 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedArmor.Add(result.items[0]);
                 ForgeLogger.Log($"Generated armor: {result.items[0].name}");
+                
+#if UNITY_EDITOR
+                if (autoSaveAsAssets)
+                {
+                    string folder = string.IsNullOrEmpty(customAssetFolder) ? null : customAssetFolder;
+                    ForgeAssetExporter.CreateAsset(result.items[0], folder);
+                }
+#endif
             }
             else
             {
@@ -168,6 +236,14 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedArmor.AddRange(result.items);
                 ForgeLogger.Log($"Generated {result.items.Count} armor pieces");
+                
+#if UNITY_EDITOR
+                if (autoSaveAsAssets)
+                {
+                    string folder = string.IsNullOrEmpty(customAssetFolder) ? null : customAssetFolder;
+                    ForgeAssetExporter.CreateAssets(result.items, folder);
+                }
+#endif
             }
             else
             {
@@ -246,4 +322,69 @@ public class ForgeDemoController : MonoBehaviour
         ExportAllCollectibles();
         ExportAllArmor();
     }
+    
+#if UNITY_EDITOR
+    [ContextMenu("Forge/Save Weapons as Assets")]
+    public void SaveWeaponsAsAssets()
+    {
+        if (generatedWeapons.Count == 0)
+        {
+            ForgeLogger.Warn("No weapons to save as assets");
+            return;
+        }
+        string folder = string.IsNullOrEmpty(customAssetFolder) ? null : customAssetFolder;
+        ForgeAssetExporter.CreateAssets(generatedWeapons, folder);
+    }
+    
+    [ContextMenu("Forge/Save Consumables as Assets")]
+    public void SaveConsumablesAsAssets()
+    {
+        if (generatedConsumables.Count == 0)
+        {
+            ForgeLogger.Warn("No consumables to save as assets");
+            return;
+        }
+        string folder = string.IsNullOrEmpty(customAssetFolder) ? null : customAssetFolder;
+        ForgeAssetExporter.CreateAssets(generatedConsumables, folder);
+    }
+    
+    [ContextMenu("Forge/Save Collectibles as Assets")]
+    public void SaveCollectiblesAsAssets()
+    {
+        if (generatedCollectibles.Count == 0)
+        {
+            ForgeLogger.Warn("No collectibles to save as assets");
+            return;
+        }
+        string folder = string.IsNullOrEmpty(customAssetFolder) ? null : customAssetFolder;
+        ForgeAssetExporter.CreateAssets(generatedCollectibles, folder);
+    }
+    
+    [ContextMenu("Forge/Save Armor as Assets")]
+    public void SaveArmorAsAssets()
+    {
+        if (generatedArmor.Count == 0)
+        {
+            ForgeLogger.Warn("No armor to save as assets");
+            return;
+        }
+        string folder = string.IsNullOrEmpty(customAssetFolder) ? null : customAssetFolder;
+        ForgeAssetExporter.CreateAssets(generatedArmor, folder);
+    }
+    
+    [ContextMenu("Forge/Save All Items as Assets")]
+    public void SaveAllItemsAsAssets()
+    {
+        SaveWeaponsAsAssets();
+        SaveConsumablesAsAssets();
+        SaveCollectiblesAsAssets();
+        SaveArmorAsAssets();
+    }
+    
+    [ContextMenu("Forge/Open Generator Window")]
+    public void OpenGeneratorWindow()
+    {
+        ForgeGeneratorWindow.OpenWindow();
+    }
+#endif
 }
