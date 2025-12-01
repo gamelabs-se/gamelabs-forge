@@ -1,17 +1,37 @@
 using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using GameLabs.Forge.Integration.OpenAI;
 
 namespace GameLabs.Forge
 {
-    /// <summary>Click “Call Forge Now” in Inspector to test a round-trip.</summary>
+    /// <summary>Click "Call Forge Now" in Inspector to test a round-trip.</summary>
     [ExecuteAlways]
     public class ForgeController : MonoBehaviour
     {
         [Header("Prompt Inputs")]
         [TextArea] public string GameDescription = "A traditional roguelike where the player is a rogue virus.";
         [Min(1)] public int ItemCount = 8;
+        
+        [Header("Save Options")]
+        [Tooltip("Automatically save generated items as ScriptableObject assets (Editor only)")]
+        public bool autoSaveAsAssets = true;
+        
+        [Tooltip("Custom folder name for saved assets (leave empty for 'GeneratedItem')")]
+        public string customAssetFolder = "";
+        
+        [Header("Generated Items (Read-Only)")]
+        [SerializeField] private List<GeneratedItem> lastGeneratedItems = new List<GeneratedItem>();
+        
+        /// <summary>Gets the last batch of generated items.</summary>
+        public IReadOnlyList<GeneratedItem> LastGeneratedItems => lastGeneratedItems;
+        
+        /// <summary>
+        /// Event fired when items are generated, allowing Editor code to hook in for auto-save.
+        /// Parameters: (List of items, custom folder name)
+        /// </summary>
+        public event System.Action<List<GeneratedItem>, string> OnItemsGenerated;
 
         [ContextMenu("Forge/Call Forge")]
         public void CallForge()
@@ -102,10 +122,20 @@ namespace GameLabs.Forge
                         }
 
                         ForgeLogger.Log($"Parsed {parsed.items.Length} items:");
+                        
+                        // Store and display items
+                        lastGeneratedItems.Clear();
                         foreach (var item in parsed.items)
                         {
                             if (item == null) continue;
+                            lastGeneratedItems.Add(item);
                             ForgeLogger.Log($"- {item.name} [{item.type}] ({item.rarity})");
+                        }
+                        
+                        // Notify listeners for auto-save (Editor code will handle this)
+                        if (autoSaveAsAssets && lastGeneratedItems.Count > 0)
+                        {
+                            OnItemsGenerated?.Invoke(lastGeneratedItems, customAssetFolder);
                         }
                     }
                     catch (Exception parseEx)
@@ -122,6 +152,14 @@ namespace GameLabs.Forge
             {
                 ForgeLogger.Error("Failed to parse ResponseData: " + e.Message);
             }
+        }
+        
+        /// <summary>Clears the last generated items list.</summary>
+        [ContextMenu("Forge/Clear Generated Items")]
+        public void ClearGeneratedItems()
+        {
+            lastGeneratedItems.Clear();
+            ForgeLogger.Log("Cleared generated items.");
         }
     }
 }
