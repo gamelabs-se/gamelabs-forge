@@ -112,35 +112,46 @@ namespace GameLabs.Forge
                     }
 
                     var wrapped = $"{{\"items\":{unescaped}}}";
+                    GeneratedItemArray parsed = null;
                     try
                     {
-                        var parsed = JsonUtility.FromJson<GeneratedItemArray>(wrapped);
-                        if (parsed?.items == null || parsed.items.Length == 0)
-                        {
-                            ForgeLogger.Warn("No items parsed from payload.");
-                            return;
-                        }
-
-                        ForgeLogger.Log($"Parsed {parsed.items.Length} items:");
-                        
-                        // Store and display items
-                        lastGeneratedItems.Clear();
-                        foreach (var item in parsed.items)
-                        {
-                            if (item == null) continue;
-                            lastGeneratedItems.Add(item);
-                            ForgeLogger.Log($"- {item.name ?? "Unnamed"} [{item.type ?? "Unknown"}] ({item.rarity ?? "None"})");
-                        }
-                        
-                        // Notify listeners for auto-save (Editor code will handle this)
-                        if (autoSaveAsAssets && lastGeneratedItems.Count > 0)
-                        {
-                            OnItemsGenerated?.Invoke(lastGeneratedItems, customAssetFolder);
-                        }
+                        parsed = JsonUtility.FromJson<GeneratedItemArray>(wrapped);
                     }
                     catch (Exception parseEx)
                     {
-                        ForgeLogger.Error("Failed to parse generated items: " + parseEx.Message);
+                        ForgeLogger.Error("Failed to parse generated items JSON: " + parseEx.Message);
+                        return;
+                    }
+                    
+                    if (parsed?.items == null || parsed.items.Length == 0)
+                    {
+                        ForgeLogger.Warn("No items parsed from payload.");
+                        return;
+                    }
+
+                    ForgeLogger.Log($"Parsed {parsed.items.Length} items:");
+                    
+                    // Store and display items
+                    lastGeneratedItems.Clear();
+                    foreach (var item in parsed.items)
+                    {
+                        if (item == null) continue;
+                        lastGeneratedItems.Add(item);
+                        ForgeLogger.Log($"- {item.name ?? "Unnamed"} [{item.type ?? "Unknown"}] ({item.rarity ?? "None"})");
+                    }
+                    
+                    // Notify listeners for auto-save (Editor code will handle this)
+                    // This is outside the JSON parsing try-catch to separate concerns
+                    if (autoSaveAsAssets && lastGeneratedItems.Count > 0)
+                    {
+                        try
+                        {
+                            OnItemsGenerated?.Invoke(lastGeneratedItems, customAssetFolder);
+                        }
+                        catch (Exception saveEx)
+                        {
+                            ForgeLogger.Error("Failed to auto-save items as assets: " + saveEx.Message + "\n" + saveEx.StackTrace);
+                        }
                     }
                 }
                 else

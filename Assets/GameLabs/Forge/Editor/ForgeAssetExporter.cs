@@ -32,23 +32,34 @@ namespace GameLabs.Forge.Editor
                 return null;
             }
             
-            // Determine folder path
-            string typeFolderName = customFolder ?? typeof(T).Name;
-            string folderPath = Path.Combine(GeneratedBasePath, typeFolderName);
-            
-            // Ensure directory exists
-            EnsureDirectoryExists(folderPath);
-            
-            // Create the ScriptableObject
-            var asset = ForgeItemAsset<T>.CreateInstance(item);
-            
-            // Generate unique filename
-            string fileName = GetUniqueFileName(folderPath, asset.name);
-            string fullPath = Path.Combine(folderPath, fileName + ".asset");
-            
-            // Save the asset
             try
             {
+                // Determine folder path
+                string typeFolderName = customFolder ?? typeof(T).Name;
+                string folderPath = Path.Combine(GeneratedBasePath, typeFolderName);
+                
+                // Ensure directory exists
+                EnsureDirectoryExists(folderPath);
+                
+                // Create the ScriptableObject
+                var asset = ForgeItemAsset<T>.CreateInstance(item);
+                if (asset == null)
+                {
+                    ForgeLogger.Error($"Failed to create ForgeItemAsset instance for type {typeof(T).Name}");
+                    return null;
+                }
+                
+                // Generate unique filename
+                string assetName = asset.name;
+                if (string.IsNullOrEmpty(assetName))
+                {
+                    assetName = $"{typeof(T).Name}_{DateTime.Now:yyyyMMdd_HHmmss}";
+                }
+                
+                string fileName = GetUniqueFileName(folderPath, assetName);
+                string fullPath = Path.Combine(folderPath, fileName + ".asset");
+                
+                // Save the asset
                 AssetDatabase.CreateAsset(asset, fullPath);
                 AssetDatabase.SaveAssets();
                 
@@ -57,7 +68,7 @@ namespace GameLabs.Forge.Editor
             }
             catch (Exception e)
             {
-                ForgeLogger.Error($"Failed to create asset: {e.Message}");
+                ForgeLogger.Error($"Failed to create asset: {e.Message}\n{e.StackTrace}");
                 return null;
             }
         }

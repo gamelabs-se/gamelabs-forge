@@ -89,33 +89,48 @@ namespace GameLabs.Forge
         /// </summary>
         internal void SetItem(T item)
         {
+            if (item == null)
+            {
+                name = $"{typeof(T).Name}_{DateTime.Now:yyyyMMdd_HHmmss}";
+                OnCreated();
+                return;
+            }
+            
             itemData = item;
             OnCreated();
             
             // Set the asset name based on the item
             string itemName = null;
             
-            // Check for ForgeItemDefinition
-            if (item is ForgeItemDefinition fid && !string.IsNullOrEmpty(fid.name))
+            try
             {
-                itemName = fid.name;
-            }
-            else
-            {
-                // Try to get name via reflection for any object with a 'name' field/property
-                var nameField = typeof(T).GetField("name");
-                if (nameField != null)
+                // Check for ForgeItemDefinition
+                if (item is ForgeItemDefinition fid && !string.IsNullOrEmpty(fid.name))
                 {
-                    itemName = nameField.GetValue(item) as string;
+                    itemName = fid.name;
                 }
                 else
                 {
-                    var nameProperty = typeof(T).GetProperty("name") ?? typeof(T).GetProperty("Name");
-                    if (nameProperty != null)
+                    // Try to get name via reflection for any object with a 'name' field/property
+                    var nameField = typeof(T).GetField("name");
+                    if (nameField != null)
                     {
-                        itemName = nameProperty.GetValue(item) as string;
+                        itemName = nameField.GetValue(item) as string;
+                    }
+                    else
+                    {
+                        var nameProperty = typeof(T).GetProperty("name") ?? typeof(T).GetProperty("Name");
+                        if (nameProperty != null)
+                        {
+                            itemName = nameProperty.GetValue(item) as string;
+                        }
                     }
                 }
+            }
+            catch
+            {
+                // Reflection failed, use fallback name
+                itemName = null;
             }
             
             if (!string.IsNullOrEmpty(itemName))
