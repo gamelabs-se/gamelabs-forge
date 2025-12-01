@@ -129,7 +129,7 @@ namespace GameLabs.Forge
                         {
                             if (item == null) continue;
                             lastGeneratedItems.Add(item);
-                            ForgeLogger.Log($"- {item.name} [{item.type}] ({item.rarity})");
+                            ForgeLogger.Log($"- {item.name ?? "Unnamed"} [{item.type ?? "Unknown"}] ({item.rarity ?? "None"})");
                         }
                         
                         // Notify listeners for auto-save (Editor code will handle this)
