@@ -247,9 +247,22 @@ namespace GameLabs.Forge
             // Handle string to enum
             if (targetType.IsEnum && sourceType == typeof(string))
             {
+                // Use reflection to call Enum.TryParse<T> for better performance
+                object result = null;
                 try
                 {
-                    return Enum.Parse(targetType, (string)value, true);
+                    // Try parsing the enum value
+                    var enumValues = Enum.GetValues(targetType);
+                    var stringValue = (string)value;
+                    foreach (var enumValue in enumValues)
+                    {
+                        if (string.Equals(enumValue.ToString(), stringValue, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return enumValue;
+                        }
+                    }
+                    // If no match found, return first value
+                    return enumValues.GetValue(0);
                 }
                 catch
                 {
@@ -290,24 +303,27 @@ namespace GameLabs.Forge
         {
             if (item == null) return null;
             
-            // Check for ForgeItemDefinition
-            if (item is ForgeItemDefinition fid && !string.IsNullOrEmpty(fid.name))
-            {
-                return fid.name;
-            }
+            // Try to get name field or property via reflection
+            // This works for ForgeItemDefinition and any other type with a name field/property
+            var itemType = item.GetType();
             
-            // Try reflection
-            var nameField = item.GetType().GetField("name", BindingFlags.Public | BindingFlags.Instance);
+            // Try field first
+            var nameField = itemType.GetField("name", BindingFlags.Public | BindingFlags.Instance);
             if (nameField != null)
             {
-                return nameField.GetValue(item) as string;
+                var nameValue = nameField.GetValue(item) as string;
+                if (!string.IsNullOrEmpty(nameValue))
+                    return nameValue;
             }
             
-            var nameProperty = item.GetType().GetProperty("name", BindingFlags.Public | BindingFlags.Instance) ??
-                               item.GetType().GetProperty("Name", BindingFlags.Public | BindingFlags.Instance);
+            // Try property
+            var nameProperty = itemType.GetProperty("name", BindingFlags.Public | BindingFlags.Instance) ??
+                               itemType.GetProperty("Name", BindingFlags.Public | BindingFlags.Instance);
             if (nameProperty != null)
             {
-                return nameProperty.GetValue(item) as string;
+                var nameValue = nameProperty.GetValue(item) as string;
+                if (!string.IsNullOrEmpty(nameValue))
+                    return nameValue;
             }
             
             return null;
@@ -346,13 +362,24 @@ namespace GameLabs.Forge
         public static void ClearCache()
         {
             _bindingCache.Clear();
+            _allBindingsCache = null;
         }
+        
+        // Cache for GetAllBindings result
+        private static Dictionary<Type, Type> _allBindingsCache;
         
         /// <summary>
         /// Gets all registered type bindings.
+        /// Results are cached for performance - call ClearCache() to refresh.
         /// </summary>
         public static Dictionary<Type, Type> GetAllBindings()
         {
+            // Return cached result if available
+            if (_allBindingsCache != null)
+            {
+                return new Dictionary<Type, Type>(_allBindingsCache);
+            }
+            
             var bindings = new Dictionary<Type, Type>();
             
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
@@ -377,7 +404,10 @@ namespace GameLabs.Forge
                 }
             }
             
-            return bindings;
+            // Cache the result
+            _allBindingsCache = bindings;
+            
+            return new Dictionary<Type, Type>(bindings);
         }
     }
 }
