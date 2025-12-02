@@ -24,7 +24,7 @@ namespace GameLabs.Forge.Editor
         /// <param name="item">The item to save as an asset.</param>
         /// <param name="customFolder">Optional custom subfolder name. Defaults to type name.</param>
         /// <returns>The created asset, or null if creation failed.</returns>
-        public static ForgeItemAsset<T> CreateAsset<T>(T item, string customFolder = null) where T : class
+        public static ForgeGeneratedItemAsset CreateAsset<T>(T item, string customFolder = null) where T : class
         {
             if (item == null)
             {
@@ -41,11 +41,11 @@ namespace GameLabs.Forge.Editor
                 // Ensure directory exists
                 EnsureDirectoryExists(folderPath);
                 
-                // Create the ScriptableObject
-                var asset = ForgeItemAsset<T>.CreateInstance(item);
+                // Create the ScriptableObject using the concrete class
+                var asset = ForgeGeneratedItemAsset.CreateInstance(item);
                 if (asset == null)
                 {
-                    ForgeLogger.Error($"Failed to create ForgeItemAsset instance for type {typeof(T).Name}");
+                    ForgeLogger.Error($"Failed to create ForgeGeneratedItemAsset instance for type {typeof(T).Name}");
                     return null;
                 }
                 
@@ -80,9 +80,9 @@ namespace GameLabs.Forge.Editor
         /// <param name="items">The items to save as assets.</param>
         /// <param name="customFolder">Optional custom subfolder name. Defaults to type name.</param>
         /// <returns>List of created assets.</returns>
-        public static List<ForgeItemAsset<T>> CreateAssets<T>(IEnumerable<T> items, string customFolder = null) where T : class
+        public static List<ForgeGeneratedItemAsset> CreateAssets<T>(IEnumerable<T> items, string customFolder = null) where T : class
         {
-            var createdAssets = new List<ForgeItemAsset<T>>();
+            var createdAssets = new List<ForgeGeneratedItemAsset>();
             
             if (items == null)
             {
@@ -115,39 +115,49 @@ namespace GameLabs.Forge.Editor
         }
         
         /// <summary>
-        /// Gets all saved assets of a specific type from the Generated folder.
+        /// Gets all saved assets from the Generated folder.
         /// </summary>
-        /// <typeparam name="T">The type of items to load.</typeparam>
-        /// <param name="customFolder">Optional custom subfolder name. Defaults to type name.</param>
+        /// <param name="customFolder">Custom subfolder name.</param>
         /// <returns>List of loaded assets.</returns>
-        public static List<ForgeItemAsset<T>> LoadAssets<T>(string customFolder = null) where T : class
+        public static List<ForgeGeneratedItemAsset> LoadAssets(string customFolder)
         {
-            string typeFolderName = customFolder ?? typeof(T).Name;
-            string folderPath = Path.Combine(GeneratedBasePath, typeFolderName);
+            string folderPath = Path.Combine(GeneratedBasePath, customFolder);
             
-            var assets = new List<ForgeItemAsset<T>>();
+            var assets = new List<ForgeGeneratedItemAsset>();
             
             if (!Directory.Exists(folderPath))
             {
-                ForgeLogger.Log($"No assets found for type {typeof(T).Name}");
+                ForgeLogger.Log($"No assets found in folder {customFolder}");
                 return assets;
             }
             
-            // Find all ScriptableObject assets in the folder and filter by type
-            string[] guids = AssetDatabase.FindAssets("t:ScriptableObject", new[] { folderPath });
+            // Find all ForgeGeneratedItemAsset assets in the folder
+            string[] guids = AssetDatabase.FindAssets("t:ForgeGeneratedItemAsset", new[] { folderPath });
             
             foreach (string guid in guids)
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
-                var asset = AssetDatabase.LoadAssetAtPath<ForgeItemAsset<T>>(path);
+                var asset = AssetDatabase.LoadAssetAtPath<ForgeGeneratedItemAsset>(path);
                 if (asset != null)
                 {
                     assets.Add(asset);
                 }
             }
             
-            ForgeLogger.Log($"Loaded {assets.Count} {typeof(T).Name} assets");
+            ForgeLogger.Log($"Loaded {assets.Count} assets from {customFolder}");
             return assets;
+        }
+        
+        /// <summary>
+        /// Gets all saved assets of a specific type from the Generated folder.
+        /// </summary>
+        /// <typeparam name="T">The type of items to load.</typeparam>
+        /// <param name="customFolder">Optional custom subfolder name. Defaults to type name.</param>
+        /// <returns>List of loaded assets.</returns>
+        public static List<ForgeGeneratedItemAsset> LoadAssets<T>(string customFolder = null) where T : class
+        {
+            string typeFolderName = customFolder ?? typeof(T).Name;
+            return LoadAssets(typeFolderName);
         }
         
         /// <summary>
