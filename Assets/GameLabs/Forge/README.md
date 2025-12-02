@@ -7,12 +7,13 @@ Forge is a dynamic, AI-powered item generation system for Unity that uses OpenAI
 - **Item-Agnostic**: Define any item type as a C# class - Forge extracts the schema automatically
 - **Dynamic Schema Extraction**: Uses reflection to understand your item structure including ranges, enums, and descriptions
 - **Single & Batch Generation**: Generate one item or many at once
+- **Typed Assets** ⭐ NEW: Create real ScriptableObject assets with actual properties - usable immediately!
 - **ScriptableObject Assets**: Save generated items as ScriptableObject assets organized by type
 - **Context-Aware**: Provide existing items as reference to ensure variety
 - **JSON Export/Import**: Save generated items for use in your game
 - **Generator Window**: Easy-to-use editor window for generating and saving items
 - **Setup Wizard**: Easy first-time configuration with cost estimation
-- **Custom Attributes**: Fine-tune generation with `[ForgeDescription]` and `[ForgeConstraint]`
+- **Custom Attributes**: Fine-tune generation with `[ForgeDescription]`, `[ForgeConstraint]`, and `[ForgeAssetBinding]`
 
 ## Quick Start
 
@@ -161,11 +162,92 @@ The most powerful way to use generated items is to save them as ScriptableObject
 2. Select your item type from the dropdown
 3. Configure the count and optional context
 4. Enable "Auto-Save as Asset" (enabled by default)
-5. Click **🔥 Generate Items**
+5. Enable "Create Typed Assets" for real ScriptableObjects (if available)
+6. Click **🔥 Generate Items**
 
 Items are automatically saved in `Assets/GameLabs/Forge/Generated/{TypeName}/`
 
-#### Via Code
+### 7. ⭐ Typed Assets - Ready-to-Use ScriptableObjects
+
+**NEW!** Typed Assets are real ScriptableObjects with actual properties - not JSON storage. Generate items and use them immediately in your game!
+
+#### Step 1: Create Your Asset Class
+
+Create a ScriptableObject that matches your item definition:
+
+```csharp
+using UnityEngine;
+using GameLabs.Forge;
+
+[CreateAssetMenu(fileName = "New Weapon", menuName = "Game/Items/Weapon")]
+public class MeleeWeaponAsset : ForgeTypedAsset
+{
+    [Header("Combat Stats")]
+    public int damage;
+    public float attackSpeed;
+    
+    [Header("Properties")]
+    public float weight;
+    public int value;
+    public ItemRarity rarity;
+    
+    // Add custom methods!
+    public float CalculateDPS() => damage * attackSpeed;
+}
+```
+
+#### Step 2: Bind Your Definition to the Asset
+
+Add `[ForgeAssetBinding]` to your item definition:
+
+```csharp
+[Serializable]
+[ForgeDescription("A melee weapon")]
+[ForgeAssetBinding(typeof(MeleeWeaponAsset))]  // ← This line!
+public class MeleeWeapon : ForgeItemDefinition
+{
+    public int damage;
+    public float attackSpeed;
+    public float weight;
+    public int value;
+    public ItemRarity rarity;
+}
+```
+
+#### Step 3: Generate and Use!
+
+```csharp
+// Generate items - they become real MeleeWeaponAsset ScriptableObjects!
+generator.GenerateBatch<MeleeWeapon>(5, result =>
+{
+    if (result.success)
+    {
+        // Creates MeleeWeaponAsset files with real properties
+        var assets = ForgeAssetExporter.CreateAssets(result.items);
+    }
+});
+```
+
+#### Using Typed Assets in Your Game
+
+```csharp
+public class WeaponManager : MonoBehaviour
+{
+    // Reference typed assets directly - no JSON parsing needed!
+    [SerializeField] private MeleeWeaponAsset[] weapons;
+    
+    void Start()
+    {
+        foreach (var weapon in weapons)
+        {
+            // Access properties directly
+            Debug.Log($"{weapon.name}: {weapon.damage} damage, DPS: {weapon.CalculateDPS()}");
+        }
+    }
+}
+```
+
+#### Via Code (Legacy JSON Storage)
 
 ```csharp
 #if UNITY_EDITOR
@@ -227,6 +309,7 @@ public class WeaponManager : MonoBehaviour
 | `[Range(min, max)]` | Field | Sets numeric range constraints |
 | `[Min(value)]` | Field | Sets minimum value |
 | `[Tooltip("...")]` | Field | Used as field description if no ForgeDescription |
+| `[ForgeAssetBinding(type)]` | Class | Binds to a ScriptableObject type for typed assets |
 
 ### Custom Constraints
 
@@ -242,6 +325,17 @@ public string element;
 // Make field optional
 [ForgeConstraint(Required = false)]
 public string loreText;
+```
+
+### Asset Binding
+
+```csharp
+// Bind your item definition to a ScriptableObject type
+[ForgeAssetBinding(typeof(MeleeWeaponAsset))]
+public class MeleeWeapon : ForgeItemDefinition
+{
+    // Fields will be automatically mapped to MeleeWeaponAsset
+}
 ```
 
 ## Configuration
@@ -305,26 +399,72 @@ static List<T> ImportItems<T>(string filepath)
 ### ForgeAssetExporter (Editor Only)
 
 ```csharp
-// Create a single ScriptableObject asset
-static ForgeItemAsset<T> CreateAsset<T>(T item, string customFolder = null)
+// Create a single ScriptableObject asset (auto-detects typed vs JSON)
+static ScriptableObject CreateAsset<T>(T item, string customFolder = null, bool preferTypedAsset = true)
 
 // Create multiple ScriptableObject assets
-static List<ForgeItemAsset<T>> CreateAssets<T>(IEnumerable<T> items, string customFolder = null)
+static List<ScriptableObject> CreateAssets<T>(IEnumerable<T> items, string customFolder = null, bool preferTypedAssets = true)
 
-// Load all saved assets of a type
-static List<ForgeItemAsset<T>> LoadAssets<T>(string customFolder = null)
+// Force typed asset creation (requires [ForgeAssetBinding])
+static ScriptableObject CreateTypedAsset<T>(T item, string customFolder = null)
+static List<ScriptableObject> CreateTypedAssets<T>(IEnumerable<T> items, string customFolder = null)
 
-// Get asset count for a type
+// Force JSON storage asset creation
+static ForgeGeneratedItemAsset CreateJsonAsset<T>(T item, string customFolder = null)
+static List<ForgeGeneratedItemAsset> CreateJsonAssets<T>(IEnumerable<T> items, string customFolder = null)
+
+// Load typed assets
+static List<TAsset> LoadTypedAssets<TAsset>(string customFolder = null) where TAsset : ScriptableObject
+
+// Load JSON assets
+static List<ForgeGeneratedItemAsset> LoadJsonAssets(string customFolder)
+static List<ForgeGeneratedItemAsset> LoadAssets<T>(string customFolder = null)
+
+// Check if type has asset binding
+static bool HasTypedAssetBinding<T>()
+static Type GetBoundAssetType<T>()
+
+// Asset management
 static int GetAssetCount<T>(string customFolder = null)
-
-// Clear all assets of a type
 static int ClearTypeAssets<T>(string customFolder = null)
-
-// Open folder in Project window
 static void RevealTypeFolder<T>(string customFolder = null)
 ```
 
-### ForgeItemAsset<T>
+### ForgeTypedAsset
+
+Base class for typed ScriptableObject assets:
+
+```csharp
+public abstract class ForgeTypedAsset : ScriptableObject
+{
+    // Base fields (automatically populated)
+    public string id;
+    public new string name;
+    public string description;
+    
+    // Override for custom post-processing
+    public virtual void OnValidateGenerated() { }
+    
+    // Metadata
+    public string SourceTypeName { get; }
+    public DateTime GeneratedAt { get; }
+    public string SourceJson { get; }
+}
+```
+
+### ForgeTypedAssetFactory
+
+```csharp
+// Check for bindings
+static bool HasBinding<T>()
+static Type GetBoundAssetType<T>()
+
+// Create typed assets programmatically
+static ScriptableObject CreateTypedAsset<T>(T item)
+static ScriptableObject CreateAndPopulateAsset(Type assetType, object item, Type definitionType)
+```
+
+### ForgeItemAsset<T> (Legacy JSON Storage)
 
 ```csharp
 // The wrapped item data
@@ -341,10 +481,17 @@ DateTime CreatedAt { get; }
 
 The package includes example item types in `Assets/GameLabs/Forge/Demo/Items/`:
 
+### Item Definitions
 - **MeleeWeapon** - Swords, axes, maces with damage, weight, durability
 - **Consumable** - Potions, food with effects and duration
 - **Collectible** - Treasures with lore and rarity
 - **Armor** - Equipment with defense, weight, slots
+
+### Typed Asset Classes (NEW!)
+- **MeleeWeaponAsset** - Real ScriptableObject with combat stats and helper methods
+- **ConsumableAsset** - Ready-to-use consumable items
+- **CollectibleAsset** - Treasures with value calculations
+- **ArmorAsset** - Equipment with defense calculations
 
 ## Cost Estimation
 
@@ -369,23 +516,31 @@ Check the Unity Console for error messages. The AI response may have failed to p
 ```
 Assets/GameLabs/Forge/
 ├── Demo/                    # Example items and demo controller
-│   ├── Items/              # Sample item definitions
+│   ├── Items/              # Sample item definitions + typed assets
+│   │   ├── MeleeWeapon.cs      # Item definition
+│   │   ├── MeleeWeaponAsset.cs # Typed ScriptableObject asset
+│   │   ├── Consumable.cs
+│   │   ├── ConsumableAsset.cs
+│   │   └── ...
 │   └── ForgeDemoController.cs
 ├── Editor/                  # Unity Editor tools
 │   ├── ForgeSetupWizard.cs     # First-time setup
 │   ├── ForgeGeneratorWindow.cs # Item generation window
-│   ├── ForgeAssetExporter.cs   # ScriptableObject asset creation
+│   ├── ForgeAssetExporter.cs   # Asset creation (typed + JSON)
 │   └── *Editor.cs files
 ├── Generated/              # Saved ScriptableObject assets
-│   ├── MeleeWeapon/        # Organized by item type
-│   ├── Armor/
+│   ├── MeleeWeaponAsset/   # Typed assets (organized by asset type)
+│   ├── MeleeWeapon/        # JSON assets (organized by definition type)
 │   └── ...
 ├── Runtime/
 │   ├── Core/               # Main system
 │   │   ├── ForgeItemGenerator.cs
 │   │   ├── ForgeSchemaExtractor.cs
 │   │   ├── ForgeItemExporter.cs
-│   │   ├── ForgeItemAsset.cs   # ScriptableObject wrapper
+│   │   ├── ForgeItemAsset.cs       # JSON storage wrapper
+│   │   ├── ForgeTypedAsset.cs      # Base class for typed assets (NEW!)
+│   │   ├── ForgeAssetBinding.cs    # Binding attribute (NEW!)
+│   │   ├── ForgeTypedAssetFactory.cs # Factory for typed assets (NEW!)
 │   │   └── ...
 │   └── Integration/
 │       └── OpenAI/         # OpenAI API client

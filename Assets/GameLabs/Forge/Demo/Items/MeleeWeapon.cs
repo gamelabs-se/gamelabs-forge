@@ -4,9 +4,12 @@ using GameLabs.Forge;
 
 /// <summary>
 /// Example melee weapon item for Forge demo.
+/// When generated, this creates a MeleeWeaponAsset ScriptableObject
+/// that can be used directly in your game.
 /// </summary>
 [Serializable]
 [ForgeDescription("A melee weapon used in close combat")]
+[ForgeAssetBinding(typeof(MeleeWeaponAsset))]
 public class MeleeWeapon : ForgeItemDefinition
 {
     [Tooltip("Base damage dealt by the weapon")]

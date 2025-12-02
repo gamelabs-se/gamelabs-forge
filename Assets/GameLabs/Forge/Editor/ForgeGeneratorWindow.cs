@@ -11,6 +11,7 @@ namespace GameLabs.Forge.Editor
     /// <summary>
     /// Editor window for generating items and saving them as ScriptableObject assets.
     /// Provides a simple, dynamic interface for any registered item type.
+    /// Supports both typed assets (with real properties) and JSON assets.
     /// </summary>
     public class ForgeGeneratorWindow : EditorWindow
     {
@@ -23,6 +24,7 @@ namespace GameLabs.Forge.Editor
         private string customFolderName = "";
         private bool useCustomFolder = false;
         private bool autoSaveAsAsset = true;
+        private bool useTypedAssets = true; // New: prefer typed assets when available
         
         // Generation state
         private bool isGenerating = false;
@@ -130,8 +132,14 @@ namespace GameLabs.Forge.Editor
                 if (selectedType != null)
                 {
                     var schema = ForgeTypeRegistry.GetSchema(selectedType);
+                    var boundAssetType = ForgeTypedAssetFactory.GetBoundAssetType(selectedType);
+                    
+                    string bindingInfo = boundAssetType != null 
+                        ? $"\n✓ Typed Asset: {boundAssetType.Name}" 
+                        : "\n○ No typed asset binding (will use JSON storage)";
+                    
                     EditorGUILayout.HelpBox(
-                        $"Type: {schema.typeName}\n{schema.description}\nFields: {schema.fields.Count}",
+                        $"Type: {schema.typeName}\n{schema.description}\nFields: {schema.fields.Count}{bindingInfo}",
                         MessageType.Info);
                 }
             }
@@ -162,6 +170,48 @@ namespace GameLabs.Forge.Editor
             {
                 EditorGUI.indentLevel++;
                 
+                // Check if selected type has a binding
+                bool hasBinding = false;
+                Type boundAssetType = null;
+                if (availableTypes.Length > 0 && selectedTypeIndex < availableTypes.Length)
+                {
+                    var selectedType = ForgeTypeRegistry.GetType(availableTypes[selectedTypeIndex]);
+                    if (selectedType != null)
+                    {
+                        boundAssetType = ForgeTypedAssetFactory.GetBoundAssetType(selectedType);
+                        hasBinding = boundAssetType != null;
+                    }
+                }
+                
+                if (hasBinding)
+                {
+                    useTypedAssets = EditorGUILayout.Toggle(
+                        new GUIContent("Create Typed Assets", 
+                            "Creates real ScriptableObject assets with properties instead of JSON storage"),
+                        useTypedAssets);
+                    
+                    if (useTypedAssets)
+                    {
+                        EditorGUILayout.HelpBox(
+                            $"Will create {boundAssetType.Name} assets with real properties.\nUsable immediately in your game!",
+                            MessageType.None);
+                    }
+                }
+                else
+                {
+                    EditorGUI.BeginDisabledGroup(true);
+                    useTypedAssets = EditorGUILayout.Toggle(
+                        new GUIContent("Create Typed Assets", 
+                            "No [ForgeAssetBinding] attribute found on this type"),
+                        false);
+                    EditorGUI.EndDisabledGroup();
+                    EditorGUILayout.HelpBox(
+                        "Add [ForgeAssetBinding(typeof(YourAsset))] to enable typed assets.",
+                        MessageType.None);
+                }
+                
+                EditorGUILayout.Space(5);
+                
                 useCustomFolder = EditorGUILayout.Toggle("Use Custom Folder Name", useCustomFolder);
                 
                 if (useCustomFolder)
@@ -170,9 +220,17 @@ namespace GameLabs.Forge.Editor
                 }
                 else
                 {
-                    string defaultFolder = availableTypes.Length > selectedTypeIndex 
-                        ? availableTypes[selectedTypeIndex] 
-                        : "Items";
+                    string defaultFolder;
+                    if (hasBinding && useTypedAssets)
+                    {
+                        defaultFolder = boundAssetType?.Name ?? availableTypes[selectedTypeIndex];
+                    }
+                    else
+                    {
+                        defaultFolder = availableTypes.Length > selectedTypeIndex 
+                            ? availableTypes[selectedTypeIndex] 
+                            : "Items";
+                    }
                     EditorGUILayout.LabelField($"Save to: Generated/{defaultFolder}/");
                 }
                 
@@ -321,10 +379,13 @@ namespace GameLabs.Forge.Editor
                 string folder = useCustomFolder && !string.IsNullOrEmpty(customFolderName) 
                     ? customFolderName 
                     : null;
-                    
-                var assets = ForgeAssetExporter.CreateAssets(result.items, folder);
                 
-                statusMessage = $"✓ Generated {result.items.Count} item(s) and saved {assets.Count} asset(s)\n" +
+                // Check if we should use typed assets
+                bool hasBinding = ForgeTypedAssetFactory.HasBinding<T>();
+                var assets = ForgeAssetExporter.CreateAssets(result.items, folder, useTypedAssets && hasBinding);
+                
+                string assetTypeText = (useTypedAssets && hasBinding) ? "typed" : "JSON";
+                statusMessage = $"✓ Generated {result.items.Count} item(s) and saved {assets.Count} {assetTypeText} asset(s)\n" +
                                $"Cost: ${result.estimatedCost:F6} ({result.promptTokens} prompt, {result.completionTokens} completion tokens)";
             }
             else

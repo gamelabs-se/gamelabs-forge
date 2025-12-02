@@ -4,9 +4,12 @@ using GameLabs.Forge;
 
 /// <summary>
 /// Example armor/equipment item for Forge demo.
+/// When generated, this creates an ArmorAsset ScriptableObject
+/// that can be used directly in your game.
 /// </summary>
 [Serializable]
 [ForgeDescription("Armor or protective equipment worn by characters")]
+[ForgeAssetBinding(typeof(ArmorAsset))]
 public class Armor : ForgeItemDefinition
 {
     [Tooltip("Equipment slot")]
