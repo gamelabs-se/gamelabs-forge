@@ -5,6 +5,7 @@ using GameLabs.Forge;
 /// <summary>
 /// Demo controller showcasing ForgeItemGenerator usage.
 /// Demonstrates single item generation, batch generation, and using existing items as context.
+/// For saving as ScriptableObject assets, use the ForgeDemoControllerEditor or the Generator Window.
 /// </summary>
 public class ForgeDemoController : MonoBehaviour
 {
@@ -17,6 +18,13 @@ public class ForgeDemoController : MonoBehaviour
     [TextArea(2, 4)]
     public string additionalContext = "Generate items suitable for a level 10-20 character";
     
+    [Header("Save Options")]
+    [Tooltip("Automatically save generated items as ScriptableObject assets (Editor only)")]
+    public bool autoSaveAsAssets = true;
+    
+    [Tooltip("Custom folder name for saved assets (leave empty for type name)")]
+    public string customAssetFolder = "";
+    
     [Header("Generated Items")]
     [SerializeField] private List<MeleeWeapon> generatedWeapons = new List<MeleeWeapon>();
     [SerializeField] private List<Consumable> generatedConsumables = new List<Consumable>();
@@ -27,7 +35,18 @@ public class ForgeDemoController : MonoBehaviour
     [Tooltip("Add existing weapons to provide context for generation")]
     [SerializeField] private List<MeleeWeapon> existingWeapons = new List<MeleeWeapon>();
     
+    // Public accessors for Editor scripts
+    public List<MeleeWeapon> GeneratedWeapons => generatedWeapons;
+    public List<Consumable> GeneratedConsumables => generatedConsumables;
+    public List<Collectible> GeneratedCollectibles => generatedCollectibles;
+    public List<Armor> GeneratedArmor => generatedArmor;
+    
     private ForgeItemGenerator Generator => ForgeItemGenerator.Instance;
+    
+    /// <summary>
+    /// Event fired when items are generated, allowing Editor code to hook in for auto-save.
+    /// </summary>
+    public event System.Action<object, string> OnItemsGenerated;
     
     [ContextMenu("Forge/Generate Single Weapon")]
     public void GenerateSingleWeapon()
@@ -44,6 +63,10 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedWeapons.Add(result.items[0]);
                 ForgeLogger.Log($"Generated weapon: {result.items[0].name} (Cost: ${result.estimatedCost:F6})");
+                
+                // Notify listeners for auto-save
+                if (autoSaveAsAssets)
+                    OnItemsGenerated?.Invoke(result.items, customAssetFolder);
             }
             else
             {
@@ -66,6 +89,10 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedWeapons.AddRange(result.items);
                 ForgeLogger.Log($"Generated {result.items.Count} weapons (Cost: ${result.estimatedCost:F6})");
+                
+                // Notify listeners for auto-save
+                if (autoSaveAsAssets)
+                    OnItemsGenerated?.Invoke(result.items, customAssetFolder);
             }
             else
             {
@@ -83,6 +110,9 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedConsumables.Add(result.items[0]);
                 ForgeLogger.Log($"Generated consumable: {result.items[0].name}");
+                
+                if (autoSaveAsAssets)
+                    OnItemsGenerated?.Invoke(result.items, customAssetFolder);
             }
             else
             {
@@ -100,6 +130,9 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedConsumables.AddRange(result.items);
                 ForgeLogger.Log($"Generated {result.items.Count} consumables");
+                
+                if (autoSaveAsAssets)
+                    OnItemsGenerated?.Invoke(result.items, customAssetFolder);
             }
             else
             {
@@ -117,6 +150,9 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedCollectibles.Add(result.items[0]);
                 ForgeLogger.Log($"Generated collectible: {result.items[0].name}");
+                
+                if (autoSaveAsAssets)
+                    OnItemsGenerated?.Invoke(result.items, customAssetFolder);
             }
             else
             {
@@ -134,6 +170,9 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedCollectibles.AddRange(result.items);
                 ForgeLogger.Log($"Generated {result.items.Count} collectibles");
+                
+                if (autoSaveAsAssets)
+                    OnItemsGenerated?.Invoke(result.items, customAssetFolder);
             }
             else
             {
@@ -151,6 +190,9 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedArmor.Add(result.items[0]);
                 ForgeLogger.Log($"Generated armor: {result.items[0].name}");
+                
+                if (autoSaveAsAssets)
+                    OnItemsGenerated?.Invoke(result.items, customAssetFolder);
             }
             else
             {
@@ -168,6 +210,9 @@ public class ForgeDemoController : MonoBehaviour
             {
                 generatedArmor.AddRange(result.items);
                 ForgeLogger.Log($"Generated {result.items.Count} armor pieces");
+                
+                if (autoSaveAsAssets)
+                    OnItemsGenerated?.Invoke(result.items, customAssetFolder);
             }
             else
             {

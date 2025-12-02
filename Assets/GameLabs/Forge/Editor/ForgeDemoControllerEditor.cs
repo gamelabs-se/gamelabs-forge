@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -11,6 +12,41 @@ namespace GameLabs.Forge.Editor
         private bool showConsumablesGroup = true;
         private bool showCollectiblesGroup = true;
         private bool showArmorGroup = true;
+        private bool showSaveAsAssetsGroup = false;
+        
+        private ForgeDemoController _controller;
+        
+        private void OnEnable()
+        {
+            _controller = (ForgeDemoController)target;
+            _controller.OnItemsGenerated += HandleItemsGenerated;
+        }
+        
+        private void OnDisable()
+        {
+            if (_controller != null)
+                _controller.OnItemsGenerated -= HandleItemsGenerated;
+        }
+        
+        private void HandleItemsGenerated(object items, string customFolder)
+        {
+            if (items == null) return;
+            
+            string folder = string.IsNullOrEmpty(customFolder) ? null : customFolder;
+            
+            // Use reflection to call the generic CreateAssets method
+            var itemsType = items.GetType();
+            if (itemsType.IsGenericType && itemsType.GetGenericTypeDefinition() == typeof(List<>))
+            {
+                var elementType = itemsType.GetGenericArguments()[0];
+                var method = typeof(ForgeAssetExporter).GetMethod("CreateAssets");
+                if (method != null)
+                {
+                    var genericMethod = method.MakeGenericMethod(elementType);
+                    genericMethod.Invoke(null, new object[] { items, folder });
+                }
+            }
+        }
         
         public override void OnInspectorGUI()
         {
@@ -136,11 +172,80 @@ namespace GameLabs.Forge.Editor
             
             EditorGUILayout.Space(5);
             
-            // Open setup wizard button
+            // Save as Assets section
+            showSaveAsAssetsGroup = EditorGUILayout.Foldout(showSaveAsAssetsGroup, "💾 Save as ScriptableObject Assets", true);
+            if (showSaveAsAssetsGroup)
+            {
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                
+                string folder = string.IsNullOrEmpty(controller.customAssetFolder) ? null : controller.customAssetFolder;
+                
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Save Weapons", GUILayout.Height(22)))
+                {
+                    if (controller.GeneratedWeapons.Count > 0)
+                        ForgeAssetExporter.CreateAssets(controller.GeneratedWeapons, folder);
+                    else
+                        ForgeLogger.Warn("No weapons to save as assets");
+                }
+                if (GUILayout.Button("Save Consumables", GUILayout.Height(22)))
+                {
+                    if (controller.GeneratedConsumables.Count > 0)
+                        ForgeAssetExporter.CreateAssets(controller.GeneratedConsumables, folder);
+                    else
+                        ForgeLogger.Warn("No consumables to save as assets");
+                }
+                EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Save Collectibles", GUILayout.Height(22)))
+                {
+                    if (controller.GeneratedCollectibles.Count > 0)
+                        ForgeAssetExporter.CreateAssets(controller.GeneratedCollectibles, folder);
+                    else
+                        ForgeLogger.Warn("No collectibles to save as assets");
+                }
+                if (GUILayout.Button("Save Armor", GUILayout.Height(22)))
+                {
+                    if (controller.GeneratedArmor.Count > 0)
+                        ForgeAssetExporter.CreateAssets(controller.GeneratedArmor, folder);
+                    else
+                        ForgeLogger.Warn("No armor to save as assets");
+                }
+                EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.Space(3);
+                
+                GUI.color = new Color(0.9f, 1f, 0.9f);
+                if (GUILayout.Button("💾 Save All Items as Assets", GUILayout.Height(25)))
+                {
+                    if (controller.GeneratedWeapons.Count > 0)
+                        ForgeAssetExporter.CreateAssets(controller.GeneratedWeapons, folder);
+                    if (controller.GeneratedConsumables.Count > 0)
+                        ForgeAssetExporter.CreateAssets(controller.GeneratedConsumables, folder);
+                    if (controller.GeneratedCollectibles.Count > 0)
+                        ForgeAssetExporter.CreateAssets(controller.GeneratedCollectibles, folder);
+                    if (controller.GeneratedArmor.Count > 0)
+                        ForgeAssetExporter.CreateAssets(controller.GeneratedArmor, folder);
+                }
+                GUI.color = Color.white;
+                
+                EditorGUILayout.EndVertical();
+            }
+            
+            EditorGUILayout.Space(5);
+            
+            // Bottom buttons
+            EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Open Setup Wizard", GUILayout.Height(25)))
             {
                 ForgeSetupWizard.Open();
             }
+            if (GUILayout.Button("Open Generator Window", GUILayout.Height(25)))
+            {
+                ForgeGeneratorWindow.OpenWindow();
+            }
+            EditorGUILayout.EndHorizontal();
         }
     }
 }
