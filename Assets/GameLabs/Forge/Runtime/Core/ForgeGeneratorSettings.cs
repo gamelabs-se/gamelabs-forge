@@ -50,8 +50,12 @@ namespace GameLabs.Forge
         [Tooltip("Base path for generated assets (relative to Assets folder). Default: 'Resources/Generated'")]
         public string generatedAssetsBasePath = "Resources/Generated";
         
+        [Header("Existing Items Context")]
         [Tooltip("If true, automatically looks for existing assets of the same type and adds them to context.")]
         public bool autoLoadExistingAssets = true;
+        
+        [Tooltip("How to use existing items in generation")]
+        public ExistingItemsIntent intent = ExistingItemsIntent.PreventDuplicatesAndRefineNaming;
         
         /// <summary>
         /// Serialized list of existing items as JSON strings.
@@ -116,9 +120,40 @@ namespace GameLabs.Forge
         {
             if (existingItemsJson == null || existingItemsJson.Count == 0)
                 return "No existing items provided.";
-                
-            return $"Existing items ({existingItemsJson.Count} total):\n[\n{string.Join(",\n", existingItemsJson)}\n]";
+            
+            string intentInstruction = GetIntentInstruction();
+            return $"Existing items ({existingItemsJson.Count} total) - {intentInstruction}:\n[\n{string.Join(",\n", existingItemsJson)}\n]";
         }
+        
+        /// <summary>
+        /// Gets the instruction text for the AI based on the intent setting.
+        /// </summary>
+        private string GetIntentInstruction()
+        {
+            return intent switch
+            {
+                ExistingItemsIntent.PreventDuplicates => "Generate UNIQUE items that don't duplicate existing ones",
+                ExistingItemsIntent.RefineNaming => "Use these items as examples to match naming conventions and style",
+                ExistingItemsIntent.PreventDuplicatesAndRefineNaming => "Generate UNIQUE items while following the naming conventions and style of existing items",
+                _ => "Use for reference"
+            };
+        }
+    }
+    
+    /// <summary>
+    /// Defines how existing items should be used during generation.
+    /// </summary>
+    [Serializable]
+    public enum ExistingItemsIntent
+    {
+        [Tooltip("Generate unique items that don't duplicate existing ones")]
+        PreventDuplicates,
+        
+        [Tooltip("Use existing items as examples to refine naming accuracy and style")]
+        RefineNaming,
+        
+        [Tooltip("Both prevent duplicates AND use existing items to guide naming conventions")]
+        PreventDuplicatesAndRefineNaming
     }
     
     /// <summary>

@@ -38,6 +38,7 @@ namespace GameLabs.Forge.Editor
         private string existingAssetsSearchPath = "Resources";
         private string generatedAssetsBasePath = "Resources/Generated";
         private bool autoLoadExistingAssets = true;
+        private ExistingItemsIntent intent = ExistingItemsIntent.PreventDuplicatesAndRefineNaming;
         
         // Validation
         private bool apiKeyValid = false;
@@ -88,6 +89,7 @@ namespace GameLabs.Forge.Editor
                         existingAssetsSearchPath = string.IsNullOrEmpty(config.existingAssetsSearchPath) ? "Resources" : config.existingAssetsSearchPath;
                         generatedAssetsBasePath = string.IsNullOrEmpty(config.generatedAssetsBasePath) ? "Resources/Generated" : config.generatedAssetsBasePath;
                         autoLoadExistingAssets = config.autoLoadExistingAssets;
+                        intent = (ExistingItemsIntent)config.intent;
                         
                         // Update indices
                         selectedModelIndex = Array.IndexOf(availableModels, model);
@@ -125,7 +127,8 @@ namespace GameLabs.Forge.Editor
                     additionalRules = additionalRules,
                     existingAssetsSearchPath = existingAssetsSearchPath,
                     generatedAssetsBasePath = generatedAssetsBasePath,
-                    autoLoadExistingAssets = autoLoadExistingAssets
+                    autoLoadExistingAssets = autoLoadExistingAssets,
+                    intent = (int)intent
                 };
                 
                 var json = JsonUtility.ToJson(config, true);
@@ -362,6 +365,22 @@ namespace GameLabs.Forge.Editor
             existingAssetsSearchPath = EditorGUILayout.TextField("Search Path", existingAssetsSearchPath);
             generatedAssetsBasePath = EditorGUILayout.TextField("Generated Path", generatedAssetsBasePath);
             autoLoadExistingAssets = EditorGUILayout.Toggle("Auto-Load Existing", autoLoadExistingAssets);
+            
+            EditorGUILayout.Space(5);
+            EditorGUILayout.LabelField("Existing Items Intent", EditorStyles.boldLabel);
+            intent = (ExistingItemsIntent)EditorGUILayout.EnumPopup("Usage Intent", intent);
+            
+            string intentDesc = intent switch
+            {
+                ExistingItemsIntent.PreventDuplicates => "AI will generate unique items that don't duplicate existing ones",
+                ExistingItemsIntent.RefineNaming => "AI will use existing items as examples for naming conventions",
+                ExistingItemsIntent.PreventDuplicatesAndRefineNaming => "AI will both prevent duplicates AND follow naming conventions",
+                _ => ""
+            };
+            if (!string.IsNullOrEmpty(intentDesc))
+            {
+                EditorGUILayout.HelpBox(intentDesc, MessageType.None);
+            }
             
             EditorGUILayout.Space(5);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);

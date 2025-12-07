@@ -23,6 +23,7 @@ namespace GameLabs.Forge
             public string existingAssetsSearchPath;
             public string generatedAssetsBasePath;
             public bool autoLoadExistingAssets;
+            public int intent; // ExistingItemsIntent enum value
         }
 
         private static ForgeConfigDto _cachedConfig;
@@ -62,7 +63,8 @@ namespace GameLabs.Forge
                 additionalRules = config.additionalRules ?? "",
                 existingAssetsSearchPath = string.IsNullOrEmpty(config.existingAssetsSearchPath) ? "Resources" : config.existingAssetsSearchPath,
                 generatedAssetsBasePath = string.IsNullOrEmpty(config.generatedAssetsBasePath) ? "Resources/Generated" : config.generatedAssetsBasePath,
-                autoLoadExistingAssets = config.autoLoadExistingAssets
+                autoLoadExistingAssets = config.autoLoadExistingAssets,
+                intent = (ExistingItemsIntent)config.intent
             };
         }
 

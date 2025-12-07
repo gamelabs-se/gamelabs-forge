@@ -30,10 +30,10 @@ namespace GameLabs.Forge.Editor
         // Results
         private List<ScriptableObject> lastGeneratedItems = new List<ScriptableObject>();
         
-        [MenuItem("GameLabs/Forge/Template Generator", priority = 5)]
+        [MenuItem("GameLabs/Forge/AI Template Generator", priority = 5)]
         public static void OpenWindow()
         {
-            var window = GetWindow<ForgeTemplateWindow>("Forge Template Generator");
+            var window = GetWindow<ForgeTemplateWindow>("Forge - AI Template Generator");
             window.minSize = new Vector2(450, 550);
         }
         
@@ -78,13 +78,13 @@ namespace GameLabs.Forge.Editor
                 alignment = TextAnchor.MiddleCenter
             };
             
-            EditorGUILayout.LabelField("🔥 Forge Template Generator", headerStyle);
+            EditorGUILayout.LabelField("🔥 Forge - AI Template Generator", headerStyle);
             
             var subtitleStyle = new GUIStyle(EditorStyles.centeredGreyMiniLabel)
             {
                 fontSize = 11
             };
-            EditorGUILayout.LabelField("Generate items from ScriptableObject templates", subtitleStyle);
+            EditorGUILayout.LabelField("AI-Powered Item Generation from Templates", subtitleStyle);
             
             DrawSeparator();
         }
@@ -168,6 +168,16 @@ namespace GameLabs.Forge.Editor
                 {
                     EditorGUILayout.LabelField($"Save to: Generated/{template.GetType().Name}/");
                 }
+                
+                EditorGUILayout.Space(3);
+                
+                // Show configured base path with override option
+                var settings = ForgeConfig.GetGeneratorSettings();
+                string basePath = ForgeAssetExporter.GetGeneratedBasePath();
+                EditorGUILayout.HelpBox(
+                    $"Base Path: {basePath}\n" +
+                    $"Configure in ForgeGeneratorSettings or config file.",
+                    MessageType.Info);
                 
                 EditorGUI.indentLevel--;
             }

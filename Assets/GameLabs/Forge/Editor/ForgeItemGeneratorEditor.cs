@@ -89,7 +89,11 @@ namespace GameLabs.Forge.Editor
                     EditorGUILayout.LabelField("Asset Paths", EditorStyles.boldLabel);
                     EditorGUILayout.PropertyField(settingsProperty.FindPropertyRelative("existingAssetsSearchPath"));
                     EditorGUILayout.PropertyField(settingsProperty.FindPropertyRelative("generatedAssetsBasePath"));
+                    
+                    EditorGUILayout.Space(5);
+                    EditorGUILayout.LabelField("Existing Items Context", EditorStyles.boldLabel);
                     EditorGUILayout.PropertyField(settingsProperty.FindPropertyRelative("autoLoadExistingAssets"));
+                    EditorGUILayout.PropertyField(settingsProperty.FindPropertyRelative("intent"));
                     
                     EditorGUILayout.Space(5);
                     var existingItems = settingsProperty.FindPropertyRelative("existingItemsJson");
