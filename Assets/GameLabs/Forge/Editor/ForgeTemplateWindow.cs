@@ -303,18 +303,27 @@ namespace GameLabs.Forge.Editor
             
             int savedCount = 0;
             
+            // Generate a timestamp for this batch to ensure uniqueness
+            string batchTimestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            
             AssetDatabase.StartAssetEditing();
             try
             {
-                foreach (var item in items)
+                for (int i = 0; i < items.Count; i++)
                 {
+                    var item = items[i];
                     if (item == null) continue;
                     
-                    // Generate unique filename
+                    // Generate unique filename using the item's name
                     string assetName = item.name;
                     if (string.IsNullOrEmpty(assetName))
                     {
-                        assetName = $"{item.GetType().Name}_{DateTime.Now:yyyyMMdd_HHmmss}";
+                        assetName = $"{item.GetType().Name}_{batchTimestamp}_{i + 1}";
+                    }
+                    else
+                    {
+                        // Add batch timestamp and index to ensure uniqueness
+                        assetName = $"{assetName}_{batchTimestamp}_{i + 1}";
                     }
                     
                     string fileName = GetUniqueFileName(folderPath, assetName);
@@ -334,6 +343,7 @@ namespace GameLabs.Forge.Editor
                 AssetDatabase.Refresh();
             }
             
+            ForgeLogger.Log($"Batch save completed: {savedCount} assets saved to {folderPath}");
             return savedCount;
         }
         

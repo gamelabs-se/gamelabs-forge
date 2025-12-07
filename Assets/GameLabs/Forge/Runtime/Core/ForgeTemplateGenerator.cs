@@ -98,6 +98,8 @@ namespace GameLabs.Forge
             var prompt = BuildUserPrompt(schema, count, additionalContext);
             
             ForgeLogger.Log($"Generating {count} {templateType.Name} item(s) from template...");
+            ForgeLogger.Log($"Template type: {templateType.FullName}");
+            ForgeLogger.Log($"Schema fields: {schema.fields.Count}");
             
             ForgeTemplateGenerationResult result = null;
             bool completed = false;
@@ -209,6 +211,7 @@ CRITICAL RULES:
                 if (expectedCount == 1)
                 {
                     // Single item - parse as object
+                    ForgeLogger.Log("Parsing single item from JSON...");
                     var item = CreateAndPopulateScriptableObject(templateType, content);
                     if (item != null)
                     {
@@ -218,7 +221,9 @@ CRITICAL RULES:
                 else
                 {
                     // Batch - parse as array
+                    ForgeLogger.Log($"Parsing {expectedCount} items from JSON array...");
                     items = ParseJsonArray(templateType, content);
+                    ForgeLogger.Log($"Parsed {items.Count} items from JSON");
                 }
                 
                 int promptTokens = response.usage?.prompt_tokens ?? 0;
@@ -249,6 +254,19 @@ CRITICAL RULES:
                 // Use Unity's JsonUtility to populate the instance
                 JsonUtility.FromJsonOverwrite(json, instance);
                 
+                // Try to extract a name from the JSON to set as the asset name
+                string assetName = ExtractNameFromJson(json, type);
+                if (!string.IsNullOrEmpty(assetName))
+                {
+                    instance.name = SanitizeAssetName(assetName);
+                }
+                else
+                {
+                    instance.name = $"{type.Name}_{System.Guid.NewGuid().ToString().Substring(0, 8)}";
+                }
+                
+                ForgeLogger.Log($"Created ScriptableObject: {instance.name} ({type.Name})");
+                
                 return instance;
             }
             catch (Exception e)
@@ -256,6 +274,61 @@ CRITICAL RULES:
                 ForgeLogger.Error($"Failed to create and populate {type.Name}: {e.Message}");
                 return null;
             }
+        }
+        
+        private string ExtractNameFromJson(string json, Type type)
+        {
+            try
+            {
+                // Try to find common name fields
+                var nameFields = new[] { "name", "weaponName", "itemName", "displayName", "title" };
+                
+                foreach (var fieldName in nameFields)
+                {
+                    // Check if the type has this field
+                    var field = type.GetField(fieldName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    if (field != null && field.FieldType == typeof(string))
+                    {
+                        // Try to extract the value from JSON using a simple regex
+                        var pattern = $"\"{fieldName}\"\\s*:\\s*\"([^\"]+)\"";
+                        var match = System.Text.RegularExpressions.Regex.Match(json, pattern);
+                        if (match.Success && match.Groups.Count > 1)
+                        {
+                            return match.Groups[1].Value;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore errors and return empty
+            }
+            
+            return null;
+        }
+        
+        private string SanitizeAssetName(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return "Unnamed";
+            
+            var chars = input.ToCharArray();
+            for (int i = 0; i < chars.Length; i++)
+            {
+                if (!char.IsLetterOrDigit(chars[i]) && chars[i] != '_' && chars[i] != '-' && chars[i] != ' ')
+                {
+                    chars[i] = '_';
+                }
+            }
+            
+            var result = new string(chars).Trim();
+            
+            if (result.Length > 0 && char.IsDigit(result[0]))
+            {
+                result = "_" + result;
+            }
+            
+            return string.IsNullOrEmpty(result) ? "Unnamed" : result;
         }
         
         private List<ScriptableObject> ParseJsonArray(Type type, string json)
