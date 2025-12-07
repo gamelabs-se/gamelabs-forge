@@ -4,14 +4,13 @@ using GameLabs.Forge;
 
 /// <summary>
 /// Example melee weapon item for Forge demo.
-/// When generated, this creates a MeleeWeaponAsset ScriptableObject
-/// that can be used directly in your game.
+/// Use this as a template in the Forge Template Generator.
 /// </summary>
-[Serializable]
-[ForgeDescription("A melee weapon used in close combat")]
-[ForgeAssetBinding(typeof(MeleeWeaponAsset))]
-public class MeleeWeapon : ForgeItemDefinition
+[CreateAssetMenu(fileName = "New Melee Weapon", menuName = "GameLabs/Forge Demo/Melee Weapon")]
+public class MeleeWeapon : ScriptableObject
 {
+    [Tooltip("Name of the weapon")]
+    public string name;
     [Tooltip("Base damage dealt by the weapon")]
     [Range(1, 100)]
     public int damage = 10;
@@ -37,11 +36,6 @@ public class MeleeWeapon : ForgeItemDefinition
 
     [Tooltip("Rarity tier of the weapon")]
     public ItemRarity rarity;
-
-    public override bool Validate()
-    {
-        return base.Validate() && damage > 0 && weight > 0;
-    }
 }
 
 /// <summary>

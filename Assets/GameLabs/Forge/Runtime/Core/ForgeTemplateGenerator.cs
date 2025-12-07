@@ -47,11 +47,11 @@ namespace GameLabs.Forge
         
         private void OnEnable()
         {
-            // Load settings from config file if available
-            var configSettings = ForgeConfig.GetGeneratorSettings();
-            if (configSettings != null && !string.IsNullOrEmpty(configSettings.gameName))
+            // Initialize with default settings
+            // DO NOT load from config to avoid stale descriptions
+            if (settings == null)
             {
-                settings = configSettings;
+                settings = new ForgeGeneratorSettings();
             }
         }
         
@@ -139,19 +139,7 @@ CRITICAL RULES:
             
             var sb = new StringBuilder();
             
-            // Game context
-            sb.AppendLine("=== GAME CONTEXT ===");
-            sb.AppendLine($"Game: {settings.gameName}");
-            sb.AppendLine($"Description: {settings.gameDescription}");
-            sb.AppendLine($"Audience: {settings.targetAudience}");
-            
-            if (!string.IsNullOrEmpty(settings.additionalRules))
-            {
-                sb.AppendLine($"Additional Rules: {settings.additionalRules}");
-            }
-            sb.AppendLine();
-            
-            // Item schema
+            // Item schema - this is the most important part
             sb.AppendLine("=== ITEM SCHEMA ===");
             sb.AppendLine(schemaDesc);
             sb.AppendLine();
@@ -160,10 +148,10 @@ CRITICAL RULES:
             sb.AppendLine(template);
             sb.AppendLine();
             
-            // Additional context
+            // Additional context from user (if provided)
             if (!string.IsNullOrEmpty(additionalContext))
             {
-                sb.AppendLine("=== ADDITIONAL CONTEXT ===");
+                sb.AppendLine("=== GENERATION CONTEXT ===");
                 sb.AppendLine(additionalContext);
                 sb.AppendLine();
             }
@@ -180,6 +168,12 @@ CRITICAL RULES:
                 sb.AppendLine($"Generate exactly {count} unique {schema.typeName} items.");
                 sb.AppendLine("Respond with a JSON array containing all items.");
             }
+            
+            sb.AppendLine();
+            sb.AppendLine("IMPORTANT:");
+            sb.AppendLine("- For enum fields, use ONLY the allowed values specified in the schema.");
+            sb.AppendLine("- Respect all [Range] constraints for numeric fields.");
+            sb.AppendLine("- Use the field descriptions as guidance for appropriate values.");
             
             return sb.ToString();
         }
@@ -251,6 +245,10 @@ CRITICAL RULES:
                     return null;
                 }
                 
+                // Preprocess JSON to convert enum string values to integers
+                // Unity's JsonUtility requires enums as integers, not strings
+                json = ConvertEnumStringsToIntegers(json, type);
+                
                 // Use Unity's JsonUtility to populate the instance
                 JsonUtility.FromJsonOverwrite(json, instance);
                 
@@ -274,6 +272,48 @@ CRITICAL RULES:
                 ForgeLogger.Error($"Failed to create and populate {type.Name}: {e.Message}");
                 return null;
             }
+        }
+        
+        private string ConvertEnumStringsToIntegers(string json, Type type)
+        {
+            try
+            {
+                // Get all enum fields in the type
+                var fields = type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                
+                foreach (var field in fields)
+                {
+                    if (field.FieldType.IsEnum)
+                    {
+                        // Find the pattern: "fieldName":"EnumValue"
+                        var enumValues = Enum.GetNames(field.FieldType);
+                        
+                        foreach (var enumValue in enumValues)
+                        {
+                            var pattern = $"\"{field.Name}\"\\s*:\\s*\"{enumValue}\"";
+                            var match = System.Text.RegularExpressions.Regex.Match(json, pattern);
+                            
+                            if (match.Success)
+                            {
+                                // Get the integer value for this enum
+                                var enumIndex = Array.IndexOf(enumValues, enumValue);
+                                
+                                // Replace the string with the integer
+                                var replacement = $"\"{field.Name}\":{enumIndex}";
+                                json = System.Text.RegularExpressions.Regex.Replace(json, pattern, replacement);
+                                
+                                ForgeLogger.Log($"Converted enum field '{field.Name}' from '{enumValue}' to {enumIndex}");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                ForgeLogger.Warn($"Failed to convert enum strings: {e.Message}");
+            }
+            
+            return json;
         }
         
         private string ExtractNameFromJson(string json, Type type)

@@ -4,14 +4,13 @@ using GameLabs.Forge;
 
 /// <summary>
 /// Example collectible/treasure item for Forge demo.
-/// When generated, this creates a CollectibleAsset ScriptableObject
-/// that can be used directly in your game.
+/// Use this as a template in the Forge Template Generator.
 /// </summary>
-[Serializable]
-[ForgeDescription("A collectible treasure or artifact with lore and value")]
-[ForgeAssetBinding(typeof(CollectibleAsset))]
-public class Collectible : ForgeItemDefinition
+[CreateAssetMenu(fileName = "New Collectible", menuName = "GameLabs/Forge Demo/Collectible")]
+public class Collectible : ScriptableObject
 {
+    [Tooltip("Name of the collectible")]
+    public string name;
     [Tooltip("Category of collectible")]
     public CollectibleCategory category;
     

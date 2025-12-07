@@ -4,14 +4,13 @@ using GameLabs.Forge;
 
 /// <summary>
 /// Example consumable item for Forge demo.
-/// When generated, this creates a ConsumableAsset ScriptableObject
-/// that can be used directly in your game.
+/// Use this as a template in the Forge Template Generator.
 /// </summary>
-[Serializable]
-[ForgeDescription("A consumable item that can be used once for an effect")]
-[ForgeAssetBinding(typeof(ConsumableAsset))]
-public class Consumable : ForgeItemDefinition
+[CreateAssetMenu(fileName = "New Consumable", menuName = "GameLabs/Forge Demo/Consumable")]
+public class Consumable : ScriptableObject
 {
+    [Tooltip("Name of the consumable")]
+    public string name;
     [Tooltip("Effect type when consumed")]
     public ConsumableEffect effectType;
     
