@@ -84,10 +84,6 @@ namespace GameLabs.Forge
             }
 #endif
             
-            else
-            {
-                ForgeLogger.Warn($"Runtime asset discovery only supports Resources folder. Search path '{searchPath}' is not supported at runtime.");
-            }
             return assets;
         }
         
@@ -170,9 +166,43 @@ namespace GameLabs.Forge
         }
         
         /// <summary>
+        /// Discovers existing ScriptableObject assets and returns them as JSON strings.
+        /// This is a type-safe method for ScriptableObject types.
+        /// </summary>
+        /// <typeparam name="T">The ScriptableObject type to discover.</typeparam>
+        /// <param name="searchPath">Search path relative to Assets folder.</param>
+        /// <returns>List of JSON strings representing discovered assets.</returns>
+        public static List<string> DiscoverScriptableObjectsAsJson<T>(string searchPath = "Resources") where T : ScriptableObject
+        {
+            var jsonStrings = new List<string>();
+            var assets = DiscoverAssets<T>(searchPath);
+            
+            foreach (var asset in assets)
+            {
+                if (asset != null)
+                {
+                    try
+                    {
+                        string json = JsonUtility.ToJson(asset);
+                        if (!string.IsNullOrEmpty(json))
+                        {
+                            jsonStrings.Add(json);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        ForgeLogger.Warn($"Failed to serialize asset to JSON: {e.Message}");
+                    }
+                }
+            }
+            
+            return jsonStrings;
+        }
+        
+        /// <summary>
         /// Discovers existing assets and returns them as JSON strings.
-        /// This is a convenience method that combines discovery and JSON serialization.
-        /// Works for both ScriptableObject types and ForgeGeneratedItemAsset.
+        /// This method works for any type by checking ForgeGeneratedItemAsset instances.
+        /// For ScriptableObject types, also discovers direct ScriptableObject assets.
         /// </summary>
         /// <typeparam name="T">The type of asset to discover.</typeparam>
         /// <param name="searchPath">Search path relative to Assets folder.</param>
@@ -181,36 +211,31 @@ namespace GameLabs.Forge
         {
             var jsonStrings = new List<string>();
             
-            // If T is a ScriptableObject, discover and serialize directly
-            if (typeof(ScriptableObject).IsAssignableFrom(typeof(T)))
-            {
-                var assets = DiscoverAssets<T>(searchPath) as System.Collections.Generic.List<T>;
-                if (assets != null)
-                {
-                    foreach (var asset in assets)
-                    {
-                        if (asset != null)
-                        {
-                            try
-                            {
-                                string json = JsonUtility.ToJson(asset);
-                                if (!string.IsNullOrEmpty(json))
-                                {
-                                    jsonStrings.Add(json);
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                ForgeLogger.Warn($"Failed to serialize asset to JSON: {e.Message}");
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Also check for ForgeGeneratedItemAsset instances of this type
+            // Check for ForgeGeneratedItemAsset instances of this type
             var generatedAssets = DiscoverGeneratedAssets(typeof(T).Name, searchPath);
             jsonStrings.AddRange(GeneratedAssetsToJsonStrings(generatedAssets));
+            
+            // If T is a ScriptableObject, also try to discover direct ScriptableObject assets
+            // We use reflection here as a fallback, but it's acceptable since this is a convenience method
+            if (typeof(ScriptableObject).IsAssignableFrom(typeof(T)))
+            {
+                try
+                {
+                    var method = typeof(ForgeAssetDiscovery).GetMethod(nameof(DiscoverScriptableObjectsAsJson), 
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    var genericMethod = method.MakeGenericMethod(typeof(T));
+                    var result = genericMethod.Invoke(null, new object[] { searchPath }) as List<string>;
+                    
+                    if (result != null)
+                    {
+                        jsonStrings.AddRange(result);
+                    }
+                }
+                catch (Exception e)
+                {
+                    ForgeLogger.Warn($"Failed to discover ScriptableObject assets: {e.Message}");
+                }
+            }
             
             return jsonStrings;
         }
