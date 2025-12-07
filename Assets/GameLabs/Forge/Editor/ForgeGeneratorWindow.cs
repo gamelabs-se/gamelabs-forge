@@ -16,7 +16,6 @@ namespace GameLabs.Forge.Editor
     {
         // UI State
         private Vector2 scrollPos;
-        private Vector2 existingItemsScrollPos;
         private string[] availableTypes;
         private int selectedTypeIndex = 0;
         private int itemCount = 1;
@@ -442,6 +441,8 @@ namespace GameLabs.Forge.Editor
             var popup = ScriptableObject.CreateInstance<ExistingItemsPopup>();
             popup.titleContent = new GUIContent($"Existing Items ({discoveredItemsCount})");
             popup.itemsJson = new List<string>(discoveredItemsJson);
+            popup.minSize = new Vector2(400, 500);
+            popup.maxSize = new Vector2(600, 800);
             popup.ShowUtility();
         }
         

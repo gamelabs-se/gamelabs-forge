@@ -239,7 +239,7 @@ namespace GameLabs.Forge.Editor
                     : template.GetType().Name;
                     
                 var folderAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(
-                    Path.Combine(ForgeAssetExporter.GeneratedBasePath, folder));
+                    Path.Combine(ForgeAssetExporter.GetGeneratedBasePath(), folder));
                 if (folderAsset != null)
                 {
                     EditorGUIUtility.PingObject(folderAsset);
@@ -308,7 +308,7 @@ namespace GameLabs.Forge.Editor
             if (items == null || items.Count == 0)
                 return 0;
             
-            string folderPath = Path.Combine(ForgeAssetExporter.GeneratedBasePath, folder);
+            string folderPath = Path.Combine(ForgeAssetExporter.GetGeneratedBasePath(), folder);
             EnsureDirectoryExists(folderPath);
             
             int savedCount = 0;
