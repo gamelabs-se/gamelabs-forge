@@ -177,6 +177,16 @@ namespace GameLabs.Forge.Editor
                     EditorGUILayout.LabelField($"Save to: Generated/{defaultFolder}/");
                 }
                 
+                EditorGUILayout.Space(3);
+                
+                // Show configured base path
+                var settings = ForgeConfig.GetGeneratorSettings();
+                string basePath = ForgeAssetExporter.GetGeneratedBasePath();
+                EditorGUILayout.HelpBox(
+                    $"Base Path: {basePath}\n" +
+                    $"Configure in ForgeGeneratorSettings or config file.",
+                    MessageType.Info);
+                
                 EditorGUI.indentLevel--;
             }
         }
