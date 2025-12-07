@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f3e4b90149f4198949bedc96e1f0b47, type: 3}
+  m_Name: Armor Template
+  m_EditorClassIdentifier: GameLabs.Forge.Demo::Armor
+  name: Leather Armor
+  slot: 1
+  defense: 10
+  weight: 5
+  value: 100
+  durability: 100
+  armorType: 1
+  rarity: 0
+  bonusHealth: 0
+  speedModifier: 1
