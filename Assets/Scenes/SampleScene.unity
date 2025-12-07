@@ -384,8 +384,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 74cf768981bc54fb7a7249c84698a084, type: 3}
   m_Name: 
   m_EditorClassIdentifier: GameLabs.Forge.Runtime::GameLabs.Forge.ForgeController
-  GameDescription: A traditional roguelike with a hacking theme where the player
-    is a rogue virus.
+  GameDescription: 
   ItemCount: 3
   autoSaveAsAssets: 1
   customAssetFolder: 

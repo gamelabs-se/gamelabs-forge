@@ -7,22 +7,65 @@ namespace GameLabs.Forge.Sample
     public class MeleeWeapon : ScriptableObject
     {
 
-        [TextArea]
-        [Tooltip("A brief description of the weapon.")]
-        public string description = "";
+        [Tooltip("Name of the melee weapon")]
+        public string WeaponName;
 
+        [Tooltip("A short description of the weapon")]
+        public string Description;
+
+        [Tooltip("Base damage dealt by the weapon")]
         [Range(1, 100)]
-        [Tooltip("Base damage dealt by the weapon, before modifiers.")]
-        public int baseDamage;
+        public int baseDamage = 10;
 
-        [Range(1, 25)]
-        [Tooltip("This value affects how fast the weapon can be swung and inventory weight.")]
-        public int weight;
+        [Tooltip("Weight of the weapon in kg")]
+        [Range(0.1f, 50f)]
+        public float weight = 1.0f;
 
+        [Tooltip("Gold value of the weapon")]
         [Range(1, 10000)]
-        [Tooltip("base value of the weapon in in-game currency.")]
-        public int value;
+        public int value = 50;
 
+        [Tooltip("Attack speed (attacks per second)")]
+        [Range(0.5f, 5f)]
+        public float attackSpeed = 1.0f;
+
+        [Tooltip("Durability of the weapon")]
+        [Range(1, 500)]
+        public int durability = 100;
+
+        [Tooltip("Type/category of melee weapon")]
+        public MeleeWeaponType weaponType;
+
+        [Tooltip("Rarity tier of the weapon")]
+        public ItemRarity rarity;
+
+    }
+
+    /// <summary>
+    /// Types of melee weapons available.
+    /// </summary>
+    public enum MeleeWeaponType
+    {
+        Sword,
+        Axe,
+        Mace,
+        Dagger,
+        Spear,
+        Hammer,
+        Staff,
+        Flail
+    }
+
+    /// <summary>
+    /// Rarity tiers for items.
+    /// </summary>
+    public enum ItemRarity
+    {
+        Common,
+        Uncommon,
+        Rare,
+        Epic,
+        Legendary
     }
 
 }
