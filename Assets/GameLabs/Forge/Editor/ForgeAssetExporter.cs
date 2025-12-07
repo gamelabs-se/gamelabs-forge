@@ -10,6 +10,7 @@ namespace GameLabs.Forge.Editor
     /// <summary>
     /// Utility for creating and managing ScriptableObject assets from generated items.
     /// Organizes assets by type in the Generated folder for easy access.
+    /// Saves items as ForgeGeneratedItemAsset with JSON data.
     /// </summary>
     public static class ForgeAssetExporter
     {
@@ -25,6 +26,24 @@ namespace GameLabs.Forge.Editor
         /// <param name="customFolder">Optional custom subfolder name. Defaults to type name.</param>
         /// <returns>The created asset, or null if creation failed.</returns>
         public static ForgeGeneratedItemAsset CreateAsset<T>(T item, string customFolder = null) where T : class
+        {
+            if (item == null)
+            {
+                ForgeLogger.Error("Cannot create asset from null item.");
+                return null;
+            }
+            
+            return CreateJsonAsset(item, customFolder);
+        }
+        
+        /// <summary>
+        /// Creates a JSON-storage ScriptableObject asset from a generated item.
+        /// </summary>
+        /// <typeparam name="T">The type of item to save.</typeparam>
+        /// <param name="item">The item to save as an asset.</param>
+        /// <param name="customFolder">Optional custom subfolder name. Defaults to type name.</param>
+        /// <returns>The created JSON asset, or null if creation failed.</returns>
+        private static ForgeGeneratedItemAsset CreateJsonAsset<T>(T item, string customFolder = null) where T : class
         {
             if (item == null)
             {

@@ -130,6 +130,7 @@ namespace GameLabs.Forge.Editor
                 if (selectedType != null)
                 {
                     var schema = ForgeTypeRegistry.GetSchema(selectedType);
+                    
                     EditorGUILayout.HelpBox(
                         $"Type: {schema.typeName}\n{schema.description}\nFields: {schema.fields.Count}",
                         MessageType.Info);
@@ -321,7 +322,7 @@ namespace GameLabs.Forge.Editor
                 string folder = useCustomFolder && !string.IsNullOrEmpty(customFolderName) 
                     ? customFolderName 
                     : null;
-                    
+                
                 var assets = ForgeAssetExporter.CreateAssets(result.items, folder);
                 
                 statusMessage = $"✓ Generated {result.items.Count} item(s) and saved {assets.Count} asset(s)\n" +
