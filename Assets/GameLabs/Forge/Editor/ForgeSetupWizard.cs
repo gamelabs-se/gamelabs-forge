@@ -619,6 +619,7 @@ namespace GameLabs.Forge.Editor
             public string existingAssetsSearchPath;
             public string generatedAssetsBasePath;
             public bool autoLoadExistingAssets;
+            public int intent; // ExistingItemsIntent enum value
         }
     }
 }
