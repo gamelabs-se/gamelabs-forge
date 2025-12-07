@@ -387,6 +387,9 @@ MonoBehaviour:
   GameDescription: A traditional roguelike with a hacking theme where the player
     is a rogue virus.
   ItemCount: 3
+  autoSaveAsAssets: 1
+  customAssetFolder: 
+  lastGeneratedItems: []
 --- !u!1 &1181174722
 GameObject:
   m_ObjectHideFlags: 0

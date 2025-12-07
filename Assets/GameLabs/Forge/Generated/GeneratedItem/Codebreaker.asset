@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: Codebreaker
+  m_EditorClassIdentifier: GameLabs.Forge.Runtime:GameLabs.Forge:ForgeGeneratedItemAsset
+  createdAt: 2025-12-02T01:03:37.6461220+01:00
+  _itemTypeName: GeneratedItem
+  _itemName: Codebreaker
+  _jsonData: "{\n    \"name\": \"Codebreaker\",\n    \"type\": \"Weapon\",\n    \"rarity\":
+    \"Rare\",\n    \"attributes\": {\n        \"attack\": 15,\n        \"defense\":
+    0,\n        \"healing\": 0\n    },\n    \"description\": \"A sharp blade that
+    disrupts enemy code.\"\n}"
