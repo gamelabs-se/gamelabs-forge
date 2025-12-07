@@ -49,11 +49,19 @@ namespace GameLabs.Forge
             
             ForgeLogger.Log($"Discovered {assets.Count} existing {typeof(T).Name} assets in {fullPath}");
 #else
-            // At runtime, use Resources.LoadAll if the search path is Resources
-            if (searchPath.StartsWith("Resources"))
+            // At runtime, use Resources.LoadAll if the search path is Resources or starts with Resources/
+            bool isResourcesPath = searchPath.Equals("Resources", StringComparison.OrdinalIgnoreCase) || 
+                                  searchPath.StartsWith("Resources/", StringComparison.OrdinalIgnoreCase) ||
+                                  searchPath.StartsWith("Resources\\", StringComparison.OrdinalIgnoreCase);
+            
+            if (isResourcesPath)
             {
                 // Extract the path after Resources/
-                string resourcesPath = searchPath.Substring("Resources".Length).TrimStart('/', '\\');
+                string resourcesPath = "";
+                if (searchPath.Length > "Resources".Length)
+                {
+                    resourcesPath = searchPath.Substring("Resources".Length).TrimStart('/', '\\');
+                }
                 
                 T[] loadedAssets;
                 if (string.IsNullOrEmpty(resourcesPath))
@@ -76,6 +84,10 @@ namespace GameLabs.Forge
             }
 #endif
             
+            else
+            {
+                ForgeLogger.Warn($"Runtime asset discovery only supports Resources folder. Search path '{searchPath}' is not supported at runtime.");
+            }
             return assets;
         }
         
@@ -115,10 +127,18 @@ namespace GameLabs.Forge
             
             ForgeLogger.Log($"Discovered {assets.Count} existing {typeName} generated assets in {fullPath}");
 #else
-            // At runtime, use Resources.LoadAll
-            if (searchPath.StartsWith("Resources"))
+            // At runtime, use Resources.LoadAll if the search path is Resources or starts with Resources/
+            bool isResourcesPath = searchPath.Equals("Resources", StringComparison.OrdinalIgnoreCase) || 
+                                  searchPath.StartsWith("Resources/", StringComparison.OrdinalIgnoreCase) ||
+                                  searchPath.StartsWith("Resources\\", StringComparison.OrdinalIgnoreCase);
+            
+            if (isResourcesPath)
             {
-                string resourcesPath = searchPath.Substring("Resources".Length).TrimStart('/', '\\');
+                string resourcesPath = "";
+                if (searchPath.Length > "Resources".Length)
+                {
+                    resourcesPath = searchPath.Substring("Resources".Length).TrimStart('/', '\\');
+                }
                 
                 ForgeGeneratedItemAsset[] loadedAssets;
                 if (string.IsNullOrEmpty(resourcesPath))
@@ -140,9 +160,59 @@ namespace GameLabs.Forge
                 
                 ForgeLogger.Log($"Loaded {assets.Count} existing {typeName} generated assets from Resources");
             }
+            else
+            {
+                ForgeLogger.Warn($"Runtime asset discovery only supports Resources folder. Search path '{searchPath}' is not supported at runtime.");
+            }
 #endif
             
             return assets;
+        }
+        
+        /// <summary>
+        /// Discovers existing assets and returns them as JSON strings.
+        /// This is a convenience method that combines discovery and JSON serialization.
+        /// Works for both ScriptableObject types and ForgeGeneratedItemAsset.
+        /// </summary>
+        /// <typeparam name="T">The type of asset to discover.</typeparam>
+        /// <param name="searchPath">Search path relative to Assets folder.</param>
+        /// <returns>List of JSON strings representing discovered assets.</returns>
+        public static List<string> DiscoverAssetsAsJson<T>(string searchPath = "Resources") where T : class
+        {
+            var jsonStrings = new List<string>();
+            
+            // If T is a ScriptableObject, discover and serialize directly
+            if (typeof(ScriptableObject).IsAssignableFrom(typeof(T)))
+            {
+                var assets = DiscoverAssets<T>(searchPath) as System.Collections.Generic.List<T>;
+                if (assets != null)
+                {
+                    foreach (var asset in assets)
+                    {
+                        if (asset != null)
+                        {
+                            try
+                            {
+                                string json = JsonUtility.ToJson(asset);
+                                if (!string.IsNullOrEmpty(json))
+                                {
+                                    jsonStrings.Add(json);
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                ForgeLogger.Warn($"Failed to serialize asset to JSON: {e.Message}");
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Also check for ForgeGeneratedItemAsset instances of this type
+            var generatedAssets = DiscoverGeneratedAssets(typeof(T).Name, searchPath);
+            jsonStrings.AddRange(GeneratedAssetsToJsonStrings(generatedAssets));
+            
+            return jsonStrings;
         }
         
         /// <summary>

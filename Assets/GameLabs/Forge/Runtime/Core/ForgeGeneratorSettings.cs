@@ -60,14 +60,35 @@ namespace GameLabs.Forge
         [HideInInspector]
         public List<string> existingItemsJson = new List<string>();
         
+        // Internal HashSet for efficient duplicate checking
+        [NonSerialized]
+        private System.Collections.Generic.HashSet<string> _existingItemsSet = null;
+        
+        /// <summary>
+        /// Gets or initializes the internal HashSet for efficient operations.
+        /// </summary>
+        private System.Collections.Generic.HashSet<string> GetExistingItemsSet()
+        {
+            if (_existingItemsSet == null)
+            {
+                _existingItemsSet = new System.Collections.Generic.HashSet<string>(existingItemsJson);
+            }
+            return _existingItemsSet;
+        }
+        
         /// <summary>
         /// Adds an existing item to the context.
+        /// Uses HashSet internally for O(1) duplicate checking.
         /// </summary>
         public void AddExistingItem<T>(T item) where T : class
         {
             var json = JsonUtility.ToJson(item);
-            if (!existingItemsJson.Contains(json))
+            var itemSet = GetExistingItemsSet();
+            
+            if (itemSet.Add(json))
+            {
                 existingItemsJson.Add(json);
+            }
         }
         
         /// <summary>
@@ -85,6 +106,7 @@ namespace GameLabs.Forge
         public void ClearExistingItems()
         {
             existingItemsJson.Clear();
+            _existingItemsSet = null;
         }
         
         /// <summary>

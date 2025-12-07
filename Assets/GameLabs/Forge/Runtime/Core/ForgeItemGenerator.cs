@@ -108,48 +108,29 @@ namespace GameLabs.Forge
             
             try
             {
-                // First, try to find ScriptableObject assets of type T
-                if (typeof(ScriptableObject).IsAssignableFrom(typeof(T)))
-                {
-                    var method = typeof(ForgeAssetDiscovery).GetMethod("DiscoverAssets");
-                    var genericMethod = method.MakeGenericMethod(typeof(T));
-                    var discoveredAssets = genericMethod.Invoke(null, new object[] { settings.existingAssetsSearchPath });
-                    
-                    if (discoveredAssets != null)
-                    {
-                        var assetList = discoveredAssets as System.Collections.IEnumerable;
-                        if (assetList != null)
-                        {
-                            foreach (var asset in assetList)
-                            {
-                                if (asset != null)
-                                {
-                                    var json = JsonUtility.ToJson(asset);
-                                    if (!string.IsNullOrEmpty(json) && !settings.existingItemsJson.Contains(json))
-                                    {
-                                        settings.existingItemsJson.Add(json);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                // Use a HashSet for efficient duplicate checking
+                var existingJsonSet = new System.Collections.Generic.HashSet<string>(settings.existingItemsJson);
+                int initialCount = existingJsonSet.Count;
                 
-                // Also check for ForgeGeneratedItemAsset instances of this type
-                var generatedAssets = ForgeAssetDiscovery.DiscoverGeneratedAssets(typeof(T).Name, settings.existingAssetsSearchPath);
-                var jsonStrings = ForgeAssetDiscovery.GeneratedAssetsToJsonStrings(generatedAssets);
+                // Discover assets using the new helper method
+                var jsonStrings = ForgeAssetDiscovery.DiscoverAssetsAsJson<T>(settings.existingAssetsSearchPath);
                 
                 foreach (var json in jsonStrings)
                 {
-                    if (!settings.existingItemsJson.Contains(json))
+                    if (!string.IsNullOrEmpty(json))
                     {
-                        settings.existingItemsJson.Add(json);
+                        existingJsonSet.Add(json);
                     }
                 }
                 
-                if (settings.existingItemsJson.Count > 0)
+                // Update the list with unique items
+                settings.existingItemsJson.Clear();
+                settings.existingItemsJson.AddRange(existingJsonSet);
+                
+                int addedCount = existingJsonSet.Count - initialCount;
+                if (addedCount > 0)
                 {
-                    ForgeLogger.Log($"Loaded {settings.existingItemsJson.Count} existing items into generation context");
+                    ForgeLogger.Log($"Loaded {addedCount} existing items into generation context (total: {existingJsonSet.Count})");
                 }
             }
             catch (Exception e)
