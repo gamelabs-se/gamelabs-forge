@@ -20,6 +20,9 @@ namespace GameLabs.Forge
             public int maxBatchSize;
             public float temperature;
             public string additionalRules;
+            public string existingAssetsSearchPath;
+            public string generatedAssetsBasePath;
+            public bool autoLoadExistingAssets;
         }
 
         private static ForgeConfigDto _cachedConfig;
@@ -56,7 +59,10 @@ namespace GameLabs.Forge
                 maxBatchSize = config.maxBatchSize > 0 ? config.maxBatchSize : 20,
                 temperature = config.temperature,
                 model = config.model ?? "gpt-4o-mini",
-                additionalRules = config.additionalRules ?? ""
+                additionalRules = config.additionalRules ?? "",
+                existingAssetsSearchPath = string.IsNullOrEmpty(config.existingAssetsSearchPath) ? "Resources" : config.existingAssetsSearchPath,
+                generatedAssetsBasePath = string.IsNullOrEmpty(config.generatedAssetsBasePath) ? "Resources/Generated" : config.generatedAssetsBasePath,
+                autoLoadExistingAssets = config.autoLoadExistingAssets
             };
         }
 

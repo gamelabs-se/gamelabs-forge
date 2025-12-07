@@ -14,8 +14,29 @@ namespace GameLabs.Forge.Editor
     /// </summary>
     public static class ForgeAssetExporter
     {
-        /// <summary>Base path for all generated assets.</summary>
-        public const string GeneratedBasePath = "Assets/GameLabs/Forge/Generated";
+        /// <summary>Default base path for all generated assets.</summary>
+        public const string DefaultGeneratedBasePath = "Assets/Resources/Generated";
+        
+        /// <summary>Legacy base path (kept for backwards compatibility).</summary>
+        [Obsolete("Use GetGeneratedBasePath() instead")]
+        public const string GeneratedBasePath = "Assets/Resources/Generated";
+        
+        /// <summary>Gets the base path for generated assets from settings or default.</summary>
+        public static string GetGeneratedBasePath()
+        {
+            var settings = ForgeConfig.GetGeneratorSettings();
+            if (settings != null && !string.IsNullOrEmpty(settings.generatedAssetsBasePath))
+            {
+                // Ensure it starts with "Assets/"
+                string path = settings.generatedAssetsBasePath;
+                if (!path.StartsWith("Assets/"))
+                {
+                    path = "Assets/" + path.TrimStart('/');
+                }
+                return path;
+            }
+            return DefaultGeneratedBasePath;
+        }
         
         /// <summary>
         /// Creates a ScriptableObject asset from a generated item.
@@ -53,9 +74,10 @@ namespace GameLabs.Forge.Editor
             
             try
             {
-                // Determine folder path
+                // Determine folder path using configurable base path
+                string basePath = GetGeneratedBasePath();
                 string typeFolderName = customFolder ?? typeof(T).Name;
-                string folderPath = Path.Combine(GeneratedBasePath, typeFolderName);
+                string folderPath = Path.Combine(basePath, typeFolderName);
                 
                 // Ensure directory exists
                 EnsureDirectoryExists(folderPath);
@@ -129,7 +151,7 @@ namespace GameLabs.Forge.Editor
                 AssetDatabase.Refresh();
             }
             
-            ForgeLogger.Log($"Created {createdAssets.Count} assets in {Path.Combine(GeneratedBasePath, customFolder ?? typeof(T).Name)}");
+            ForgeLogger.Log($"Created {createdAssets.Count} assets in {Path.Combine(GetGeneratedBasePath(), customFolder ?? typeof(T).Name)}");
             return createdAssets;
         }
         
@@ -140,7 +162,7 @@ namespace GameLabs.Forge.Editor
         /// <returns>List of loaded assets.</returns>
         public static List<ForgeGeneratedItemAsset> LoadAssets(string customFolder)
         {
-            string folderPath = Path.Combine(GeneratedBasePath, customFolder);
+            string folderPath = Path.Combine(GetGeneratedBasePath(), customFolder);
             
             var assets = new List<ForgeGeneratedItemAsset>();
             
@@ -185,7 +207,7 @@ namespace GameLabs.Forge.Editor
         public static string GetTypeFolderPath<T>(string customFolder = null) where T : class
         {
             string typeFolderName = customFolder ?? typeof(T).Name;
-            return Path.Combine(GeneratedBasePath, typeFolderName);
+            return Path.Combine(GetGeneratedBasePath(), typeFolderName);
         }
         
         /// <summary>
@@ -214,7 +236,7 @@ namespace GameLabs.Forge.Editor
         public static int ClearTypeAssets<T>(string customFolder = null) where T : class
         {
             string typeFolderName = customFolder ?? typeof(T).Name;
-            string folderPath = Path.Combine(GeneratedBasePath, typeFolderName);
+            string folderPath = Path.Combine(GetGeneratedBasePath(), typeFolderName);
             
             if (!Directory.Exists(folderPath))
             {
@@ -243,7 +265,7 @@ namespace GameLabs.Forge.Editor
         public static int GetAssetCount<T>(string customFolder = null) where T : class
         {
             string typeFolderName = customFolder ?? typeof(T).Name;
-            string folderPath = Path.Combine(GeneratedBasePath, typeFolderName);
+            string folderPath = Path.Combine(GetGeneratedBasePath(), typeFolderName);
             
             if (!Directory.Exists(folderPath))
             {

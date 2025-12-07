@@ -43,6 +43,16 @@ namespace GameLabs.Forge
         [TextArea(2, 4)]
         public string additionalRules = "";
         
+        [Header("Asset Paths")]
+        [Tooltip("Base path to search for existing assets (relative to Assets folder). Default: 'Resources'")]
+        public string existingAssetsSearchPath = "Resources";
+        
+        [Tooltip("Base path for generated assets (relative to Assets folder). Default: 'Resources/Generated'")]
+        public string generatedAssetsBasePath = "Resources/Generated";
+        
+        [Tooltip("If true, automatically looks for existing assets of the same type and adds them to context.")]
+        public bool autoLoadExistingAssets = true;
+        
         /// <summary>
         /// Serialized list of existing items as JSON strings.
         /// Used to provide context to the AI about what items already exist.

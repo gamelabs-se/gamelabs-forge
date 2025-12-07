@@ -245,7 +245,7 @@ namespace GameLabs.Forge.Editor
                     : availableTypes[selectedTypeIndex];
                     
                 var folderAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(
-                    Path.Combine(ForgeAssetExporter.GeneratedBasePath, folder));
+                    Path.Combine(ForgeAssetExporter.GetGeneratedBasePath(), folder));
                 if (folderAsset != null)
                 {
                     EditorGUIUtility.PingObject(folderAsset);

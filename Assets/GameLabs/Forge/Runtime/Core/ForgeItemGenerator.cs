@@ -86,7 +86,76 @@ namespace GameLabs.Forge
                 return;
             }
             
+            // Auto-load existing assets if enabled
+            if (settings.autoLoadExistingAssets)
+            {
+                LoadExistingAssetsIntoContext<T>();
+            }
+            
             StartCoroutine(GenerateCoroutine(request, callback));
+        }
+        
+        /// <summary>
+        /// Loads existing assets of the specified type into the generation context.
+        /// This helps the AI generate items that complement existing ones.
+        /// </summary>
+        public void LoadExistingAssetsIntoContext<T>() where T : class
+        {
+            if (string.IsNullOrEmpty(settings.existingAssetsSearchPath))
+            {
+                return;
+            }
+            
+            try
+            {
+                // First, try to find ScriptableObject assets of type T
+                if (typeof(ScriptableObject).IsAssignableFrom(typeof(T)))
+                {
+                    var method = typeof(ForgeAssetDiscovery).GetMethod("DiscoverAssets");
+                    var genericMethod = method.MakeGenericMethod(typeof(T));
+                    var discoveredAssets = genericMethod.Invoke(null, new object[] { settings.existingAssetsSearchPath });
+                    
+                    if (discoveredAssets != null)
+                    {
+                        var assetList = discoveredAssets as System.Collections.IEnumerable;
+                        if (assetList != null)
+                        {
+                            foreach (var asset in assetList)
+                            {
+                                if (asset != null)
+                                {
+                                    var json = JsonUtility.ToJson(asset);
+                                    if (!string.IsNullOrEmpty(json) && !settings.existingItemsJson.Contains(json))
+                                    {
+                                        settings.existingItemsJson.Add(json);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Also check for ForgeGeneratedItemAsset instances of this type
+                var generatedAssets = ForgeAssetDiscovery.DiscoverGeneratedAssets(typeof(T).Name, settings.existingAssetsSearchPath);
+                var jsonStrings = ForgeAssetDiscovery.GeneratedAssetsToJsonStrings(generatedAssets);
+                
+                foreach (var json in jsonStrings)
+                {
+                    if (!settings.existingItemsJson.Contains(json))
+                    {
+                        settings.existingItemsJson.Add(json);
+                    }
+                }
+                
+                if (settings.existingItemsJson.Count > 0)
+                {
+                    ForgeLogger.Log($"Loaded {settings.existingItemsJson.Count} existing items into generation context");
+                }
+            }
+            catch (Exception e)
+            {
+                ForgeLogger.Warn($"Failed to load existing assets into context: {e.Message}");
+            }
         }
         
         private IEnumerator GenerateCoroutine<T>(ForgeGenerationRequest request, Action<ForgeGenerationResult<T>> callback) where T : class, new()
