@@ -79,6 +79,10 @@ namespace GameLabs.Forge.Editor
         {
             EditorGUILayout.Space(10);
             
+            // Header with settings button
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            
             var headerStyle = new GUIStyle(EditorStyles.boldLabel)
             {
                 fontSize = 18,
@@ -86,6 +90,16 @@ namespace GameLabs.Forge.Editor
             };
             
             EditorGUILayout.LabelField("🔥 Forge - AI Item Generator", headerStyle);
+            
+            GUILayout.FlexibleSpace();
+            
+            // Settings cogwheel button
+            if (GUILayout.Button("⚙️", GUILayout.Width(30), GUILayout.Height(25)))
+            {
+                ForgeSettingsWindow.OpenWindow();
+            }
+            
+            EditorGUILayout.EndHorizontal();
             
             var subtitleStyle = new GUIStyle(EditorStyles.centeredGreyMiniLabel)
             {
@@ -269,6 +283,20 @@ namespace GameLabs.Forge.Editor
             Repaint();
             
             var generator = ForgeTemplateGenerator.Instance;
+            
+            // Add discovered items to the generator settings before generation
+            if (discoveredItemsJson != null && discoveredItemsJson.Count > 0)
+            {
+                generator.Settings.existingItemsJson.Clear();
+                foreach (var json in discoveredItemsJson)
+                {
+                    if (!string.IsNullOrEmpty(json))
+                    {
+                        generator.Settings.existingItemsJson.Add(json);
+                    }
+                }
+                ForgeLogger.Log($"Added {discoveredItemsJson.Count} existing items to generation context");
+            }
             
             generator.GenerateFromTemplate(template, itemCount, OnGenerationComplete, additionalContext);
         }
