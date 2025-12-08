@@ -22,6 +22,10 @@ namespace GameLabs.Forge.Editor
         private bool useCustomFolder = false;
         private bool autoSaveAsAsset = true;
         
+        // Existing items discovery
+        private int discoveredItemsCount = 0;
+        private List<string> discoveredItemsJson = new List<string>();
+        
         // Generation state
         private bool isGenerating = false;
         private string statusMessage = "";
@@ -30,10 +34,10 @@ namespace GameLabs.Forge.Editor
         // Results
         private List<ScriptableObject> lastGeneratedItems = new List<ScriptableObject>();
         
-        [MenuItem("GameLabs/Forge/AI Template Generator", priority = 5)]
+        [MenuItem("GameLabs/Forge/AI Item Generator", priority = 5)]
         public static void OpenWindow()
         {
-            var window = GetWindow<ForgeTemplateWindow>("Forge - AI Template Generator");
+            var window = GetWindow<ForgeTemplateWindow>("Forge - AI Item Generator");
             window.minSize = new Vector2(450, 550);
         }
         
@@ -45,6 +49,9 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.Space(10);
             
             DrawTemplateSelection();
+            EditorGUILayout.Space(10);
+            
+            DrawExistingItemsSection();
             EditorGUILayout.Space(10);
             
             DrawGenerationOptions();
@@ -78,7 +85,7 @@ namespace GameLabs.Forge.Editor
                 alignment = TextAnchor.MiddleCenter
             };
             
-            EditorGUILayout.LabelField("🔥 Forge - AI Template Generator", headerStyle);
+            EditorGUILayout.LabelField("🔥 Forge - AI Item Generator", headerStyle);
             
             var subtitleStyle = new GUIStyle(EditorStyles.centeredGreyMiniLabel)
             {
@@ -141,7 +148,7 @@ namespace GameLabs.Forge.Editor
             
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Additional Context (Optional)");
-            additionalContext = EditorGUILayout.TextArea(additionalContext, GUILayout.Height(60));
+            additionalContext = EditorGUILayout.TextArea(additionalContext, GUILayout.Height(60), GUILayout.ExpandHeight(false));
             
             EditorGUILayout.HelpBox(
                 "Add specific instructions like 'Generate fire-themed items' or 'Items for a level 50 character'",
@@ -402,12 +409,137 @@ namespace GameLabs.Forge.Editor
             return fileName;
         }
         
+        private void DrawExistingItemsSection()
+        {
+            EditorGUILayout.LabelField("Existing Items Context", EditorStyles.boldLabel);
+            
+            var settings = ForgeConfig.GetGeneratorSettings();
+            
+            EditorGUILayout.BeginHorizontal();
+            
+            // Button to find existing objects
+            if (GUILayout.Button($"🔍 Find Existing Items", GUILayout.Height(30)))
+            {
+                FindExistingItems();
+            }
+            
+            // Show count if discovered
+            if (discoveredItemsCount > 0)
+            {
+                var countStyle = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    normal = { textColor = new Color(0.3f, 0.7f, 0.3f) }
+                };
+                EditorGUILayout.LabelField($"Found: {discoveredItemsCount}", countStyle, GUILayout.Width(80));
+                
+                // Button to view
+                if (GUILayout.Button("View", GUILayout.Width(60), GUILayout.Height(30)))
+                {
+                    ShowExistingItemsPopup();
+                }
+            }
+            
+            EditorGUILayout.EndHorizontal();
+            
+            EditorGUILayout.Space(3);
+            EditorGUILayout.HelpBox(
+                $"Search path: {settings?.existingAssetsSearchPath ?? "Resources"}\n" +
+                "Discovered items will be used as context for AI generation.",
+                MessageType.Info);
+        }
+        
+        private void FindExistingItems()
+        {
+            if (template == null)
+            {
+                EditorUtility.DisplayDialog("Error", "Please select a template first.", "OK");
+                return;
+            }
+            
+            var itemType = template.GetType();
+            var settings = ForgeConfig.GetGeneratorSettings();
+            string searchPath = settings?.existingAssetsSearchPath ?? "Resources";
+            
+            // Use reflection to call the generic method
+            var method = typeof(ForgeAssetDiscovery).GetMethod(nameof(ForgeAssetDiscovery.DiscoverAssetsAsJson), 
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            var genericMethod = method.MakeGenericMethod(itemType);
+            var result = genericMethod.Invoke(null, new object[] { searchPath }) as List<string>;
+            
+            discoveredItemsJson = result ?? new List<string>();
+            discoveredItemsCount = discoveredItemsJson.Count;
+            
+            if (discoveredItemsCount == 0)
+            {
+                EditorUtility.DisplayDialog("Existing Items", 
+                    $"No existing {itemType.Name} items found in '{searchPath}'.\n\n" +
+                    "Make sure you have ScriptableObject assets of this type in the search path.", 
+                    "OK");
+            }
+            else
+            {
+                ForgeLogger.Log($"Discovered {discoveredItemsCount} existing {itemType.Name} items");
+            }
+            
+            Repaint();
+        }
+        
+        private void ShowExistingItemsPopup()
+        {
+            var popup = ScriptableObject.CreateInstance<ExistingItemsPopup>();
+            popup.titleContent = new GUIContent($"Existing Items ({discoveredItemsCount})");
+            popup.itemsJson = new List<string>(discoveredItemsJson);
+            popup.minSize = new Vector2(400, 500);
+            popup.maxSize = new Vector2(600, 800);
+            popup.ShowUtility();
+        }
+        
         private void DrawSeparator()
         {
             EditorGUILayout.Space(5);
             var rect = EditorGUILayout.GetControlRect(false, 1);
             EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.5f));
             EditorGUILayout.Space(5);
+        }
+    }
+    
+    /// <summary>
+    /// Popup window to display discovered existing items.
+    /// </summary>
+    public class ExistingItemsPopup : EditorWindow
+    {
+        public List<string> itemsJson = new List<string>();
+        private Vector2 scrollPos;
+        
+        private void OnGUI()
+        {
+            EditorGUILayout.Space(10);
+            
+            EditorGUILayout.LabelField("Discovered Items", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "These items will be used as context for AI generation to prevent duplicates and guide naming conventions.",
+                MessageType.Info);
+            
+            EditorGUILayout.Space(10);
+            
+            scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+            
+            foreach (var json in itemsJson)
+            {
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.TextArea(json, GUILayout.ExpandHeight(true));
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.Space(5);
+            }
+            
+            EditorGUILayout.EndScrollView();
+            
+            EditorGUILayout.Space(10);
+            
+            if (GUILayout.Button("Close", GUILayout.Height(30)))
+            {
+                Close();
+            }
         }
     }
 }
