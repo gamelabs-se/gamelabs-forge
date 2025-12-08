@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f3e4b90149f4198949bedc96e1f0b47, type: 3}
+  m_Name: Guardian_s Chain Vest_20251208_205438_6
+  m_EditorClassIdentifier: GameLabs.Forge.Demo::Armor
+  name: Guardian's Chain Vest
+  slot: 1
+  defense: 70
+  weight: 10
+  value: 3000
+  durability: 500
+  armorType: 2
+  rarity: 3
+  bonusHealth: 20
+  speedModifier: 0.95
