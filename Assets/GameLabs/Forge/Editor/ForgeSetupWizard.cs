@@ -34,6 +34,12 @@ namespace GameLabs.Forge.Editor
         private float temperature = 0.8f;
         private string additionalRules = "";
         
+        // Step 4: Asset Path Settings
+        private string existingAssetsSearchPath = "Resources";
+        private string generatedAssetsBasePath = "Resources/Generated";
+        private bool autoLoadExistingAssets = true;
+        private ExistingItemsIntent intent = ExistingItemsIntent.PreventDuplicatesAndRefineNaming;
+        
         // Validation
         private bool apiKeyValid = false;
         private string validationMessage = "";
@@ -80,6 +86,10 @@ namespace GameLabs.Forge.Editor
                         maxBatchSize = config.maxBatchSize > 0 ? config.maxBatchSize : 20;
                         temperature = config.temperature;
                         additionalRules = config.additionalRules ?? "";
+                        existingAssetsSearchPath = string.IsNullOrEmpty(config.existingAssetsSearchPath) ? "Resources" : config.existingAssetsSearchPath;
+                        generatedAssetsBasePath = string.IsNullOrEmpty(config.generatedAssetsBasePath) ? "Resources/Generated" : config.generatedAssetsBasePath;
+                        autoLoadExistingAssets = config.autoLoadExistingAssets;
+                        intent = (ExistingItemsIntent)config.intent;
                         
                         // Update indices
                         selectedModelIndex = Array.IndexOf(availableModels, model);
@@ -114,7 +124,11 @@ namespace GameLabs.Forge.Editor
                     defaultBatchSize = defaultBatchSize,
                     maxBatchSize = maxBatchSize,
                     temperature = temperature,
-                    additionalRules = additionalRules
+                    additionalRules = additionalRules,
+                    existingAssetsSearchPath = existingAssetsSearchPath,
+                    generatedAssetsBasePath = generatedAssetsBasePath,
+                    autoLoadExistingAssets = autoLoadExistingAssets,
+                    intent = (int)intent
                 };
                 
                 var json = JsonUtility.ToJson(config, true);
@@ -342,6 +356,40 @@ namespace GameLabs.Forge.Editor
             
             EditorGUILayout.Space(15);
             
+            EditorGUILayout.LabelField("Asset Paths", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Configure where Forge searches for existing assets and saves generated ones.\n" +
+                "Paths are relative to the Assets folder and work across all platforms.",
+                MessageType.Info);
+            
+            existingAssetsSearchPath = EditorGUILayout.TextField("Search Path", existingAssetsSearchPath);
+            generatedAssetsBasePath = EditorGUILayout.TextField("Generated Path", generatedAssetsBasePath);
+            autoLoadExistingAssets = EditorGUILayout.Toggle("Auto-Load Existing", autoLoadExistingAssets);
+            
+            EditorGUILayout.Space(5);
+            EditorGUILayout.LabelField("Existing Items Intent", EditorStyles.boldLabel);
+            intent = (ExistingItemsIntent)EditorGUILayout.EnumPopup("Usage Intent", intent);
+            
+            string intentDesc = intent switch
+            {
+                ExistingItemsIntent.PreventDuplicates => "AI will generate unique items that don't duplicate existing ones",
+                ExistingItemsIntent.RefineNaming => "AI will use existing items as examples for naming conventions",
+                ExistingItemsIntent.PreventDuplicatesAndRefineNaming => "AI will both prevent duplicates AND follow naming conventions",
+                _ => ""
+            };
+            if (!string.IsNullOrEmpty(intentDesc))
+            {
+                EditorGUILayout.HelpBox(intentDesc, MessageType.None);
+            }
+            
+            EditorGUILayout.Space(5);
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.LabelField($"Full Search: Assets/{existingAssetsSearchPath}", EditorStyles.miniLabel);
+            EditorGUILayout.LabelField($"Full Generated: Assets/{generatedAssetsBasePath}/{{TypeName}}", EditorStyles.miniLabel);
+            EditorGUILayout.EndVertical();
+            
+            EditorGUILayout.Space(15);
+            
             DrawCostEstimate();
         }
         
@@ -383,6 +431,7 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.LabelField($"Audience: {targetAudience}");
             EditorGUILayout.LabelField($"Default Batch Size: {defaultBatchSize}");
             EditorGUILayout.LabelField($"Temperature: {temperature:F1}");
+            EditorGUILayout.LabelField($"Generated Path: Assets/{generatedAssetsBasePath}");
             EditorGUILayout.LabelField($"API Key: {(string.IsNullOrEmpty(apiKey) ? "Not configured" : "✓ Configured")}");
             EditorGUILayout.EndVertical();
             
@@ -567,6 +616,10 @@ namespace GameLabs.Forge.Editor
             public int maxBatchSize;
             public float temperature;
             public string additionalRules;
+            public string existingAssetsSearchPath;
+            public string generatedAssetsBasePath;
+            public bool autoLoadExistingAssets;
+            public int intent; // ExistingItemsIntent enum value
         }
     }
 }

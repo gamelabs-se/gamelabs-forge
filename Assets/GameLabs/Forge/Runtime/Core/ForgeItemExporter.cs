@@ -11,14 +11,32 @@ namespace GameLabs.Forge
     /// </summary>
     public static class ForgeItemExporter
     {
-        private const string DefaultExportPath = "Assets/GameLabs/Forge/Generated";
+        private const string DefaultExportPath = "Assets/Resources/Generated";
+        
+        /// <summary>
+        /// Gets the export path from settings or uses default.
+        /// </summary>
+        private static string GetExportPath()
+        {
+            var settings = ForgeConfig.GetGeneratorSettings();
+            if (settings != null && !string.IsNullOrEmpty(settings.generatedAssetsBasePath))
+            {
+                string path = settings.generatedAssetsBasePath;
+                if (!path.StartsWith("Assets/"))
+                {
+                    path = "Assets/" + path.TrimStart('/');
+                }
+                return path;
+            }
+            return DefaultExportPath;
+        }
         
         /// <summary>
         /// Exports a single item to a JSON file.
         /// </summary>
         public static string ExportItem<T>(T item, string filename = null, string path = null) where T : class
         {
-            path ??= DefaultExportPath;
+            path ??= GetExportPath();
             filename ??= $"{typeof(T).Name}_{DateTime.Now:yyyyMMdd_HHmmss}.json";
             
             EnsureDirectory(path);
@@ -41,7 +59,7 @@ namespace GameLabs.Forge
         /// </summary>
         public static string ExportItems<T>(IEnumerable<T> items, string filename = null, string path = null) where T : class
         {
-            path ??= DefaultExportPath;
+            path ??= GetExportPath();
             filename ??= $"{typeof(T).Name}s_{DateTime.Now:yyyyMMdd_HHmmss}.json";
             
             EnsureDirectory(path);
@@ -155,7 +173,7 @@ namespace GameLabs.Forge
         /// </summary>
         public static string GetDefaultExportPath()
         {
-            return DefaultExportPath;
+            return GetExportPath();
         }
         
         private static void EnsureDirectory(string path)

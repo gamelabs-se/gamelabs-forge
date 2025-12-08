@@ -148,6 +148,14 @@ CRITICAL RULES:
             sb.AppendLine(template);
             sb.AppendLine();
             
+            // Existing items context (CRITICAL for preventing duplicates)
+            if (settings.existingItemsJson != null && settings.existingItemsJson.Count > 0)
+            {
+                sb.AppendLine("=== EXISTING ITEMS ===");
+                sb.AppendLine(settings.GetExistingItemsContext());
+                sb.AppendLine();
+            }
+            
             // Additional context from user (if provided)
             if (!string.IsNullOrEmpty(additionalContext))
             {
@@ -174,6 +182,13 @@ CRITICAL RULES:
             sb.AppendLine("- For enum fields, use ONLY the allowed values specified in the schema.");
             sb.AppendLine("- Respect all [Range] constraints for numeric fields.");
             sb.AppendLine("- Use the field descriptions as guidance for appropriate values.");
+            
+            // Add explicit duplicate prevention instruction if existing items are present
+            if (settings.existingItemsJson != null && settings.existingItemsJson.Count > 0)
+            {
+                sb.AppendLine("- DO NOT duplicate any items from the EXISTING ITEMS list above.");
+                sb.AppendLine("- Generate completely NEW and UNIQUE items that are different from existing ones.");
+            }
             
             return sb.ToString();
         }

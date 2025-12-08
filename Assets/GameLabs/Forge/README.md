@@ -165,7 +165,7 @@ The most powerful way to use generated items is to save them as ScriptableObject
 5. Enable "Create Typed Assets" for real ScriptableObjects (if available)
 6. Click **🔥 Generate Items**
 
-Items are automatically saved in `Assets/GameLabs/Forge/Generated/{TypeName}/`
+Items are automatically saved in `Assets/Resources/Generated/{TypeName}/` (configurable)
 
 ### 7. ⭐ Typed Assets - Ready-to-Use ScriptableObjects
 
@@ -342,6 +342,31 @@ public class MeleeWeapon : ForgeItemDefinition
 
 Settings are stored in `Assets/GameLabs/Forge/Settings/forge.config.json` (gitignored by default).
 
+### Asset Path Configuration
+
+Forge now supports configurable paths for asset discovery and generation:
+
+- **Existing Assets Search Path**: Define where Forge looks for existing ScriptableObjects to use as context (default: `Resources`)
+- **Generated Assets Base Path**: Define where generated assets are saved (default: `Resources/Generated`)
+- **Auto-Load Existing Assets**: When enabled, Forge automatically discovers existing assets of the same type and uses them as context for generation
+
+**Cross-Platform Support**: All paths use Unity's built-in path handling (`Path.Combine`, `Application.dataPath`) ensuring compatibility across Windows, macOS, Linux, iOS, Android, Xbox, and other platforms.
+
+#### Example Configuration:
+
+```json
+{
+  "openaiApiKey": "your-api-key",
+  "gameName": "My Game",
+  "gameDescription": "A fantasy RPG",
+  "existingAssetsSearchPath": "Resources/Items",
+  "generatedAssetsBasePath": "Resources/Generated/Items",
+  "autoLoadExistingAssets": true
+}
+```
+
+You can also configure these in the Unity Inspector when selecting a ForgeItemGenerator component.
+
 ### Generator Settings
 
 | Setting | Description | Default |
@@ -353,6 +378,9 @@ Settings are stored in `Assets/GameLabs/Forge/Settings/forge.config.json` (gitig
 | `maxBatchSize` | Maximum items per request | 20 |
 | `temperature` | AI creativity (0-2, higher = more creative) | 0.8 |
 | `model` | OpenAI model to use | "gpt-4o-mini" |
+| `existingAssetsSearchPath` | Where to search for existing assets | "Resources" |
+| `generatedAssetsBasePath` | Where to save generated assets | "Resources/Generated" |
+| `autoLoadExistingAssets` | Auto-load existing assets into context | true |
 
 ## API Reference
 
@@ -528,10 +556,12 @@ Assets/GameLabs/Forge/
 │   ├── ForgeGeneratorWindow.cs # Item generation window
 │   ├── ForgeAssetExporter.cs   # Asset creation (typed + JSON)
 │   └── *Editor.cs files
-├── Generated/              # Saved ScriptableObject assets
-│   ├── MeleeWeaponAsset/   # Typed assets (organized by asset type)
-│   ├── MeleeWeapon/        # JSON assets (organized by definition type)
-│   └── ...
+├── Generated/              # Legacy location for generated assets
+Resources/                  # Default location for generated assets (NEW!)
+└── Generated/              # Generated ScriptableObject assets (configurable)
+    ├── MeleeWeaponAsset/   # Typed assets (organized by asset type)
+    ├── MeleeWeapon/        # JSON assets (organized by definition type)
+    └── ...
 ├── Runtime/
 │   ├── Core/               # Main system
 │   │   ├── ForgeItemGenerator.cs

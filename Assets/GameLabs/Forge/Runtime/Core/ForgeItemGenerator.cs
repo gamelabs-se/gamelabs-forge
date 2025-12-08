@@ -86,7 +86,57 @@ namespace GameLabs.Forge
                 return;
             }
             
+            // Auto-load existing assets if enabled
+            if (settings.autoLoadExistingAssets)
+            {
+                LoadExistingAssetsIntoContext<T>();
+            }
+            
             StartCoroutine(GenerateCoroutine(request, callback));
+        }
+        
+        /// <summary>
+        /// Loads existing assets of the specified type into the generation context.
+        /// This helps the AI generate items that complement existing ones.
+        /// </summary>
+        public void LoadExistingAssetsIntoContext<T>() where T : class
+        {
+            if (string.IsNullOrEmpty(settings.existingAssetsSearchPath))
+            {
+                return;
+            }
+            
+            try
+            {
+                // Use a HashSet for efficient duplicate checking
+                var existingJsonSet = new System.Collections.Generic.HashSet<string>(settings.existingItemsJson);
+                int initialCount = existingJsonSet.Count;
+                
+                // Discover assets using the new helper method
+                var jsonStrings = ForgeAssetDiscovery.DiscoverAssetsAsJson<T>(settings.existingAssetsSearchPath);
+                
+                foreach (var json in jsonStrings)
+                {
+                    if (!string.IsNullOrEmpty(json))
+                    {
+                        existingJsonSet.Add(json);
+                    }
+                }
+                
+                // Update the list with unique items
+                settings.existingItemsJson.Clear();
+                settings.existingItemsJson.AddRange(existingJsonSet);
+                
+                int addedCount = existingJsonSet.Count - initialCount;
+                if (addedCount > 0)
+                {
+                    ForgeLogger.Log($"Loaded {addedCount} existing items into generation context (total: {existingJsonSet.Count})");
+                }
+            }
+            catch (Exception e)
+            {
+                ForgeLogger.Warn($"Failed to load existing assets into context: {e.Message}");
+            }
         }
         
         private IEnumerator GenerateCoroutine<T>(ForgeGenerationRequest request, Action<ForgeGenerationResult<T>> callback) where T : class, new()
