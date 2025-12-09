@@ -2,12 +2,14 @@ using System.Collections.Generic;
 using UnityEngine;
 using GameLabs.Forge;
 
-/// <summary>
-/// Demo controller showcasing ForgeItemGenerator usage.
-/// Demonstrates single item generation, batch generation, and using existing items as context.
-/// For saving as ScriptableObject assets, use the ForgeDemoControllerEditor or the Generator Window.
-/// </summary>
-public class ForgeDemoController : MonoBehaviour
+namespace GameLabs.Forge.Demo
+{
+    /// <summary>
+    /// Demo controller showcasing ForgeItemGenerator usage.
+    /// Demonstrates single item generation, batch generation, and using existing items as context.
+    /// For saving as ScriptableObject assets, use the ForgeDemoControllerEditor or the Generator Window.
+    /// </summary>
+    public class ForgeDemoController : MonoBehaviour
 {
     [Header("Generation Settings")]
     [Tooltip("Number of items to generate in batch mode")]
@@ -290,5 +292,6 @@ public class ForgeDemoController : MonoBehaviour
         ExportAllConsumables();
         ExportAllCollectibles();
         ExportAllArmor();
+    }
     }
 }

@@ -2,12 +2,14 @@ using System;
 using UnityEngine;
 using GameLabs.Forge;
 
-/// <summary>
-/// Example consumable item for Forge demo.
-/// Use this as a template in the Forge Template Generator.
-/// </summary>
-[CreateAssetMenu(fileName = "New Consumable", menuName = "GameLabs/Forge Demo/Consumable")]
-public class Consumable : ScriptableObject
+namespace GameLabs.Forge.Demo
+{
+    /// <summary>
+    /// Example consumable item for Forge demo.
+    /// Use this as a template in the Forge Template Generator.
+    /// </summary>
+    [CreateAssetMenu(fileName = "New Consumable", menuName = "GameLabs/Forge Demo/Consumable")]
+    public class Consumable : ScriptableObject
 {
     [Tooltip("Name of the consumable")]
     public string name;
@@ -32,19 +34,20 @@ public class Consumable : ScriptableObject
     
     [Tooltip("Rarity tier")]
     public ItemRarity rarity;
-}
+    }
 
-/// <summary>
-/// Types of consumable effects.
-/// </summary>
-public enum ConsumableEffect
-{
-    Heal,
-    RestoreMana,
-    BuffStrength,
-    BuffSpeed,
-    BuffDefense,
-    Poison,
-    Cure,
-    Resurrect
+    /// <summary>
+    /// Types of consumable effects.
+    /// </summary>
+    public enum ConsumableEffect
+    {
+        Heal,
+        RestoreMana,
+        BuffStrength,
+        BuffSpeed,
+        BuffDefense,
+        Poison,
+        Cure,
+        Resurrect
+    }
 }
