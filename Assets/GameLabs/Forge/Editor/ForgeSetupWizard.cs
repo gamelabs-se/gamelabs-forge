@@ -48,7 +48,8 @@ namespace GameLabs.Forge.Editor
         public static void Open()
         {
             var window = GetWindow<ForgeSetupWizard>("Forge Setup Wizard");
-            window.minSize = new Vector2(500, 600);
+            window.minSize = new Vector2(550, 650);
+            window.maxSize = new Vector2(700, 900);
             window.LoadSavedSettings();
         }
         
@@ -56,7 +57,8 @@ namespace GameLabs.Forge.Editor
         public static void OpenQuickSettings()
         {
             var window = GetWindow<ForgeSetupWizard>("Forge Setup Wizard");
-            window.minSize = new Vector2(500, 600);
+            window.minSize = new Vector2(550, 650);
+            window.maxSize = new Vector2(700, 900);
             window.LoadSavedSettings();
             window.currentStep = 0; // Go to API key step
         }
@@ -245,12 +247,12 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.HelpBox(
                 "Enter your OpenAI API key. This is required for item generation.\n" +
                 "Get your API key from: https://platform.openai.com/api-keys",
-                MessageType.Info);
+                MessageType.Info, true);
             
             EditorGUILayout.Space(5);
             
             EditorGUI.BeginChangeCheck();
-            apiKey = EditorGUILayout.PasswordField("API Key", apiKey);
+            apiKey = EditorGUILayout.PasswordField("API Key", apiKey, GUILayout.MaxWidth(650));
             if (EditorGUI.EndChangeCheck())
             {
                 apiKeyValid = !string.IsNullOrEmpty(apiKey) && apiKey.StartsWith("sk-");
@@ -260,11 +262,11 @@ namespace GameLabs.Forge.Editor
             {
                 if (apiKey.StartsWith("sk-"))
                 {
-                    EditorGUILayout.HelpBox("✓ API key format looks valid", MessageType.None);
+                    EditorGUILayout.HelpBox("✓ API key format looks valid", MessageType.None, true);
                 }
                 else
                 {
-                    EditorGUILayout.HelpBox("⚠ API key should start with 'sk-'", MessageType.Warning);
+                    EditorGUILayout.HelpBox("⚠ API key should start with 'sk-'", MessageType.Warning, true);
                 }
             }
             
@@ -277,9 +279,9 @@ namespace GameLabs.Forge.Editor
                 "• gpt-4o: Higher quality, more expensive\n" +
                 "• gpt-4-turbo: Legacy high-quality model\n" +
                 "• gpt-3.5-turbo: Fastest, lowest cost",
-                MessageType.Info);
+                MessageType.Info, true);
             
-            selectedModelIndex = EditorGUILayout.Popup("Model", selectedModelIndex, availableModels);
+            selectedModelIndex = EditorGUILayout.Popup("Model", selectedModelIndex, availableModels, GUILayout.MaxWidth(650));
             model = availableModels[selectedModelIndex];
         }
         
@@ -291,31 +293,31 @@ namespace GameLabs.Forge.Editor
             
             EditorGUILayout.LabelField("Basic Information", EditorStyles.boldLabel);
             
-            gameName = EditorGUILayout.TextField("Game Name", gameName);
+            gameName = EditorGUILayout.TextField("Game Name", gameName, GUILayout.MaxWidth(650));
             
             EditorGUILayout.Space(5);
-            EditorGUILayout.LabelField("Game Description");
-            gameDescription = EditorGUILayout.TextArea(gameDescription, GUILayout.Height(80));
+            EditorGUILayout.LabelField("Game Description", EditorStyles.miniLabel);
+            gameDescription = EditorGUILayout.TextArea(gameDescription, GUILayout.Height(80), GUILayout.MaxWidth(650));
             
             EditorGUILayout.HelpBox(
                 "Describe your game's setting, theme, art style, and any unique characteristics. " +
                 "This helps the AI generate items that fit your game.",
-                MessageType.Info);
+                MessageType.Info, true);
             
             EditorGUILayout.Space(10);
             
             EditorGUILayout.LabelField("Target Audience", EditorStyles.boldLabel);
-            selectedAudienceIndex = EditorGUILayout.Popup("Audience", selectedAudienceIndex, audienceOptions);
+            selectedAudienceIndex = EditorGUILayout.Popup("Audience", selectedAudienceIndex, audienceOptions, GUILayout.MaxWidth(650));
             targetAudience = audienceOptions[selectedAudienceIndex];
             
             EditorGUILayout.Space(10);
             
             EditorGUILayout.LabelField("Additional Rules (Optional)", EditorStyles.boldLabel);
-            additionalRules = EditorGUILayout.TextArea(additionalRules, GUILayout.Height(60));
+            additionalRules = EditorGUILayout.TextArea(additionalRules, GUILayout.Height(60), GUILayout.MaxWidth(650));
             EditorGUILayout.HelpBox(
                 "Add any specific rules or guidelines for item generation.\n" +
                 "Example: 'All weapons should have unique names' or 'Avoid generic fantasy tropes'",
-                MessageType.Info);
+                MessageType.Info, true);
         }
         
         private void DrawGenerationSettingsStep()
@@ -326,8 +328,15 @@ namespace GameLabs.Forge.Editor
             
             EditorGUILayout.LabelField("Batch Settings", EditorStyles.boldLabel);
             
-            defaultBatchSize = EditorGUILayout.IntSlider("Default Batch Size", defaultBatchSize, 1, 50);
-            maxBatchSize = EditorGUILayout.IntSlider("Max Batch Size", maxBatchSize, 1, 100);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Default Batch Size", GUILayout.Width(150));
+            defaultBatchSize = EditorGUILayout.IntSlider(defaultBatchSize, 1, 50, GUILayout.MaxWidth(480));
+            EditorGUILayout.EndHorizontal();
+            
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Max Batch Size", GUILayout.Width(150));
+            maxBatchSize = EditorGUILayout.IntSlider(maxBatchSize, 1, 100, GUILayout.MaxWidth(480));
+            EditorGUILayout.EndHorizontal();
             
             if (maxBatchSize < defaultBatchSize)
             {
@@ -337,12 +346,16 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.HelpBox(
                 "Batch size determines how many items are generated per request.\n" +
                 "Larger batches are more cost-effective but may hit token limits.",
-                MessageType.Info);
+                MessageType.Info, true);
             
             EditorGUILayout.Space(15);
             
             EditorGUILayout.LabelField("AI Creativity", EditorStyles.boldLabel);
-            temperature = EditorGUILayout.Slider("Temperature", temperature, 0f, 2f);
+            
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Temperature", GUILayout.Width(150));
+            temperature = EditorGUILayout.Slider(temperature, 0f, 2f, GUILayout.MaxWidth(480));
+            EditorGUILayout.EndHorizontal();
             
             string tempDesc = temperature switch
             {

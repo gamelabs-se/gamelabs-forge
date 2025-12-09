@@ -38,7 +38,8 @@ namespace GameLabs.Forge.Editor
         public static void OpenWindow()
         {
             var window = GetWindow<ForgeTemplateWindow>("Forge - AI Item Generator");
-            window.minSize = new Vector2(450, 550);
+            window.minSize = new Vector2(500, 650);
+            window.maxSize = new Vector2(700, 1000);
         }
         
         private void OnGUI()
@@ -118,7 +119,8 @@ namespace GameLabs.Forge.Editor
                 "ScriptableObject Template", 
                 template, 
                 typeof(ScriptableObject), 
-                false);
+                false,
+                GUILayout.MaxWidth(650));
             
             if (template != null)
             {
@@ -131,10 +133,10 @@ namespace GameLabs.Forge.Editor
                     $"Fields: {schema.fields.Count}\n\n" +
                     $"The AI will generate items matching this template's structure,\n" +
                     $"respecting all [Range], [Tooltip], and enum constraints.",
-                    MessageType.Info);
+                    MessageType.Info, true);
                 
                 // Show a preview of the schema
-                if (GUILayout.Button("Preview Schema", GUILayout.Height(25)))
+                if (GUILayout.Button("Preview Schema", GUILayout.Height(28), GUILayout.MaxWidth(650)))
                 {
                     var schemaDesc = ForgeSchemaExtractor.GenerateSchemaDescription(schema);
                     EditorUtility.DisplayDialog("Schema Preview", schemaDesc, "OK");
@@ -150,7 +152,7 @@ namespace GameLabs.Forge.Editor
                     "• Descriptions ([Tooltip] attribute)\n" +
                     "• Enum options\n\n" +
                     "Create one using Assets → Create menu.",
-                    MessageType.Info);
+                    MessageType.Info, true);
             }
         }
         
@@ -158,36 +160,41 @@ namespace GameLabs.Forge.Editor
         {
             EditorGUILayout.LabelField("Generation Options", EditorStyles.boldLabel);
             
-            itemCount = EditorGUILayout.IntSlider("Item Count", itemCount, 1, 20);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Item Count", GUILayout.Width(120));
+            itemCount = EditorGUILayout.IntSlider(itemCount, 1, 20, GUILayout.MaxWidth(450));
+            EditorGUILayout.EndHorizontal();
             
             EditorGUILayout.Space(5);
-            EditorGUILayout.LabelField("Additional Context (Optional)");
-            additionalContext = EditorGUILayout.TextArea(additionalContext, GUILayout.Height(60), GUILayout.ExpandHeight(false));
+            EditorGUILayout.LabelField("Additional Context (Optional)", EditorStyles.miniLabel);
+            additionalContext = EditorGUILayout.TextArea(additionalContext, 
+                GUILayout.Height(60), GUILayout.MaxWidth(650), GUILayout.ExpandHeight(false));
             
             EditorGUILayout.HelpBox(
                 "Add specific instructions like 'Generate fire-themed items' or 'Items for a level 50 character'",
-                MessageType.None);
+                MessageType.None, true);
         }
         
         private void DrawSaveOptions()
         {
             EditorGUILayout.LabelField("Save Options", EditorStyles.boldLabel);
             
-            autoSaveAsAsset = EditorGUILayout.Toggle("Auto-Save as Asset", autoSaveAsAsset);
+            autoSaveAsAsset = EditorGUILayout.Toggle("Auto-Save as Asset", autoSaveAsAsset, GUILayout.MaxWidth(650));
             
             if (autoSaveAsAsset)
             {
                 EditorGUI.indentLevel++;
                 
-                useCustomFolder = EditorGUILayout.Toggle("Use Custom Folder Name", useCustomFolder);
+                useCustomFolder = EditorGUILayout.Toggle("Use Custom Folder Name", useCustomFolder, GUILayout.MaxWidth(650));
                 
                 if (useCustomFolder)
                 {
-                    customFolderName = EditorGUILayout.TextField("Folder Name", customFolderName);
+                    customFolderName = EditorGUILayout.TextField("Folder Name", customFolderName, GUILayout.MaxWidth(650));
                 }
                 else if (template != null)
                 {
-                    EditorGUILayout.LabelField($"Save to: Generated/{template.GetType().Name}/");
+                    EditorGUILayout.LabelField($"Save to: Generated/{template.GetType().Name}/", 
+                        EditorStyles.miniLabel, GUILayout.MaxWidth(650));
                 }
                 
                 EditorGUILayout.Space(3);
@@ -198,7 +205,7 @@ namespace GameLabs.Forge.Editor
                 EditorGUILayout.HelpBox(
                     $"Base Path: {basePath}\n" +
                     $"Configure in ForgeGeneratorSettings or config file.",
-                    MessageType.Info);
+                    MessageType.Info, true);
                 
                 EditorGUI.indentLevel--;
             }
@@ -517,8 +524,8 @@ namespace GameLabs.Forge.Editor
             var popup = ScriptableObject.CreateInstance<ExistingItemsPopup>();
             popup.titleContent = new GUIContent($"Existing Items ({discoveredItemsCount})");
             popup.itemsJson = new List<string>(discoveredItemsJson);
-            popup.minSize = new Vector2(400, 500);
-            popup.maxSize = new Vector2(600, 800);
+            popup.minSize = new Vector2(450, 500);
+            popup.maxSize = new Vector2(700, 900);
             popup.ShowUtility();
         }
         
@@ -533,6 +540,7 @@ namespace GameLabs.Forge.Editor
     
     /// <summary>
     /// Popup window to display discovered existing items.
+    /// Shows the JSON representation of items that will be used as context for generation.
     /// </summary>
     public class ExistingItemsPopup : EditorWindow
     {
@@ -546,7 +554,7 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.LabelField("Discovered Items", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
                 "These items will be used as context for AI generation to prevent duplicates and guide naming conventions.",
-                MessageType.Info);
+                MessageType.Info, true);
             
             EditorGUILayout.Space(10);
             
@@ -555,7 +563,7 @@ namespace GameLabs.Forge.Editor
             foreach (var json in itemsJson)
             {
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                EditorGUILayout.TextArea(json, GUILayout.ExpandHeight(true));
+                EditorGUILayout.TextArea(json, GUILayout.ExpandHeight(true), GUILayout.MaxWidth(680));
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.Space(5);
             }
@@ -564,10 +572,12 @@ namespace GameLabs.Forge.Editor
             
             EditorGUILayout.Space(10);
             
-            if (GUILayout.Button("Close", GUILayout.Height(30)))
+            if (GUILayout.Button("Close", GUILayout.Height(35), GUILayout.MaxWidth(680)))
             {
                 Close();
             }
+            
+            EditorGUILayout.Space(10);
         }
     }
 }
