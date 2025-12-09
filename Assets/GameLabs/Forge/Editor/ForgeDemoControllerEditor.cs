@@ -2,9 +2,14 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using GameLabs.Forge.Demo;
 
 namespace GameLabs.Forge.Editor
 {
+    /// <summary>
+    /// Custom editor for ForgeDemoController that provides a convenient UI
+    /// for generating items in the Unity Inspector.
+    /// </summary>
     [CustomEditor(typeof(ForgeDemoController))]
     public class ForgeDemoControllerEditor : UnityEditor.Editor
     {
