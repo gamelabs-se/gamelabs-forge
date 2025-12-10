@@ -18,7 +18,7 @@ namespace GameLabs.Forge
         private class ForgeConfigDto
         {
             public string openaiApiKey;
-            public string model;
+            public int model; // ForgeAIModel enum value
             public string gameName;
             public string gameDescription;
             public string targetAudience;
@@ -43,13 +43,14 @@ namespace GameLabs.Forge
             return string.IsNullOrWhiteSpace(config?.openaiApiKey) ? null : config.openaiApiKey.Trim();
         }
         
-        /// <summary>Gets the AI model name from the configuration.</summary>
+        /// <summary>Gets the AI model from the configuration.</summary>
         /// <param name="path">Path to the config file (defaults to DefaultPath).</param>
-        /// <returns>The model name, or "gpt-4o-mini" as default.</returns>
-        public static string GetModel(string path = DefaultPath)
+        /// <returns>The ForgeAIModel enum value, or GPT4o as default.</returns>
+        public static ForgeAIModel GetModel(string path = DefaultPath)
         {
             var config = LoadConfig(path);
-            return string.IsNullOrWhiteSpace(config?.model) ? "gpt-4o-mini" : config.model;
+            if (config == null) return ForgeAIModel.GPT4o;
+            return (ForgeAIModel)config.model;
         }
         
         /// <summary>Gets the AI temperature setting (creativity level) from the configuration.</summary>
@@ -80,7 +81,7 @@ namespace GameLabs.Forge
                 defaultBatchSize = config.defaultBatchSize > 0 ? config.defaultBatchSize : 5,
                 maxBatchSize = config.maxBatchSize > 0 ? config.maxBatchSize : 20,
                 temperature = config.temperature,
-                model = config.model ?? "gpt-4o-mini",
+                model = (ForgeAIModel)config.model,
                 additionalRules = config.additionalRules ?? "",
                 existingAssetsSearchPath = string.IsNullOrEmpty(config.existingAssetsSearchPath) ? "Resources" : config.existingAssetsSearchPath,
                 generatedAssetsBasePath = string.IsNullOrEmpty(config.generatedAssetsBasePath) ? "Resources/Generated" : config.generatedAssetsBasePath,

@@ -36,7 +36,7 @@ namespace GameLabs.Forge
         public float temperature = 0.8f;
         
         [Tooltip("AI model to use.")]
-        public string model = "gpt-4o-mini";
+        public ForgeAIModel model = ForgeAIModel.GPT4o;
         
         [Header("Item Context")]
         [Tooltip("Additional context or rules for item generation.")]
@@ -250,8 +250,8 @@ namespace GameLabs.Forge
         
         private static float CalculateCost(int prompt, int completion)
         {
-            // GPT-4o-mini pricing (as of late 2024): $0.15/1M input, $0.60/1M output
-            return (prompt * 0.00000015f) + (completion * 0.0000006f);
+            // Use GPT-4o pricing as default (will be recalculated with correct model in result)
+            return ForgeAIModelHelper.CalculateCost(ForgeAIModel.GPT4o, prompt, completion);
         }
     }
 }

@@ -86,7 +86,8 @@ namespace GameLabs.Forge
             var client = ForgeOpenAIClient.Instance;
             
             // Configure client
-            client.SetModel(settings.model);
+            string modelName = ForgeAIModelHelper.GetModelName(settings.model);
+            client.SetModel(modelName);
             client.SetTemperature(settings.temperature);
             client.SetSystemRole(BuildSystemPrompt());
             

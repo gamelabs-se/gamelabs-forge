@@ -34,7 +34,7 @@ namespace GameLabs.Forge.Editor
             serializedObject.ApplyModifiedProperties();
         }
         
-        private void DrawHeader()
+        private new void DrawHeader()
         {
             EditorGUILayout.Space(5);
             

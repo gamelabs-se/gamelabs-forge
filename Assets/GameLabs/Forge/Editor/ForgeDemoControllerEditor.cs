@@ -69,7 +69,7 @@ namespace GameLabs.Forge.Editor
             DrawGenerationButtons(controller);
         }
 
-        private void DrawHeader()
+        private new void DrawHeader()
         {
             EditorGUILayout.Space(5);
 

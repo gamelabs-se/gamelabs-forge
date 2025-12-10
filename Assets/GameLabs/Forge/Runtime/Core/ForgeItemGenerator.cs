@@ -144,21 +144,39 @@ namespace GameLabs.Forge
             var client = ForgeOpenAIClient.Instance;
             
             // Configure client
-            client.SetModel(settings.model);
+            string modelName = ForgeAIModelHelper.GetModelName(settings.model);
+            client.SetModel(modelName);
             client.SetTemperature(settings.temperature);
             client.SetSystemRole(BuildSystemPrompt());
             
             // Build the user prompt
             var prompt = BuildUserPrompt<T>(request);
             
-            ForgeLogger.Log($"Generating {request.count} {typeof(T).Name} item(s)...");
+            ForgeLogger.Log($"Generating {request.count} {typeof(T).Name} item(s) using {ForgeAIModelHelper.GetDisplayName(settings.model)}...");
             
             ForgeGenerationResult<T> result = null;
             bool completed = false;
             
             client.Chat(prompt, response =>
             {
-                result = ProcessResponse<T>(response, request.count);
+                result = ProcessResponse<T>(response, request.count, settings.model);
+                
+                // Track statistics
+                if (result.success)
+                {
+                    ForgeStatistics.Instance.RecordGeneration(
+                        request.count, 
+                        result.items.Count, 
+                        result.promptTokens, 
+                        result.completionTokens, 
+                        result.estimatedCost
+                    );
+                }
+                else
+                {
+                    ForgeStatistics.Instance.RecordFailure(result.errorMessage);
+                }
+                
                 completed = true;
             });
             
@@ -263,22 +281,31 @@ CRITICAL RULES:
             return sb.ToString();
         }
         
-        private ForgeGenerationResult<T> ProcessResponse<T>(ForgeOpenAIClient.OpenAIResponse response, int expectedCount) where T : class, new()
+        private ForgeGenerationResult<T> ProcessResponse<T>(ForgeOpenAIClient.OpenAIResponse response, int expectedCount, ForgeAIModel model) where T : class, new()
         {
             if (response == null)
-                return ForgeGenerationResult<T>.Error("No response from API.");
+            {
+                ForgeLogger.Error("No response from API. Check your internet connection and API key.");
+                return ForgeGenerationResult<T>.Error("No response from API. Check your internet connection and API key.");
+            }
             
             if (response.choices == null || response.choices.Count == 0)
-                return ForgeGenerationResult<T>.Error("Empty choices in response.");
+            {
+                ForgeLogger.Error("API returned empty response. Check your API key permissions.");
+                return ForgeGenerationResult<T>.Error("Empty choices in response. Check your API key permissions.");
+            }
             
             var content = response.choices[0].message?.content;
             if (string.IsNullOrEmpty(content))
+            {
+                ForgeLogger.Error("API returned empty content.");
                 return ForgeGenerationResult<T>.Error("Empty content in response.");
+            }
             
             // Clean up the content (remove markdown if present)
             content = CleanJsonContent(content);
             
-            ForgeLogger.Log($"Raw response:\n{content}");
+            ForgeLogger.Log($"Raw API response ({content.Length} chars):\n{(content.Length > 500 ? content.Substring(0, 500) + "..." : content)}");
             
             try
             {
@@ -294,29 +321,63 @@ CRITICAL RULES:
                             fid.OnDeserialized();
                         items.Add(item);
                     }
+                    else
+                    {
+                        ForgeLogger.Error("Failed to deserialize single item. JSON format may be incorrect.");
+                        return ForgeGenerationResult<T>.Error("Failed to deserialize single item. JSON format may be incorrect.");
+                    }
                 }
                 else
                 {
                     // Batch - parse as array using wrapper
                     items = ParseJsonArray<T>(content);
+                    
+                    if (items == null || items.Count == 0)
+                    {
+                        ForgeLogger.Error("Failed to parse any items from response.");
+                        return ForgeGenerationResult<T>.Error("Failed to parse any items from response. JSON format may be incorrect.");
+                    }
+                    
                     foreach (var item in items)
                     {
                         if (item is ForgeItemDefinition fid)
                             fid.OnDeserialized();
+                    }
+                    
+                    // Check if we got fewer items than expected
+                    if (items.Count < expectedCount)
+                    {
+                        int missing = expectedCount - items.Count;
+                        ForgeLogger.Warn($"⚠️ Partial generation: requested {expectedCount} items, got {items.Count}. Missing {missing} items.");
+                        ForgeLogger.Warn($"This usually means the AI response was incomplete. Try reducing batch size or simplifying your item schema.");
                     }
                 }
                 
                 int promptTokens = response.usage?.prompt_tokens ?? 0;
                 int completionTokens = response.usage?.completion_tokens ?? 0;
                 
-                ForgeLogger.Log($"Successfully parsed {items.Count} item(s). Tokens: {promptTokens} prompt, {completionTokens} completion.");
+                // Calculate cost with correct model
+                float cost = ForgeAIModelHelper.CalculateCost(model, promptTokens, completionTokens);
                 
-                return ForgeGenerationResult<T>.Success(items, promptTokens, completionTokens);
+                if (items.Count == expectedCount)
+                {
+                    ForgeLogger.Log($"✓ Successfully generated {items.Count} item(s). Tokens: {promptTokens} prompt, {completionTokens} completion. Cost: ${cost:F6}");
+                }
+                else
+                {
+                    ForgeLogger.Warn($"⚠️ Partial success: {items.Count}/{expectedCount} items. Tokens: {promptTokens} prompt, {completionTokens} completion. Cost: ${cost:F6}");
+                }
+                
+                var result = ForgeGenerationResult<T>.Success(items, promptTokens, completionTokens);
+                result.estimatedCost = cost; // Override with correct model pricing
+                return result;
             }
             catch (Exception e)
             {
                 ForgeLogger.Error($"Failed to parse items: {e.Message}");
-                return ForgeGenerationResult<T>.Error($"JSON parsing failed: {e.Message}\nContent: {content}");
+                ForgeLogger.ErrorFull("Stack trace:", e.StackTrace);
+                ForgeLogger.ErrorFull("Content that failed to parse:", content);
+                return ForgeGenerationResult<T>.Error($"JSON parsing failed: {e.Message}\nCheck console for full details.");
             }
         }
         

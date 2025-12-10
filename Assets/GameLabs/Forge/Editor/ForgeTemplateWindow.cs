@@ -119,8 +119,7 @@ namespace GameLabs.Forge.Editor
                 "ScriptableObject Template", 
                 template, 
                 typeof(ScriptableObject), 
-                false,
-                GUILayout.MaxWidth(650));
+                false);
             
             if (template != null)
             {
@@ -136,7 +135,7 @@ namespace GameLabs.Forge.Editor
                     MessageType.Info, true);
                 
                 // Show a preview of the schema
-                if (GUILayout.Button("Preview Schema", GUILayout.Height(28), GUILayout.MaxWidth(650)))
+                if (GUILayout.Button("Preview Schema", GUILayout.Height(28)))
                 {
                     var schemaDesc = ForgeSchemaExtractor.GenerateSchemaDescription(schema);
                     EditorUtility.DisplayDialog("Schema Preview", schemaDesc, "OK");
@@ -162,13 +161,13 @@ namespace GameLabs.Forge.Editor
             
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Item Count", GUILayout.Width(120));
-            itemCount = EditorGUILayout.IntSlider(itemCount, 1, 20, GUILayout.MaxWidth(450));
+            itemCount = EditorGUILayout.IntSlider(itemCount, 1, 20);
             EditorGUILayout.EndHorizontal();
             
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Additional Context (Optional)", EditorStyles.miniLabel);
             additionalContext = EditorGUILayout.TextArea(additionalContext, 
-                GUILayout.Height(60), GUILayout.MaxWidth(650), GUILayout.ExpandHeight(false));
+                GUILayout.Height(60), GUILayout.ExpandHeight(false));
             
             EditorGUILayout.HelpBox(
                 "Add specific instructions like 'Generate fire-themed items' or 'Items for a level 50 character'",
@@ -179,22 +178,22 @@ namespace GameLabs.Forge.Editor
         {
             EditorGUILayout.LabelField("Save Options", EditorStyles.boldLabel);
             
-            autoSaveAsAsset = EditorGUILayout.Toggle("Auto-Save as Asset", autoSaveAsAsset, GUILayout.MaxWidth(650));
+            autoSaveAsAsset = EditorGUILayout.Toggle("Auto-Save as Asset", autoSaveAsAsset);
             
             if (autoSaveAsAsset)
             {
                 EditorGUI.indentLevel++;
                 
-                useCustomFolder = EditorGUILayout.Toggle("Use Custom Folder Name", useCustomFolder, GUILayout.MaxWidth(650));
+                useCustomFolder = EditorGUILayout.Toggle("Use Custom Folder Name", useCustomFolder);
                 
                 if (useCustomFolder)
                 {
-                    customFolderName = EditorGUILayout.TextField("Folder Name", customFolderName, GUILayout.MaxWidth(650));
+                    customFolderName = EditorGUILayout.TextField("Folder Name", customFolderName);
                 }
                 else if (template != null)
                 {
                     EditorGUILayout.LabelField($"Save to: Generated/{template.GetType().Name}/", 
-                        EditorStyles.miniLabel, GUILayout.MaxWidth(650));
+                        EditorStyles.miniLabel);
                 }
                 
                 EditorGUILayout.Space(3);
@@ -244,7 +243,7 @@ namespace GameLabs.Forge.Editor
             {
                 if (item != null)
                 {
-                    EditorGUILayout.LabelField($"• {item.name}");
+                    EditorGUILayout.LabelField($"• {item.name}", GUILayout.ExpandWidth(true));
                 }
             }
             
@@ -563,7 +562,7 @@ namespace GameLabs.Forge.Editor
             foreach (var json in itemsJson)
             {
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                EditorGUILayout.TextArea(json, GUILayout.ExpandHeight(true), GUILayout.MaxWidth(680));
+                EditorGUILayout.TextArea(json, GUILayout.ExpandHeight(true));
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.Space(5);
             }
@@ -572,7 +571,7 @@ namespace GameLabs.Forge.Editor
             
             EditorGUILayout.Space(10);
             
-            if (GUILayout.Button("Close", GUILayout.Height(35), GUILayout.MaxWidth(680)))
+            if (GUILayout.Button("Close", GUILayout.Height(35)))
             {
                 Close();
             }

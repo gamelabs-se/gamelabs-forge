@@ -51,7 +51,7 @@ namespace GameLabs.Forge.Editor
             DrawSaveSection();
         }
         
-        private void DrawHeader()
+        private new void DrawHeader()
         {
             EditorGUILayout.Space(5);
             
