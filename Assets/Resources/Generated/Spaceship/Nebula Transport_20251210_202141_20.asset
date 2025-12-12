@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6eebfa051f02a49ffa05eced22e664fd, type: 3}
+  m_Name: Nebula Transport_20251210_202141_20
+  m_EditorClassIdentifier: GameLabs.Forge.Demo::GameLabs.Forge.Demo.Spaceship
+  displayName: Nebula Transport
+  description: A specialized transport designed for safe delivery in nebula-filled
+    sectors.
+  sizeClass: 2
+  role: 9
+  faction: 3
+  propulsionType: 1
+  hullMaterial: 2
+  hullPoints: 1100
+  shieldPoints: 300
+  shieldAbsorption: 0.5
+  armorReduction: 0.15
+  hullRegenRate: 0.8
+  shieldRegenRate: 15
+  reactorOutput: 250
+  energyCapacity: 350
+  energyRegenRate: 7
+  fuelCapacity: 30000
+  fuelConsumption: 18
+  maxSpeed: 78
+  acceleration: 6
+  turnRate: 60
+  maneuverability: 4
+  mass: 25000
+  primaryHardpointCount: 2
+  secondaryHardpointCount: 1
+  primaryWeaponMountType: 0
+  secondaryWeaponMountType: 6
+  targetingRange: 950
+  criticalHitChance: 0.1
+  criticalHitMultiplier: 1.5
+  maxCrew: 60
+  recommendedCrew: 20
+  cargoCapacity: 12000
+  passengerCapacity: 50
+  aiProfile: 0
+  aggression: 0.2
+  cowardice: 0.4
+  supportiveness: 0.1
+  basePrice: 190000
+  techTier: 4
+  rarity: 2.5
+  prefab: {fileID: 0}
+  icon: {fileID: 0}
+  engineEffectPrefab: {fileID: 0}
+  engineSound: {fileID: 0}
+  explosionSound: {fileID: 0}

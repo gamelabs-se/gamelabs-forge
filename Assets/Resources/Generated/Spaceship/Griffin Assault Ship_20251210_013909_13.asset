@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6eebfa051f02a49ffa05eced22e664fd, type: 3}
+  m_Name: Griffin Assault Ship_20251210_013909_13
+  m_EditorClassIdentifier: GameLabs.Forge.Demo::GameLabs.Forge.Demo.Spaceship
+  displayName: Griffin Assault Ship
+  description: An assault ship designed for close combat, equipped with powerful
+    weaponry.
+  sizeClass: 1
+  role: 1
+  faction: 5
+  propulsionType: 2
+  hullMaterial: 0
+  hullPoints: 800
+  shieldPoints: 300
+  shieldAbsorption: 0.4
+  armorReduction: 0.2
+  hullRegenRate: 0.6
+  shieldRegenRate: 12
+  reactorOutput: 250
+  energyCapacity: 300
+  energyRegenRate: 7
+  fuelCapacity: 10000
+  fuelConsumption: 18
+  maxSpeed: 110
+  acceleration: 14
+  turnRate: 120
+  maneuverability: 6
+  mass: 12000
+  primaryHardpointCount: 3
+  secondaryHardpointCount: 2
+  primaryWeaponMountType: 2
+  secondaryWeaponMountType: 6
+  targetingRange: 600
+  criticalHitChance: 0.15
+  criticalHitMultiplier: 3
+  maxCrew: 40
+  recommendedCrew: 10
+  cargoCapacity: 600
+  passengerCapacity: 0
+  aiProfile: 3
+  aggression: 0.9
+  cowardice: 0.1
+  supportiveness: 0.2
+  basePrice: 120000
+  techTier: 5
+  rarity: 3
+  prefab: {fileID: 0}
+  icon: {fileID: 0}
+  engineEffectPrefab: {fileID: 0}
+  engineSound: {fileID: 0}
+  explosionSound: {fileID: 0}

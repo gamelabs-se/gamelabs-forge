@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6eebfa051f02a49ffa05eced22e664fd, type: 3}
+  m_Name: Galactic Sentinel_20251210_203006_9
+  m_EditorClassIdentifier: GameLabs.Forge.Demo::GameLabs.Forge.Demo.Spaceship
+  displayName: Galactic Sentinel
+  description: A heavily fortified battleship poised to defend key galactic territories.
+  sizeClass: 5
+  role: 2
+  faction: 5
+  propulsionType: 2
+  hullMaterial: 2
+  hullPoints: 4500
+  shieldPoints: 1800
+  shieldAbsorption: 0.7
+  armorReduction: 0.35
+  hullRegenRate: 2.2
+  shieldRegenRate: 27
+  reactorOutput: 900
+  energyCapacity: 800
+  energyRegenRate: 15
+  fuelCapacity: 70000
+  fuelConsumption: 45
+  maxSpeed: 50
+  acceleration: 3.5
+  turnRate: 20
+  maneuverability: 2.5
+  mass: 75000
+  primaryHardpointCount: 7
+  secondaryHardpointCount: 4
+  primaryWeaponMountType: 3
+  secondaryWeaponMountType: 1
+  targetingRange: 2500
+  criticalHitChance: 0.22
+  criticalHitMultiplier: 4.5
+  maxCrew: 350
+  recommendedCrew: 80
+  cargoCapacity: 6000
+  passengerCapacity: 40
+  aiProfile: 3
+  aggression: 0.7
+  cowardice: 0.15
+  supportiveness: 0.6
+  basePrice: 700000
+  techTier: 7
+  rarity: 4
+  prefab: {fileID: 0}
+  icon: {fileID: 0}
+  engineEffectPrefab: {fileID: 0}
+  engineSound: {fileID: 0}
+  explosionSound: {fileID: 0}

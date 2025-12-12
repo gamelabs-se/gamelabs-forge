@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6eebfa051f02a49ffa05eced22e664fd, type: 3}
+  m_Name: Stellar Voyager_20251210_203006_21
+  m_EditorClassIdentifier: GameLabs.Forge.Demo::GameLabs.Forge.Demo.Spaceship
+  displayName: Stellar Voyager
+  description: A versatile exploration ship crafted for long-range missions and scientific
+    endeavors.
+  sizeClass: 1
+  role: 8
+  faction: 6
+  propulsionType: 7
+  hullMaterial: 4
+  hullPoints: 650
+  shieldPoints: 220
+  shieldAbsorption: 0.5
+  armorReduction: 0.15
+  hullRegenRate: 0.7
+  shieldRegenRate: 9
+  reactorOutput: 250
+  energyCapacity: 260
+  energyRegenRate: 7
+  fuelCapacity: 20000
+  fuelConsumption: 14
+  maxSpeed: 130
+  acceleration: 10
+  turnRate: 100
+  maneuverability: 5.5
+  mass: 15000
+  primaryHardpointCount: 1
+  secondaryHardpointCount: 1
+  primaryWeaponMountType: 2
+  secondaryWeaponMountType: 6
+  targetingRange: 700
+  criticalHitChance: 0.1
+  criticalHitMultiplier: 2
+  maxCrew: 50
+  recommendedCrew: 12
+  cargoCapacity: 1800
+  passengerCapacity: 20
+  aiProfile: 2
+  aggression: 0.4
+  cowardice: 0.3
+  supportiveness: 0.6
+  basePrice: 180000
+  techTier: 5
+  rarity: 3
+  prefab: {fileID: 0}
+  icon: {fileID: 0}
+  engineEffectPrefab: {fileID: 0}
+  engineSound: {fileID: 0}
+  explosionSound: {fileID: 0}

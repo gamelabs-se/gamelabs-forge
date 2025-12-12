@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6eebfa051f02a49ffa05eced22e664fd, type: 3}
+  m_Name: Phantom Bomber_20251210_013909_3
+  m_EditorClassIdentifier: GameLabs.Forge.Demo::GameLabs.Forge.Demo.Spaceship
+  displayName: Phantom Bomber
+  description: A stealth bomber equipped with advanced cloaking technology for surprise
+    attacks.
+  sizeClass: 0
+  role: 3
+  faction: 2
+  propulsionType: 2
+  hullMaterial: 2
+  hullPoints: 300
+  shieldPoints: 100
+  shieldAbsorption: 0.3
+  armorReduction: 0.15
+  hullRegenRate: 0.5
+  shieldRegenRate: 8
+  reactorOutput: 250
+  energyCapacity: 250
+  energyRegenRate: 4
+  fuelCapacity: 10000
+  fuelConsumption: 20
+  maxSpeed: 120
+  acceleration: 15
+  turnRate: 150
+  maneuverability: 6
+  mass: 12000
+  primaryHardpointCount: 2
+  secondaryHardpointCount: 1
+  primaryWeaponMountType: 0
+  secondaryWeaponMountType: 5
+  targetingRange: 800
+  criticalHitChance: 0.2
+  criticalHitMultiplier: 3
+  maxCrew: 20
+  recommendedCrew: 5
+  cargoCapacity: 500
+  passengerCapacity: 0
+  aiProfile: 6
+  aggression: 0.9
+  cowardice: 0.2
+  supportiveness: 0
+  basePrice: 75000
+  techTier: 4
+  rarity: 3
+  prefab: {fileID: 0}
+  icon: {fileID: 0}
+  engineEffectPrefab: {fileID: 0}
+  engineSound: {fileID: 0}
+  explosionSound: {fileID: 0}

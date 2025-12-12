@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6eebfa051f02a49ffa05eced22e664fd, type: 3}
+  m_Name: Celestial Miner_20251210_013909_10
+  m_EditorClassIdentifier: GameLabs.Forge.Demo::GameLabs.Forge.Demo.Spaceship
+  displayName: Celestial Miner
+  description: A specialized mining ship equipped with tools for extracting resources
+    from asteroids.
+  sizeClass: 1
+  role: 7
+  faction: 4
+  propulsionType: 0
+  hullMaterial: 0
+  hullPoints: 500
+  shieldPoints: 100
+  shieldAbsorption: 0.3
+  armorReduction: 0.1
+  hullRegenRate: 0.4
+  shieldRegenRate: 5
+  reactorOutput: 150
+  energyCapacity: 200
+  energyRegenRate: 3
+  fuelCapacity: 10000
+  fuelConsumption: 10
+  maxSpeed: 70
+  acceleration: 7
+  turnRate: 120
+  maneuverability: 5
+  mass: 9000
+  primaryHardpointCount: 1
+  secondaryHardpointCount: 1
+  primaryWeaponMountType: 0
+  secondaryWeaponMountType: 6
+  targetingRange: 400
+  criticalHitChance: 0.05
+  criticalHitMultiplier: 1
+  maxCrew: 30
+  recommendedCrew: 8
+  cargoCapacity: 3000
+  passengerCapacity: 0
+  aiProfile: 0
+  aggression: 0
+  cowardice: 0.2
+  supportiveness: 0
+  basePrice: 100000
+  techTier: 3
+  rarity: 2
+  prefab: {fileID: 0}
+  icon: {fileID: 0}
+  engineEffectPrefab: {fileID: 0}
+  engineSound: {fileID: 0}
+  explosionSound: {fileID: 0}

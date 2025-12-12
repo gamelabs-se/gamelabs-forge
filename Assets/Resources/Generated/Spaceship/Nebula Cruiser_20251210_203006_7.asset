@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6eebfa051f02a49ffa05eced22e664fd, type: 3}
+  m_Name: Nebula Cruiser_20251210_203006_7
+  m_EditorClassIdentifier: GameLabs.Forge.Demo::GameLabs.Forge.Demo.Spaceship
+  displayName: Nebula Cruiser
+  description: A cruiser optimized for operations in nebulous and radiation-heavy
+    sectors.
+  sizeClass: 4
+  role: 5
+  faction: 4
+  propulsionType: 4
+  hullMaterial: 4
+  hullPoints: 1700
+  shieldPoints: 550
+  shieldAbsorption: 0.6
+  armorReduction: 0.2
+  hullRegenRate: 1.3
+  shieldRegenRate: 20
+  reactorOutput: 480
+  energyCapacity: 500
+  energyRegenRate: 12
+  fuelCapacity: 40000
+  fuelConsumption: 22
+  maxSpeed: 105
+  acceleration: 10
+  turnRate: 65
+  maneuverability: 4.5
+  mass: 26000
+  primaryHardpointCount: 3
+  secondaryHardpointCount: 3
+  primaryWeaponMountType: 1
+  secondaryWeaponMountType: 4
+  targetingRange: 1400
+  criticalHitChance: 0.14
+  criticalHitMultiplier: 2
+  maxCrew: 130
+  recommendedCrew: 40
+  cargoCapacity: 4000
+  passengerCapacity: 45
+  aiProfile: 1
+  aggression: 0.4
+  cowardice: 0.25
+  supportiveness: 0.75
+  basePrice: 320000
+  techTier: 6
+  rarity: 3.5
+  prefab: {fileID: 0}
+  icon: {fileID: 0}
+  engineEffectPrefab: {fileID: 0}
+  engineSound: {fileID: 0}
+  explosionSound: {fileID: 0}

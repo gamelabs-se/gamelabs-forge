@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6eebfa051f02a49ffa05eced22e664fd, type: 3}
+  m_Name: Aether Assault_20251210_202141_19
+  m_EditorClassIdentifier: GameLabs.Forge.Demo::GameLabs.Forge.Demo.Spaceship
+  displayName: Aether Assault
+  description: A dynamic assault ship designed for frontline combat and rapid deployment.
+  sizeClass: 1
+  role: 1
+  faction: 2
+  propulsionType: 2
+  hullMaterial: 1
+  hullPoints: 800
+  shieldPoints: 350
+  shieldAbsorption: 0.55
+  armorReduction: 0.2
+  hullRegenRate: 0.9
+  shieldRegenRate: 18
+  reactorOutput: 300
+  energyCapacity: 400
+  energyRegenRate: 9
+  fuelCapacity: 20000
+  fuelConsumption: 22
+  maxSpeed: 110
+  acceleration: 14
+  turnRate: 120
+  maneuverability: 7
+  mass: 20000
+  primaryHardpointCount: 3
+  secondaryHardpointCount: 2
+  primaryWeaponMountType: 1
+  secondaryWeaponMountType: 5
+  targetingRange: 750
+  criticalHitChance: 0.2
+  criticalHitMultiplier: 3
+  maxCrew: 50
+  recommendedCrew: 15
+  cargoCapacity: 1000
+  passengerCapacity: 0
+  aiProfile: 3
+  aggression: 0.8
+  cowardice: 0.1
+  supportiveness: 0.3
+  basePrice: 180000
+  techTier: 5
+  rarity: 3
+  prefab: {fileID: 0}
+  icon: {fileID: 0}
+  engineEffectPrefab: {fileID: 0}
+  engineSound: {fileID: 0}
+  explosionSound: {fileID: 0}

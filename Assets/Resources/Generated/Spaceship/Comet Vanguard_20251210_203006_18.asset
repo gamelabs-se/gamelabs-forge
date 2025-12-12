@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6eebfa051f02a49ffa05eced22e664fd, type: 3}
+  m_Name: Comet Vanguard_20251210_203006_18
+  m_EditorClassIdentifier: GameLabs.Forge.Demo::GameLabs.Forge.Demo.Spaceship
+  displayName: Comet Vanguard
+  description: Designed for rapid response, this interceptor excels in quick-strike
+    tactics.
+  sizeClass: 0
+  role: 0
+  faction: 1
+  propulsionType: 1
+  hullMaterial: 1
+  hullPoints: 350
+  shieldPoints: 120
+  shieldAbsorption: 0.55
+  armorReduction: 0.1
+  hullRegenRate: 0.3
+  shieldRegenRate: 9
+  reactorOutput: 200
+  energyCapacity: 300
+  energyRegenRate: 6
+  fuelCapacity: 10000
+  fuelConsumption: 10
+  maxSpeed: 170
+  acceleration: 23
+  turnRate: 210
+  maneuverability: 9
+  mass: 1800
+  primaryHardpointCount: 2
+  secondaryHardpointCount: 0
+  primaryWeaponMountType: 0
+  secondaryWeaponMountType: 6
+  targetingRange: 450
+  criticalHitChance: 0.13
+  criticalHitMultiplier: 2.8
+  maxCrew: 10
+  recommendedCrew: 3
+  cargoCapacity: 150
+  passengerCapacity: 0
+  aiProfile: 3
+  aggression: 0.8
+  cowardice: 0.1
+  supportiveness: 0.2
+  basePrice: 95000
+  techTier: 5
+  rarity: 2.5
+  prefab: {fileID: 0}
+  icon: {fileID: 0}
+  engineEffectPrefab: {fileID: 0}
+  engineSound: {fileID: 0}
+  explosionSound: {fileID: 0}

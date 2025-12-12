@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6eebfa051f02a49ffa05eced22e664fd, type: 3}
+  m_Name: Void Roamer_20251210_203006_8
+  m_EditorClassIdentifier: GameLabs.Forge.Demo::GameLabs.Forge.Demo.Spaceship
+  displayName: Void Roamer
+  description: An explorer vessel designed to venture into the uncharted voids of
+    space.
+  sizeClass: 2
+  role: 8
+  faction: 0
+  propulsionType: 7
+  hullMaterial: 5
+  hullPoints: 900
+  shieldPoints: 400
+  shieldAbsorption: 0.55
+  armorReduction: 0.15
+  hullRegenRate: 1
+  shieldRegenRate: 16
+  reactorOutput: 300
+  energyCapacity: 350
+  energyRegenRate: 7
+  fuelCapacity: 25000
+  fuelConsumption: 20
+  maxSpeed: 88
+  acceleration: 8
+  turnRate: 80
+  maneuverability: 5.5
+  mass: 24000
+  primaryHardpointCount: 2
+  secondaryHardpointCount: 2
+  primaryWeaponMountType: 2
+  secondaryWeaponMountType: 6
+  targetingRange: 900
+  criticalHitChance: 0.1
+  criticalHitMultiplier: 2.1
+  maxCrew: 80
+  recommendedCrew: 18
+  cargoCapacity: 2500
+  passengerCapacity: 30
+  aiProfile: 2
+  aggression: 0.3
+  cowardice: 0.3
+  supportiveness: 0.4
+  basePrice: 240000
+  techTier: 5
+  rarity: 2.5
+  prefab: {fileID: 0}
+  icon: {fileID: 0}
+  engineEffectPrefab: {fileID: 0}
+  engineSound: {fileID: 0}
+  explosionSound: {fileID: 0}

@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6eebfa051f02a49ffa05eced22e664fd, type: 3}
+  m_Name: Void Tracer_20251210_203006_17
+  m_EditorClassIdentifier: GameLabs.Forge.Demo::GameLabs.Forge.Demo.Spaceship
+  displayName: Void Tracer
+  description: An agile scout optimized for stealth and speed in tracing enemy movements.
+  sizeClass: 0
+  role: 0
+  faction: 0
+  propulsionType: 5
+  hullMaterial: 2
+  hullPoints: 250
+  shieldPoints: 70
+  shieldAbsorption: 0.35
+  armorReduction: 0.1
+  hullRegenRate: 0.4
+  shieldRegenRate: 5
+  reactorOutput: 180
+  energyCapacity: 200
+  energyRegenRate: 5
+  fuelCapacity: 6000
+  fuelConsumption: 8
+  maxSpeed: 180
+  acceleration: 25
+  turnRate: 230
+  maneuverability: 9.5
+  mass: 1800
+  primaryHardpointCount: 1
+  secondaryHardpointCount: 1
+  primaryWeaponMountType: 0
+  secondaryWeaponMountType: 6
+  targetingRange: 450
+  criticalHitChance: 0.14
+  criticalHitMultiplier: 2.2
+  maxCrew: 5
+  recommendedCrew: 2
+  cargoCapacity: 100
+  passengerCapacity: 0
+  aiProfile: 5
+  aggression: 0.75
+  cowardice: 0.15
+  supportiveness: 0.3
+  basePrice: 85000
+  techTier: 6
+  rarity: 3
+  prefab: {fileID: 0}
+  icon: {fileID: 0}
+  engineEffectPrefab: {fileID: 0}
+  engineSound: {fileID: 0}
+  explosionSound: {fileID: 0}

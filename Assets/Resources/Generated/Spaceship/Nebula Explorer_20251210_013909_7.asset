@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6eebfa051f02a49ffa05eced22e664fd, type: 3}
+  m_Name: Nebula Explorer_20251210_013909_7
+  m_EditorClassIdentifier: GameLabs.Forge.Demo::GameLabs.Forge.Demo.Spaceship
+  displayName: Nebula Explorer
+  description: An advanced explorer equipped for deep space missions and discovery.
+  sizeClass: 4
+  role: 8
+  faction: 0
+  propulsionType: 4
+  hullMaterial: 3
+  hullPoints: 1200
+  shieldPoints: 300
+  shieldAbsorption: 0.5
+  armorReduction: 0.15
+  hullRegenRate: 1
+  shieldRegenRate: 15
+  reactorOutput: 300
+  energyCapacity: 400
+  energyRegenRate: 8
+  fuelCapacity: 25000
+  fuelConsumption: 20
+  maxSpeed: 90
+  acceleration: 8
+  turnRate: 80
+  maneuverability: 4
+  mass: 15000
+  primaryHardpointCount: 3
+  secondaryHardpointCount: 1
+  primaryWeaponMountType: 0
+  secondaryWeaponMountType: 6
+  targetingRange: 1000
+  criticalHitChance: 0.1
+  criticalHitMultiplier: 2
+  maxCrew: 80
+  recommendedCrew: 20
+  cargoCapacity: 2000
+  passengerCapacity: 40
+  aiProfile: 2
+  aggression: 0.4
+  cowardice: 0.1
+  supportiveness: 0.3
+  basePrice: 250000
+  techTier: 6
+  rarity: 3
+  prefab: {fileID: 0}
+  icon: {fileID: 0}
+  engineEffectPrefab: {fileID: 0}
+  engineSound: {fileID: 0}
+  explosionSound: {fileID: 0}
