@@ -8,83 +8,78 @@ using UnityEngine;
 namespace GameLabs.Forge.Editor
 {
     /// <summary>
-    /// Visual-polished template-based generator window (Unity 6.3).
-    /// Logic unchanged. UI only.
+    /// Forge – AI Item Generator (polished IMGUI for Unity 6.3).
+    /// Pure UI overhaul: alignment, spacing, button styling. Logic intact.
     /// </summary>
     public class ForgeTemplateWindow : EditorWindow
     {
-        // ====== UI State ======
-        private Vector2 scrollPos;
-        private ScriptableObject template;
-        private int itemCount = 1;
-        private string additionalContext = "";
-        private string customFolderName = "";
-        private bool useCustomFolder = false;
-        private bool autoSaveAsAsset = true;
+        // ========= UI State =========
+        private Vector2 _scroll;
+        private ScriptableObject _template;
+        private int _itemCount = 20;
+        private string _additionalContext = "";
+        private string _customFolderName = "";
+        private bool _useCustomFolder = false;
+        private bool _autoSaveAsAsset = true;
 
-        // Existing items discovery
-        private int discoveredItemsCount = 0;
-        private List<string> discoveredItemsJson = new List<string>();
+        private int _foundCount = 0;
+        private List<string> _foundJson = new();
 
-        // Generation state
-        private bool isGenerating = false;
-        private string statusMessage = "";
-        private MessageType statusType = MessageType.None;
+        private bool _isGenerating = false;
+        private string _status = "";
+        private MessageType _statusType = MessageType.None;
 
-        // Results
-        private List<ScriptableObject> lastGeneratedItems = new List<ScriptableObject>();
+        private readonly List<ScriptableObject> _lastGenerated = new();
 
-        // ====== Menu ======
+        private const float LABEL_W = 120f; // unified label width
+
         [MenuItem("GameLabs/Forge/AI Item Generator", priority = 5)]
         public static void OpenWindow()
         {
-            var window = GetWindow<ForgeTemplateWindow>("Forge – AI Item Generator");
-            window.minSize = new Vector2(560, 680);
-            window.maxSize = new Vector2(960, 1200);
+            var w = GetWindow<ForgeTemplateWindow>();
+            w.titleContent = new GUIContent("Forge – AI Item Generator", EditorGUIUtility.IconContent("d_PlayButton On").image);
+            w.minSize = new Vector2(560, 660);
+            w.maxSize = new Vector2(1200, 1400);
         }
 
-        // ====== Styles ======
+        // ========= Styles =========
         private static class UI
         {
             public static GUIStyle Title;
-            public static GUIStyle SubTitle;
-            public static GUIStyle SectionHeader;
+            public static GUIStyle ToolbarBtn;
+            public static GUIStyle Section;
+            public static GUIStyle Header;
             public static GUIStyle Card;
             public static GUIStyle Pill;
-            public static GUIStyle FooterHelp;
-            public static GUIStyle PrimaryButton;
-            public static GUIStyle ToolbarBtn;
-            public static GUIStyle MiniMuted;
-            public static Color Accent => EditorGUIUtility.isProSkin ? new Color(0.25f, 0.55f, 1f, 1f) : new Color(0.1f, 0.4f, 0.95f, 1f);
-            public static Color AccentDim => EditorGUIUtility.isProSkin ? new Color(0.25f, 0.55f, 1f, 0.12f) : new Color(0.1f, 0.4f, 0.95f, 0.12f);
-            public static Color Divider => EditorGUIUtility.isProSkin ? new Color(1, 1, 1, 0.08f) : new Color(0, 0, 0, 0.08f);
+            public static GUIStyle Hint;
+            public static GUIStyle Code;
+            public static GUIStyle PrimaryBtnText;
+            public static Color Accent => EditorGUIUtility.isProSkin ? new Color(0.24f, 0.56f, 1f, 1f) : new Color(0.1f, 0.4f, 0.95f, 1f);
+            public static Color AccentDim => EditorGUIUtility.isProSkin ? new Color(0.24f, 0.56f, 1f, 0.10f) : new Color(0.1f, 0.4f, 0.95f, 0.12f);
+            public static Color Line => EditorGUIUtility.isProSkin ? new Color(1, 1, 1, 0.08f) : new Color(0, 0, 0, 0.08f);
 
-            public static Texture SettingsIcon => EditorGUIUtility.IconContent("d_SettingsIcon").image;
-            public static Texture SearchIcon => EditorGUIUtility.IconContent("d_Search Icon").image;
-            public static Texture FolderIcon => EditorGUIUtility.IconContent("d_Folder Icon").image;
-            public static Texture RefreshIcon => EditorGUIUtility.IconContent("d_Refresh").image;
-            public static Texture PlayIcon => EditorGUIUtility.IconContent("d_PlayButton On").image;
-            public static Texture ClearIcon => EditorGUIUtility.IconContent("TreeEditor.Trash").image;
+            public static Texture2D Play => (Texture2D)EditorGUIUtility.IconContent("d_PlayButton On").image;
+            public static Texture2D Gear => (Texture2D)EditorGUIUtility.IconContent("d_SettingsIcon").image;
+            public static Texture2D Search => (Texture2D)EditorGUIUtility.IconContent("d_Search Icon").image;
+            public static Texture2D Folder => (Texture2D)EditorGUIUtility.IconContent("d_Folder Icon").image;
+            public static Texture2D Trash => (Texture2D)EditorGUIUtility.IconContent("TreeEditor.Trash").image;
+            public static Texture2D Refresh => (Texture2D)EditorGUIUtility.IconContent("d_Refresh").image;
+            public static Texture2D Copy => (Texture2D)EditorGUIUtility.IconContent("Clipboard").image;
 
             public static void Init()
             {
                 if (Title != null) return;
 
-                Title = new GUIStyle(EditorStyles.boldLabel)
-                {
-                    fontSize = 18,
-                    alignment = TextAnchor.MiddleLeft
-                };
+                Title = new GUIStyle(EditorStyles.boldLabel) { fontSize = 17, alignment = TextAnchor.MiddleLeft };
 
-                SubTitle = new GUIStyle(EditorStyles.centeredGreyMiniLabel)
+                ToolbarBtn = new GUIStyle(EditorStyles.toolbarButton) { fixedHeight = 22 };
+
+                Section = new GUIStyle(EditorStyles.boldLabel) { fontSize = 12 };
+
+                Header = new GUIStyle(EditorStyles.label)
                 {
                     fontSize = 11,
-                    alignment = TextAnchor.MiddleLeft
-                };
-
-                SectionHeader = new GUIStyle(EditorStyles.boldLabel)
-                {
-                    fontSize = 12
+                    normal = { textColor = EditorGUIUtility.isProSkin ? new Color(1, 1, 1, 0.75f) : new Color(0, 0, 0, 0.75f) }
                 };
 
                 Card = new GUIStyle("HelpBox")
@@ -93,34 +88,29 @@ namespace GameLabs.Forge.Editor
                     margin = new RectOffset(0, 0, 6, 6)
                 };
 
-                Pill = new GUIStyle(EditorStyles.miniLabel)
+                Pill = new GUIStyle(EditorStyles.miniBoldLabel)
                 {
                     alignment = TextAnchor.MiddleCenter,
-                    fontSize = 10,
-                    padding = new RectOffset(8, 8, 2, 2)
+                    padding = new RectOffset(8, 8, 2, 2),
                 };
 
-                FooterHelp = new GUIStyle(EditorStyles.miniLabel)
+                Hint = new GUIStyle(EditorStyles.miniLabel)
                 {
-                    alignment = TextAnchor.LowerLeft,
-                    wordWrap = true
+                    wordWrap = true,
+                    normal = { textColor = EditorGUIUtility.isProSkin ? new Color(1, 1, 1, 0.6f) : new Color(0, 0, 0, 0.6f) }
                 };
 
-                PrimaryButton = new GUIStyle(GUI.skin.button)
+                Code = new GUIStyle(EditorStyles.textArea)
+                {
+                    wordWrap = true,
+                    fontSize = 12,
+                    padding = new RectOffset(6, 6, 6, 6)
+                };
+
+                PrimaryBtnText = new GUIStyle(EditorStyles.boldLabel)
                 {
                     fontSize = 14,
-                    fontStyle = FontStyle.Bold,
-                    fixedHeight = 40
-                };
-
-                ToolbarBtn = new GUIStyle(EditorStyles.toolbarButton)
-                {
-                    fixedHeight = 22
-                };
-
-                MiniMuted = new GUIStyle(EditorStyles.miniLabel)
-                {
-                    normal = { textColor = EditorGUIUtility.isProSkin ? new Color(1, 1, 1, 0.6f) : new Color(0, 0, 0, 0.6f) }
+                    alignment = TextAnchor.MiddleCenter
                 };
             }
         }
@@ -128,447 +118,410 @@ namespace GameLabs.Forge.Editor
         private void OnGUI()
         {
             UI.Init();
-            DrawTitleBar();
 
-            scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+            DrawTopBar();        // no extra vertical padding
+            DrawToolbar();
 
-            DrawTopToolbar();
-            DrawSpacer(6);
+            _scroll = EditorGUILayout.BeginScrollView(_scroll);
 
-            DrawTemplateSelection();
-            DrawSectionDivider();
-
-            DrawExistingItemsSection();
-            DrawSectionDivider();
-
-            DrawGenerationOptions();
-            DrawSectionDivider();
-
+            DrawTemplateSection();
+            DrawExistingSection();
+            DrawGenerateOptions();
             DrawSaveOptions();
-            DrawSpacer(10);
-
-            DrawGenerateButton();
-
-            if (!string.IsNullOrEmpty(statusMessage))
-            {
-                DrawSpacer(8);
-                EditorGUILayout.HelpBox(statusMessage, statusType);
-            }
-
-            DrawSpacer(10);
+            DrawPrimaryButton();
+            DrawStatus();
             DrawResults();
 
             EditorGUILayout.EndScrollView();
 
-            DrawFooterNote();
+            DrawFooter();
         }
 
-        // ====== Visual helpers ======
-        private void DrawTitleBar()
+        // ========= Bars =========
+        private void DrawTopBar()
         {
-            var rect = GUILayoutUtility.GetRect(0, 40, GUILayout.ExpandWidth(true));
+            // single-line header strip without odd margins
+            var rect = GUILayoutUtility.GetRect(0, 34, GUILayout.ExpandWidth(true));
             EditorGUI.DrawRect(rect, UI.AccentDim);
-            GUILayout.BeginArea(rect);
-            GUILayout.Space(6);
-
-            EditorGUILayout.BeginHorizontal();
-            GUILayout.Label(UI.PlayIcon, GUILayout.Width(24), GUILayout.Height(24));
-            GUILayout.Space(4);
-
-            GUILayout.BeginVertical();
-            GUILayout.Label("Forge – AI Item Generator", UI.Title);
-            GUILayout.Label("Prompt-driven content generation from ScriptableObject templates", UI.SubTitle);
-            GUILayout.EndVertical();
-
-            GUILayout.FlexibleSpace();
-
-            if (GUILayout.Button(new GUIContent("", UI.SettingsIcon, "Open Forge Settings"), GUILayout.Width(26), GUILayout.Height(24)))
+            using (new GUILayout.AreaScope(rect))
             {
-                // Replace with your settings window if present
-                // ForgeSettingsWindow.OpenWindow();
-                EditorGUIUtility.PingObject(this);
+                GUILayout.Space(6);
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.Label(UI.Play, GUILayout.Width(20), GUILayout.Height(20));
+                GUILayout.Space(4);
+                GUILayout.Label("Forge – AI Item Generator", UI.Title);
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button(new GUIContent("", UI.Gear, "Settings"), GUILayout.Width(24), GUILayout.Height(22)))
+                {
+                    // Hook settings window if you have one
+                    EditorGUIUtility.PingObject(this);
+                }
+                EditorGUILayout.EndHorizontal();
             }
-            EditorGUILayout.EndHorizontal();
-
-            GUILayout.EndArea();
         }
 
-        private void DrawSectionHeader(string title, string tooltip = null)
-        {
-            EditorGUILayout.Space(2);
-            var r = EditorGUILayout.GetControlRect(false, 22);
-            var line = new Rect(r.x, r.y + r.height - 3, r.width, 2);
-            EditorGUI.DrawRect(line, UI.Divider);
-            var label = new GUIContent(title, tooltip);
-            EditorGUI.LabelField(r, label, UI.SectionHeader);
-        }
-
-        private void DrawSectionDivider()
-        {
-            var r = EditorGUILayout.GetControlRect(false, 1);
-            EditorGUI.DrawRect(r, UI.Divider);
-            EditorGUILayout.Space(6);
-        }
-
-        private void DrawSpacer(float px) => GUILayout.Space(px);
-
-        private void DrawPill(string text, Color color)
-        {
-            var bg = new GUIStyle(UI.Pill);
-            var c = GUI.color;
-            GUI.color = color;
-            GUILayout.Label(text, bg, GUILayout.ExpandWidth(false));
-            GUI.color = c;
-        }
-
-        // ====== Top toolbar ======
-        private void DrawTopToolbar()
+        private void DrawToolbar()
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-
             GUILayout.Label("Quick Actions", GUILayout.Width(90));
 
-            using (new EditorGUI.DisabledScope(template == null))
+            using (new EditorGUI.DisabledScope(_template == null))
             {
-                if (GUILayout.Button(new GUIContent(" Find Items", UI.SearchIcon), UI.ToolbarBtn, GUILayout.Width(110)))
+                if (GUILayout.Button(new GUIContent(" Find Items", UI.Search), UI.ToolbarBtn))
                     FindExistingItems();
 
-                if (GUILayout.Button(new GUIContent(" Open Folder", UI.FolderIcon), UI.ToolbarBtn, GUILayout.Width(110)))
-                    TryOpenGeneratedFolder();
+                if (GUILayout.Button(new GUIContent(" Open Folder", UI.Folder), UI.ToolbarBtn))
+                    OpenGeneratedFolder();
             }
 
-            if (GUILayout.Button(new GUIContent(" Clear Results", UI.ClearIcon), UI.ToolbarBtn, GUILayout.Width(110)))
+            if (GUILayout.Button(new GUIContent(" Clear Results", UI.Trash), UI.ToolbarBtn))
             {
-                lastGeneratedItems.Clear();
-                statusMessage = "";
+                _lastGenerated.Clear();
+                _status = "";
+                _statusType = MessageType.None;
             }
 
             GUILayout.FlexibleSpace();
 
-            // Subtle count/status on the right
-            if (discoveredItemsCount > 0)
+            if (_foundCount > 0)
             {
-                GUILayout.Label($"Discovered: {discoveredItemsCount}", UI.MiniMuted);
+                GUILayout.Label($"Discovered: {_foundCount}", UI.Header);
                 if (GUILayout.Button("View", UI.ToolbarBtn, GUILayout.Width(60)))
-                    ShowExistingItemsPopup();
+                    ShowFoundPopup();
             }
-
             EditorGUILayout.EndHorizontal();
         }
 
-        // ====== Template selection ======
-        private void DrawTemplateSelection()
+        // ========= Sections =========
+        private void DrawTemplateSection()
         {
             DrawSectionHeader("Template");
 
-            EditorGUILayout.BeginVertical(UI.Card);
-            template = (ScriptableObject)EditorGUILayout.ObjectField(
-                new GUIContent("ScriptableObject Template", "Pick a ScriptableObject that represents your item definition."),
-                template,
-                typeof(ScriptableObject),
-                false);
-
-            if (template != null)
+            using (new EditorGUILayout.VerticalScope(UI.Card))
             {
-                var templateType = template.GetType();
-                // You already had this extractor in your codebase:
-                var schema = ForgeSchemaExtractor.ExtractSchema(templateType);
+                var old = EditorGUIUtility.labelWidth;
+                EditorGUIUtility.labelWidth = LABEL_W;
 
-                EditorGUILayout.Space(4);
-                EditorGUILayout.LabelField("Preview", EditorStyles.miniBoldLabel);
-                EditorGUILayout.BeginHorizontal();
-                DrawPill($"Type: {schema.typeName}", UI.Accent);
-                GUILayout.Space(4);
-                DrawPill($"Fields: {schema.fields.Count}", new Color(0.2f, 0.7f, 0.35f, 1f));
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button(new GUIContent("Preview Schema", UI.RefreshIcon), GUILayout.Height(24), GUILayout.Width(140)))
+                _template = (ScriptableObject)EditorGUILayout.ObjectField(
+                    new GUIContent("ScriptableObject Template", "Pick the ScriptableObject that defines your item structure."),
+                    _template,
+                    typeof(ScriptableObject),
+                    false);
+
+                if (_template != null)
                 {
-                    var schemaDesc = ForgeSchemaExtractor.GenerateSchemaDescription(schema);
-                    EditorUtility.DisplayDialog("Schema Preview", schemaDesc, "OK");
+                    var t = _template.GetType();
+                    var schema = ForgeSchemaExtractor.ExtractSchema(t);
+
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.BeginHorizontal();
+                    GUILayout.Label($"Type: {schema.typeName}", UI.Header);
+                    GUILayout.Space(8);
+                    // green count pill
+                    var pillRect = GUILayoutUtility.GetRect(80, 20, GUILayout.Width(80));
+                    EditorGUI.DrawRect(pillRect, new Color(0.2f, 0.75f, 0.35f, 0.18f));
+                    GUI.Label(pillRect, $"Fields: {schema.fields.Count}", UI.Pill);
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button(new GUIContent("Preview Schema", UI.Refresh), GUILayout.Height(22), GUILayout.Width(140)))
+                    {
+                        var desc = ForgeSchemaExtractor.GenerateSchemaDescription(schema);
+                        EditorUtility.DisplayDialog("Schema Preview", desc, "OK");
+                    }
+                    EditorGUILayout.EndHorizontal();
+
+                    GUILayout.Space(2);
+                    GUILayout.Label(schema.description, UI.Hint);
                 }
-                EditorGUILayout.EndHorizontal();
+                else
+                {
+                    EditorGUILayout.HelpBox(
+                        "Select a ScriptableObject template to define the structure:\n" +
+                        "• Fields & types  • [Range] constraints  • [Tooltip] descriptions  • Enum options",
+                        MessageType.Info);
+                }
 
-                EditorGUILayout.Space(2);
-                EditorGUILayout.LabelField(schema.description, UI.FooterHelp);
+                EditorGUIUtility.labelWidth = old;
             }
-            else
-            {
-                EditorGUILayout.HelpBox(
-                    "Select a ScriptableObject template to define the structure.\n" +
-                    "• Fields & types\n• [Range] constraints\n• [Tooltip] descriptions\n• Enum options",
-                    MessageType.Info);
-            }
-
-            EditorGUILayout.EndVertical();
         }
 
-        // ====== Generation options ======
-        private void DrawGenerationOptions()
+        private void DrawExistingSection()
+        {
+            DrawSectionHeader("Existing Items Context");
+
+            using (new EditorGUILayout.VerticalScope(UI.Card))
+            {
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button(new GUIContent(" Find Existing Items", UI.Search), GUILayout.Height(26)))
+                    FindExistingItems();
+
+                if (_foundCount > 0)
+                {
+                    var pillRect = GUILayoutUtility.GetRect(120, 22, GUILayout.Width(120));
+                    EditorGUI.DrawRect(pillRect, new Color(0.2f, 0.75f, 0.35f, 0.18f));
+                    GUI.Label(pillRect, $"Found: {_foundCount}", UI.Pill);
+
+                    if (GUILayout.Button("View", GUILayout.Width(70), GUILayout.Height(22)))
+                        ShowFoundPopup();
+                }
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.EndHorizontal();
+
+                var s = ForgeConfig.GetGeneratorSettings();
+                GUILayout.Space(3);
+                GUILayout.Label($"Search path: {s?.existingAssetsSearchPath ?? "Resources"} — Discovered items inform naming & uniqueness.", UI.Hint);
+            }
+        }
+
+        private void DrawGenerateOptions()
         {
             DrawSectionHeader("Generation Options");
 
-            EditorGUILayout.BeginVertical(UI.Card);
-            using (new EditorGUILayout.HorizontalScope())
+            using (new EditorGUILayout.VerticalScope(UI.Card))
             {
-                GUILayout.Label("Item Count", GUILayout.Width(100));
-                var prev = itemCount;
-                itemCount = EditorGUILayout.IntSlider(prev, 1, 50);
-                if (itemCount != prev) Repaint();
+                var old = EditorGUIUtility.labelWidth;
+                EditorGUIUtility.labelWidth = LABEL_W;
+
+                // Row: Item count slider + right badge (aligned)
+                Rect row = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+                Rect label = new Rect(row.x, row.y, LABEL_W, row.height);
+                Rect slider = new Rect(label.xMax + 4, row.y, row.width - LABEL_W - 60, row.height);
+                Rect badge = new Rect(slider.xMax + 6, row.y, 40, row.height);
+
+                EditorGUI.LabelField(label, "Item Count");
+                _itemCount = Mathf.RoundToInt(GUI.HorizontalSlider(slider, _itemCount, 1, 50));
+                // badge
+                EditorGUI.DrawRect(badge, UI.Accent);
+                var bc = GUI.color; GUI.color = Color.white;
+                GUI.Label(badge, _itemCount.ToString(), UI.Pill);
+                GUI.color = bc;
+
+                GUILayout.Space(6);
+                EditorGUILayout.LabelField("Additional Context (Optional)");
+                _additionalContext = EditorGUILayout.TextArea(_additionalContext, UI.Code, GUILayout.MinHeight(64));
+                GUILayout.Space(2);
+                GUILayout.Label("Tip: e.g. “Fire-themed items”, “Cyberpunk names”, or “For level 50+”.", UI.Hint);
+
+                EditorGUIUtility.labelWidth = old;
             }
-
-            EditorGUILayout.Space(4);
-            EditorGUILayout.LabelField("Additional Context (Optional)", EditorStyles.miniBoldLabel);
-            var ctxRect = GUILayoutUtility.GetRect(0, 64, GUILayout.ExpandWidth(true));
-            GUI.Box(ctxRect, GUIContent.none);
-            additionalContext = EditorGUI.TextArea(new Rect(ctxRect.x + 4, ctxRect.y + 4, ctxRect.width - 8, ctxRect.height - 8), additionalContext);
-
-            EditorGUILayout.Space(2);
-            EditorGUILayout.LabelField("Tip: e.g. “Fire-themed items”, “Cyberpunk names”, or “For level 50+”.", UI.MiniMuted);
-            EditorGUILayout.EndVertical();
         }
 
-        // ====== Save options ======
         private void DrawSaveOptions()
         {
             DrawSectionHeader("Save Options");
 
-            EditorGUILayout.BeginVertical(UI.Card);
-
-            autoSaveAsAsset = EditorGUILayout.ToggleLeft(new GUIContent("Auto-Save as Asset", "Create assets immediately after generation."), autoSaveAsAsset);
-            using (new EditorGUI.DisabledScope(!autoSaveAsAsset))
+            using (new EditorGUILayout.VerticalScope(UI.Card))
             {
-                EditorGUI.indentLevel++;
-                useCustomFolder = EditorGUILayout.ToggleLeft(new GUIContent("Use Custom Folder Name"), useCustomFolder);
-                if (useCustomFolder)
+                _autoSaveAsAsset = EditorGUILayout.ToggleLeft(new GUIContent("Auto-Save as Asset", "Create assets immediately after generation."), _autoSaveAsAsset);
+                using (new EditorGUI.DisabledScope(!_autoSaveAsAsset))
                 {
-                    customFolderName = EditorGUILayout.TextField(new GUIContent("Folder Name"), customFolderName);
-                }
-                else if (template != null)
-                {
-                    EditorGUILayout.LabelField($"Save to: Generated/{template.GetType().Name}/", UI.MiniMuted);
-                }
+                    var old = EditorGUIUtility.labelWidth;
+                    EditorGUIUtility.labelWidth = LABEL_W;
 
-                EditorGUILayout.Space(3);
-                string basePath = ForgeAssetExporter.GetGeneratedBasePath();
-                EditorGUILayout.LabelField(new GUIContent("Base Path", "Configured in ForgeGeneratorSettings or config file."), UI.MiniMuted);
-                EditorGUILayout.SelectableLabel(basePath, EditorStyles.textField, GUILayout.Height(18));
-                EditorGUI.indentLevel--;
+                    _useCustomFolder = EditorGUILayout.ToggleLeft(new GUIContent("Use Custom Folder Name"), _useCustomFolder);
+                    if (_useCustomFolder)
+                    {
+                        _customFolderName = EditorGUILayout.TextField(new GUIContent("Folder Name"), _customFolderName);
+                    }
+                    else if (_template != null)
+                    {
+                        GUILayout.Label($"Save to: Generated/{_template.GetType().Name}/", UI.Hint);
+                    }
+
+                    GUILayout.Space(4);
+                    string basePath = ForgeAssetExporter.GetGeneratedBasePath();
+                    GUILayout.Label(new GUIContent("Base Path", "Configured in ForgeGeneratorSettings or config file."), UI.Hint);
+                    EditorGUILayout.BeginHorizontal();
+                    EditorGUILayout.SelectableLabel(basePath, EditorStyles.textField, GUILayout.Height(18));
+                    if (GUILayout.Button(new GUIContent("", UI.Copy, "Copy path"), GUILayout.Width(24), GUILayout.Height(18)))
+                        EditorGUIUtility.systemCopyBuffer = basePath;
+                    EditorGUILayout.EndHorizontal();
+
+                    EditorGUIUtility.labelWidth = old;
+                }
             }
-
-            EditorGUILayout.EndVertical();
         }
 
-        // ====== Generate ======
-        private void DrawGenerateButton()
+        // ========= Primary Generate Button =========
+        private void DrawPrimaryButton()
         {
-            EditorGUI.BeginDisabledGroup(isGenerating || template == null);
+            EditorGUI.BeginDisabledGroup(_isGenerating || _template == null);
 
-            var c = GUI.color;
-            GUI.color = isGenerating ? new Color(1f, 1f, 1f, 0.7f) : Color.white;
-
-            var btnText = isGenerating ? "Generating..." : $"Generate {itemCount} Item(s)";
-            var icon = UI.PlayIcon;
             var r = GUILayoutUtility.GetRect(0, 44, GUILayout.ExpandWidth(true));
+
+            // background
+            EditorGUI.DrawRect(r, new Color(0, 0, 0, 0.08f));
+            // hover tint
+            if (r.Contains(Event.current.mousePosition) && !_isGenerating && _template != null)
+                EditorGUI.DrawRect(r, UI.AccentDim);
+
+            // click area
             if (GUI.Button(r, GUIContent.none))
-            {
                 GenerateItems();
-            }
 
-            // Fancy button contents (icon + label)
-            var pad = 8f;
-            var iconRect = new Rect(r.x + pad, r.y + (r.height - 20) / 2f, 20, 20);
-            var labelRect = new Rect(iconRect.xMax + 6, r.y, r.width - (iconRect.width + pad * 2 + 6), r.height);
-            GUI.DrawTexture(iconRect, icon, ScaleMode.ScaleToFit, true);
-            EditorGUI.LabelField(labelRect, btnText, UI.PrimaryButton);
+            // icon
+            var iconRect = new Rect(r.x + 12, r.y + (r.height - 20) / 2f, 20, 20);
+            GUI.DrawTexture(iconRect, UI.Play, ScaleMode.ScaleToFit, true);
 
-            GUI.color = c;
+            // label (centered)
+            string text = _isGenerating ? "Generating…" : $"Generate {_itemCount} Item(s)";
+            EditorGUI.LabelField(r, text, UI.PrimaryBtnText);
+
             EditorGUI.EndDisabledGroup();
         }
 
-        // ====== Results ======
+        // ========= Status & Results =========
+        private void DrawStatus()
+        {
+            if (string.IsNullOrEmpty(_status)) return;
+            GUILayout.Space(6);
+            EditorGUILayout.HelpBox(_status, _statusType);
+        }
+
         private void DrawResults()
         {
-            if (lastGeneratedItems.Count == 0) return;
+            if (_lastGenerated.Count == 0) return;
 
             DrawSectionHeader("Last Generated Items");
-
-            EditorGUILayout.BeginVertical(UI.Card);
-            foreach (var item in lastGeneratedItems)
+            using (new EditorGUILayout.VerticalScope(UI.Card))
             {
-                if (item == null) continue;
-                EditorGUILayout.BeginHorizontal();
-                GUILayout.Label("• " + item.name, GUILayout.ExpandWidth(true));
-                if (GUILayout.Button("Ping", GUILayout.Width(60)))
+                foreach (var x in _lastGenerated)
                 {
-                    EditorGUIUtility.PingObject(item);
-                    Selection.activeObject = item;
+                    if (x == null) continue;
+                    EditorGUILayout.BeginHorizontal();
+                    GUILayout.Label("• " + x.name, GUILayout.ExpandWidth(true));
+                    if (GUILayout.Button("Ping", GUILayout.Width(56)))
+                    {
+                        EditorGUIUtility.PingObject(x);
+                        Selection.activeObject = x;
+                    }
+                    EditorGUILayout.EndHorizontal();
+                }
+
+                GUILayout.Space(6);
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button(new GUIContent(" Clear Results", UI.Trash), GUILayout.Height(24)))
+                {
+                    _lastGenerated.Clear();
+                    _status = "";
+                    _statusType = MessageType.None;
+                }
+                using (new EditorGUI.DisabledScope(!(_autoSaveAsAsset && _template != null)))
+                {
+                    if (GUILayout.Button(new GUIContent(" Open Folder", UI.Folder), GUILayout.Height(24)))
+                        OpenGeneratedFolder();
                 }
                 EditorGUILayout.EndHorizontal();
             }
-
-            EditorGUILayout.Space(6);
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button(new GUIContent(" Clear Results", UI.ClearIcon), GUILayout.Height(24)))
-            {
-                lastGeneratedItems.Clear();
-                statusMessage = "";
-            }
-            using (new EditorGUI.DisabledScope(!(autoSaveAsAsset && template != null)))
-            {
-                if (GUILayout.Button(new GUIContent(" Open Folder", UI.FolderIcon), GUILayout.Height(24)))
-                {
-                    TryOpenGeneratedFolder();
-                }
-            }
-            EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.EndVertical();
         }
 
-        private void DrawFooterNote()
+        private void DrawFooter()
         {
-            GUILayout.FlexibleSpace();
-            var r = EditorGUILayout.GetControlRect(false, 24);
-            var tint = UI.Divider;
-            tint.a *= 2f;
-            EditorGUI.DrawRect(new Rect(r.x, r.y, r.width, 1), tint);
+            var r = EditorGUILayout.GetControlRect(false, 22);
+            EditorGUI.DrawRect(new Rect(r.x, r.y, r.width, 1), UI.Line);
             GUILayout.Space(2);
-            EditorGUILayout.LabelField("Forge • GameLabs — Generate faster. Keep control.", UI.FooterHelp);
+            GUILayout.Label("Forge • GameLabs — Generate faster. Keep control.", UI.Hint);
             GUILayout.Space(2);
         }
 
-        // ====== Existing Items Section ======
-        private void DrawExistingItemsSection()
+        // ========= Section header helper =========
+        private void DrawSectionHeader(string title)
         {
-            DrawSectionHeader("Existing Items Context");
-
-            EditorGUILayout.BeginVertical(UI.Card);
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                if (GUILayout.Button(new GUIContent(" Find Existing Items", UI.SearchIcon), GUILayout.Height(28)))
-                {
-                    FindExistingItems();
-                }
-
-                if (discoveredItemsCount > 0)
-                {
-                    DrawPill($"Found: {discoveredItemsCount}", new Color(0.2f, 0.7f, 0.35f, 1f));
-                    GUILayout.Space(6);
-                    if (GUILayout.Button("View", GUILayout.Width(80), GUILayout.Height(28)))
-                    {
-                        ShowExistingItemsPopup();
-                    }
-                }
-
-                GUILayout.FlexibleSpace();
-            }
-
-            EditorGUILayout.Space(3);
-            var settings = ForgeConfig.GetGeneratorSettings(); // your existing accessor
-            EditorGUILayout.LabelField(
-                $"Search path: {settings?.existingAssetsSearchPath ?? "Resources"} — Discovered items inform naming & uniqueness.",
-                UI.MiniMuted);
-
-            EditorGUILayout.EndVertical();
+            GUILayout.Space(6);
+            var rect = EditorGUILayout.GetControlRect(false, 22);
+            var line = new Rect(rect.x, rect.y + rect.height - 3, rect.width, 2);
+            EditorGUI.DrawRect(line, UI.Line);
+            EditorGUI.LabelField(rect, title, UI.Section);
         }
 
-        // ====== Logic (unchanged) ======
+        // ========= Logic (unchanged) =========
         private void GenerateItems()
         {
-            if (template == null)
-                return;
+            if (_template == null) return;
 
-            isGenerating = true;
-            statusMessage = "Generating items...";
-            statusType = MessageType.Info;
-            lastGeneratedItems.Clear();
+            _isGenerating = true;
+            _status = "Generating items…";
+            _statusType = MessageType.Info;
+            _lastGenerated.Clear();
             Repaint();
 
             var generator = ForgeTemplateGenerator.Instance;
 
-            // Push discovered JSON into generator context
-            if (discoveredItemsJson != null && discoveredItemsJson.Count > 0)
+            if (_foundJson != null && _foundJson.Count > 0)
             {
                 generator.Settings.existingItemsJson.Clear();
-                foreach (var json in discoveredItemsJson)
-                {
-                    if (!string.IsNullOrEmpty(json))
-                        generator.Settings.existingItemsJson.Add(json);
-                }
-                ForgeLogger.Log($"Added {discoveredItemsJson.Count} existing items to generation context");
+                foreach (var j in _foundJson)
+                    if (!string.IsNullOrEmpty(j))
+                        generator.Settings.existingItemsJson.Add(j);
+                ForgeLogger.Log($"Added {_foundJson.Count} existing items to generation context");
             }
 
-            generator.GenerateFromTemplate(template, itemCount, OnGenerationComplete, additionalContext);
+            generator.GenerateFromTemplate(_template, _itemCount, OnGenerationComplete, _additionalContext);
         }
 
         private void OnGenerationComplete(ForgeTemplateGenerationResult result)
         {
-            isGenerating = false;
+            _isGenerating = false;
 
             if (!result.success)
             {
-                statusMessage = $"Generation failed: {result.errorMessage}";
-                statusType = MessageType.Error;
+                _status = $"Generation failed: {result.errorMessage}";
+                _statusType = MessageType.Error;
                 Repaint();
                 return;
             }
 
-            lastGeneratedItems.Clear();
-            lastGeneratedItems.AddRange(result.items);
+            _lastGenerated.Clear();
+            _lastGenerated.AddRange(result.items);
 
-            if (autoSaveAsAsset && template != null)
+            if (_autoSaveAsAsset && _template != null)
             {
-                string folder = useCustomFolder && !string.IsNullOrEmpty(customFolderName)
-                    ? customFolderName
-                    : template.GetType().Name;
+                string folder = _useCustomFolder && !string.IsNullOrEmpty(_customFolderName)
+                    ? _customFolderName
+                    : _template.GetType().Name;
 
-                var savedCount = SaveGeneratedAssets(result.items, folder);
+                var saved = SaveGeneratedAssets(result.items, folder);
 
-                statusMessage =
-                    $"✓ Generated {result.items.Count} item(s) and saved {savedCount} asset(s)\n" +
-                    $"Cost: ${result.estimatedCost:F6} ({result.promptTokens} prompt, {result.completionTokens} completion tokens)";
+                _status = $"✓ Generated {result.items.Count} item(s) and saved {saved} asset(s)\n" +
+                          $"Cost: ${result.estimatedCost:F6} ({result.promptTokens} prompt, {result.completionTokens} completion tokens)";
             }
             else
             {
-                statusMessage =
-                    $"✓ Generated {result.items.Count} item(s)\n" +
-                    $"Cost: ${result.estimatedCost:F6} ({result.promptTokens} prompt, {result.completionTokens} completion tokens)";
+                _status = $"✓ Generated {result.items.Count} item(s)\n" +
+                          $"Cost: ${result.estimatedCost:F6} ({result.promptTokens} prompt, {result.completionTokens} completion tokens)";
             }
 
-            statusType = MessageType.Info;
+            _statusType = MessageType.Info;
             Repaint();
         }
 
         private int SaveGeneratedAssets(List<ScriptableObject> items, string folder)
         {
-            if (items == null || items.Count == 0)
-                return 0;
+            if (items == null || items.Count == 0) return 0;
 
             string folderPath = Path.Combine(ForgeAssetExporter.GetGeneratedBasePath(), folder);
-            EnsureDirectoryExists(folderPath);
+            EnsureDir(folderPath);
 
-            int savedCount = 0;
-            string batchTimestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            int saved = 0;
+            string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
 
             AssetDatabase.StartAssetEditing();
             try
             {
                 for (int i = 0; i < items.Count; i++)
                 {
-                    var item = items[i];
-                    if (item == null) continue;
+                    var itm = items[i];
+                    if (itm == null) continue;
 
-                    string assetName = string.IsNullOrEmpty(item.name)
-                        ? $"{item.GetType().Name}_{batchTimestamp}_{i + 1}"
-                        : $"{item.name}_{batchTimestamp}_{i + 1}";
+                    string baseName = string.IsNullOrEmpty(itm.name)
+                        ? $"{itm.GetType().Name}_{stamp}_{i + 1}"
+                        : $"{itm.name}_{stamp}_{i + 1}";
 
-                    string fileName = GetUniqueFileName(folderPath, assetName);
-                    string fullPath = Path.Combine(folderPath, fileName + ".asset");
+                    string unique = UniqueName(folderPath, baseName);
+                    string full = Path.Combine(folderPath, unique + ".asset");
 
-                    AssetDatabase.CreateAsset(item, fullPath);
-                    savedCount++;
-                    ForgeLogger.Log($"Saved asset: {fullPath}");
+                    AssetDatabase.CreateAsset(itm, full);
+                    saved++;
+                    ForgeLogger.Log($"Saved asset: {full}");
                 }
             }
             finally
@@ -578,62 +531,56 @@ namespace GameLabs.Forge.Editor
                 AssetDatabase.Refresh();
             }
 
-            ForgeLogger.Log($"Batch save completed: {savedCount} assets saved to {folderPath}");
-            return savedCount;
+            ForgeLogger.Log($"Batch save completed: {saved} assets saved to {folderPath}");
+            return saved;
         }
 
-        private void EnsureDirectoryExists(string path)
+        private void EnsureDir(string path)
         {
-            if (Directory.Exists(path))
-                return;
+            if (Directory.Exists(path)) return;
 
-            string parentPath = Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(parentPath) && !Directory.Exists(parentPath))
-                EnsureDirectoryExists(parentPath);
+            string parent = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(parent) && !Directory.Exists(parent))
+                EnsureDir(parent);
 
             string parentFolder = Path.GetDirectoryName(path);
-            string newFolderName = Path.GetFileName(path);
-
-            if (!string.IsNullOrEmpty(parentFolder) && !string.IsNullOrEmpty(newFolderName))
+            string newFolder = Path.GetFileName(path);
+            if (!string.IsNullOrEmpty(parentFolder) && !string.IsNullOrEmpty(newFolder))
             {
-                AssetDatabase.CreateFolder(parentFolder, newFolderName);
+                AssetDatabase.CreateFolder(parentFolder, newFolder);
                 ForgeLogger.Log($"Created folder: {path}");
             }
         }
 
-        private string GetUniqueFileName(string folderPath, string baseName)
+        private string UniqueName(string folderPath, string baseName)
         {
-            if (string.IsNullOrEmpty(baseName))
-                baseName = "Item";
-
-            string fileName = baseName;
-            string fullPath = Path.Combine(folderPath, fileName + ".asset");
-            int counter = 1;
-
-            while (AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(fullPath) != null)
+            if (string.IsNullOrEmpty(baseName)) baseName = "Item";
+            string file = baseName;
+            string full = Path.Combine(folderPath, file + ".asset");
+            int n = 1;
+            while (AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(full) != null)
             {
-                fileName = $"{baseName}_{counter}";
-                fullPath = Path.Combine(folderPath, fileName + ".asset");
-                counter++;
+                file = $"{baseName}_{n}";
+                full = Path.Combine(folderPath, file + ".asset");
+                n++;
             }
-
-            return fileName;
+            return file;
         }
 
-        private void TryOpenGeneratedFolder()
+        private void OpenGeneratedFolder()
         {
-            if (template == null) return;
+            if (_template == null) return;
 
-            string folder = useCustomFolder && !string.IsNullOrEmpty(customFolderName)
-                ? customFolderName
-                : template.GetType().Name;
+            string folder = _useCustomFolder && !string.IsNullOrEmpty(_customFolderName)
+                ? _customFolderName
+                : _template.GetType().Name;
 
             var path = Path.Combine(ForgeAssetExporter.GetGeneratedBasePath(), folder);
-            var folderAsset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
-            if (folderAsset != null)
+            var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
+            if (asset != null)
             {
-                EditorGUIUtility.PingObject(folderAsset);
-                Selection.activeObject = folderAsset;
+                EditorGUIUtility.PingObject(asset);
+                Selection.activeObject = asset;
             }
             else
             {
@@ -643,25 +590,25 @@ namespace GameLabs.Forge.Editor
 
         private void FindExistingItems()
         {
-            if (template == null)
+            if (_template == null)
             {
                 EditorUtility.DisplayDialog("Error", "Please select a template first.", "OK");
                 return;
             }
 
-            var itemType = template.GetType();
+            var itemType = _template.GetType();
             var settings = ForgeConfig.GetGeneratorSettings();
             string searchPath = settings?.existingAssetsSearchPath ?? "Resources";
 
             var method = typeof(ForgeAssetDiscovery).GetMethod(nameof(ForgeAssetDiscovery.DiscoverAssetsAsJson),
                 System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-            var genericMethod = method.MakeGenericMethod(itemType);
-            var result = genericMethod.Invoke(null, new object[] { searchPath }) as List<string>;
+            var generic = method.MakeGenericMethod(itemType);
+            var result = generic.Invoke(null, new object[] { searchPath }) as List<string>;
 
-            discoveredItemsJson = result ?? new List<string>();
-            discoveredItemsCount = discoveredItemsJson.Count;
+            _foundJson = result ?? new List<string>();
+            _foundCount = _foundJson.Count;
 
-            if (discoveredItemsCount == 0)
+            if (_foundCount == 0)
             {
                 EditorUtility.DisplayDialog("Existing Items",
                     $"No existing {itemType.Name} items found in '{searchPath}'.\n\n" +
@@ -670,46 +617,41 @@ namespace GameLabs.Forge.Editor
             }
             else
             {
-                ForgeLogger.Log($"Discovered {discoveredItemsCount} existing {itemType.Name} items");
+                ForgeLogger.Log($"Discovered {_foundCount} existing {itemType.Name} items");
             }
 
             Repaint();
         }
 
-        private void ShowExistingItemsPopup()
+        private void ShowFoundPopup()
         {
-            var popup = ScriptableObject.CreateInstance<ExistingItemsPopup>();
-            popup.titleContent = new GUIContent($"Existing Items ({discoveredItemsCount})");
-            popup.itemsJson = new List<string>(discoveredItemsJson);
-            popup.minSize = new Vector2(520, 520);
-            popup.maxSize = new Vector2(820, 1000);
-            popup.ShowUtility();
+            var p = ScriptableObject.CreateInstance<ExistingItemsPopup>();
+            p.titleContent = new GUIContent($"Existing Items ({_foundCount})");
+            p.itemsJson = new List<string>(_foundJson);
+            p.minSize = new Vector2(520, 520);
+            p.maxSize = new Vector2(820, 1000);
+            p.ShowUtility();
         }
     }
 
-    /// <summary>
-    /// Popup: view discovered existing items (visual refresh only).
-    /// </summary>
+    /// <summary>Popup to display discovered existing items (visual only).</summary>
     public class ExistingItemsPopup : EditorWindow
     {
-        public List<string> itemsJson = new List<string>();
-        private Vector2 scrollPos;
+        public List<string> itemsJson = new();
+        private Vector2 _scroll;
 
         private void OnGUI()
         {
             GUILayout.Space(8);
             EditorGUILayout.LabelField("Discovered Items", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox(
-                "These items guide generation to avoid duplicates and maintain naming/style consistency.",
-                MessageType.Info);
+            EditorGUILayout.HelpBox("These items guide generation to avoid duplicates and keep naming/style consistent.", MessageType.Info);
 
             GUILayout.Space(6);
             var r = EditorGUILayout.GetControlRect(false, 1);
             EditorGUI.DrawRect(r, new Color(1, 1, 1, 0.07f));
 
             GUILayout.Space(8);
-            scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
-
+            _scroll = EditorGUILayout.BeginScrollView(_scroll);
             foreach (var json in itemsJson)
             {
                 EditorGUILayout.BeginVertical("HelpBox");
@@ -717,12 +659,10 @@ namespace GameLabs.Forge.Editor
                 EditorGUILayout.EndVertical();
                 GUILayout.Space(4);
             }
-
             EditorGUILayout.EndScrollView();
 
             GUILayout.Space(6);
-            if (GUILayout.Button("Close", GUILayout.Height(26)))
-                Close();
+            if (GUILayout.Button("Close", GUILayout.Height(26))) Close();
             GUILayout.Space(6);
         }
     }
