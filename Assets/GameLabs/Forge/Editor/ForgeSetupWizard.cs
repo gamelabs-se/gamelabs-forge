@@ -446,20 +446,13 @@ namespace GameLabs.Forge.Editor
             
             EditorGUILayout.Space(20);
             
-            EditorGUILayout.LabelField("Quick Start", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Next Steps", EditorStyles.boldLabel);
             
             EditorGUILayout.Space(10);
             
-            if (GUILayout.Button("Add ForgeItemGenerator to Scene", GUILayout.Height(35)))
+            if (GUILayout.Button("Open Forge AI Item Generator", GUILayout.Height(35)))
             {
-                CreateForgeGenerator();
-            }
-            
-            EditorGUILayout.Space(5);
-            
-            if (GUILayout.Button("Open Demo Scene", GUILayout.Height(25)))
-            {
-                OpenDemoScene();
+                EditorWindow.GetWindow<ForgeTemplateWindow>();
             }
             
             EditorGUILayout.Space(5);
@@ -472,11 +465,11 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.Space(20);
             
             EditorGUILayout.HelpBox(
-                "Next Steps:\n" +
-                "1. Create your item classes (inherit from ForgeItemDefinition or use any class)\n" +
-                "2. Add ForgeItemGenerator to your scene\n" +
-                "3. Call GenerateSingle<YourItem>() or GenerateBatch<YourItem>(count)\n" +
-                "4. Use the generated items in your game!",
+                "Ready to generate!\n" +
+                "1. Open the Forge AI Item Generator window (above)\n" +
+                "2. Select a ScriptableObject template for your item type\n" +
+                "3. Adjust generation settings and create items\n" +
+                "4. Generated items are saved as Unity assets",
                 MessageType.Info);
         }
         
@@ -566,52 +559,6 @@ namespace GameLabs.Forge.Editor
             var rect = EditorGUILayout.GetControlRect(false, 1);
             EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.5f));
             EditorGUILayout.Space(5);
-        }
-        
-        private void CreateForgeGenerator()
-        {
-            var existing = FindFirstObjectByType<ForgeItemGenerator>();
-            if (existing != null)
-            {
-                Selection.activeObject = existing.gameObject;
-                EditorUtility.DisplayDialog("Forge", "ForgeItemGenerator already exists in scene.", "OK");
-                return;
-            }
-            
-            var go = new GameObject("ForgeItemGenerator");
-            var generator = go.AddComponent<ForgeItemGenerator>();
-            
-            // Apply settings
-            var settings = new ForgeGeneratorSettings
-            {
-                gameName = gameName,
-                gameDescription = gameDescription,
-                targetAudience = targetAudience,
-                defaultBatchSize = defaultBatchSize,
-                maxBatchSize = maxBatchSize,
-                temperature = temperature,
-                model = model,
-                additionalRules = additionalRules
-            };
-            generator.UpdateSettings(settings);
-            
-            Selection.activeObject = go;
-            EditorGUIUtility.PingObject(go);
-            
-            ForgeLogger.Log("ForgeItemGenerator added to scene.");
-        }
-        
-        private void OpenDemoScene()
-        {
-            string demoScenePath = "Assets/GameLabs/Forge/Demo/ForgeDemo.unity";
-            if (File.Exists(demoScenePath))
-            {
-                UnityEditor.SceneManagement.EditorSceneManager.OpenScene(demoScenePath);
-            }
-            else
-            {
-                EditorUtility.DisplayDialog("Forge", "Demo scene not found. Create a new scene and add ForgeItemGenerator.", "OK");
-            }
         }
         
         [Serializable]
