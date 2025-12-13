@@ -22,7 +22,6 @@ namespace GameLabs.Forge.Editor
         
         /// <summary>Static method for easy access from other windows.</summary>
         public static void Open() => OpenWindow();
-        }
         
         private void OnEnable()
         {
