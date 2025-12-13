@@ -68,6 +68,7 @@ namespace GameLabs.Forge.Editor
             public static Texture2D Refresh => (Texture2D)EditorGUIUtility.IconContent("d_Refresh").image;
             public static Texture2D Copy => (Texture2D)EditorGUIUtility.IconContent("Clipboard").image;
             public static Texture2D Save => (Texture2D)EditorGUIUtility.IconContent("SaveFromPlay").image;
+            public static Texture2D BarChart => (Texture2D)EditorGUIUtility.IconContent("BarChartIcon").image;
 
             public static void Init()
             {
@@ -143,27 +144,37 @@ namespace GameLabs.Forge.Editor
         // ========= Bars =========
         private void DrawTopBar()
         {
-            // single-line header strip without deadzone
-            EditorGUILayout.BeginHorizontal(GUILayout.Height(34));
-            var rect = EditorGUILayout.GetControlRect(GUILayout.Width(1), GUILayout.Height(34));
-            EditorGUI.DrawRect(new Rect(0, rect.y, position.width, 34), UI.AccentDim);
+            // Tall header strip with centered content
+            EditorGUILayout.BeginVertical(GUILayout.Height(44));
             
-            GUILayout.Label(UI.Play, GUILayout.Width(20), GUILayout.Height(20));
-            GUILayout.Space(4);
-            GUILayout.Label("Forge – AI Item Generator", UI.Title);
+            // Draw background
+            var rect = EditorGUILayout.GetControlRect(GUILayout.Height(44));
+            EditorGUI.DrawRect(new Rect(0, rect.y, position.width, 44), UI.AccentDim);
+            
+            // Centered content inside
+            EditorGUILayout.BeginHorizontal(GUILayout.Height(44));
+            GUILayout.Space(8);
+            
+            // Icon + Title (left side)
+            GUILayout.Label(UI.Play, GUILayout.Width(24), GUILayout.Height(24));
+            GUILayout.Space(6);
+            GUILayout.Label("Forge – AI Item Generator", UI.Title, GUILayout.ExpandWidth(true));
+            
             GUILayout.FlexibleSpace();
             
-            if (GUILayout.Button(new GUIContent(UI.Gear, "Settings"), GUILayout.Width(28), GUILayout.Height(28)))
+            // Action buttons (right side)
+            if (GUILayout.Button(new GUIContent(UI.Gear, "Settings"), GUILayout.Width(36), GUILayout.Height(36)))
             {
                 ForgeSettingsWindow.Open();
             }
-            if (GUILayout.Button(new GUIContent(UI.Refresh, "Statistics"), GUILayout.Width(28), GUILayout.Height(28)))
+            if (GUILayout.Button(new GUIContent(UI.BarChart, "Statistics"), GUILayout.Width(36), GUILayout.Height(36)))
             {
                 ForgeStatisticsWindow.Open();
             }
             
-            GUILayout.Space(4);
+            GUILayout.Space(8);
             EditorGUILayout.EndHorizontal();
+            EditorGUILayout.EndVertical();
         }
 
         private void DrawToolbar()
