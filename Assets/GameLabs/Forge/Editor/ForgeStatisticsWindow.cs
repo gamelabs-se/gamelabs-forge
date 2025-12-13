@@ -12,12 +12,16 @@ namespace GameLabs.Forge.Editor
         private Vector2 scrollPos;
         private ForgeStatistics stats;
         
-        [MenuItem("GameLabs/Forge/Statistics", priority = 10)]
+        [MenuItem("GameLabs/Forge/Statistics", priority = 21)]
         public static void OpenWindow()
         {
             var window = GetWindow<ForgeStatisticsWindow>("Forge Statistics");
             window.minSize = new Vector2(400, 500);
             window.maxSize = new Vector2(600, 800);
+        }
+        
+        /// <summary>Static method for easy access from other windows.</summary>
+        public static void Open() => OpenWindow();
         }
         
         private void OnEnable()

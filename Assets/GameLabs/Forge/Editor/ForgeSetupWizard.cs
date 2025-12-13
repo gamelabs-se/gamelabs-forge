@@ -41,7 +41,7 @@ namespace GameLabs.Forge.Editor
         // Validation
         private bool apiKeyValid = false;
         
-        [MenuItem("GameLabs/Forge/Setup Wizard", priority = 0)]
+        [MenuItem("GameLabs/Forge/Setup Wizard", priority = 11)]
         public static void Open()
         {
             var window = GetWindow<ForgeSetupWizard>("Forge Setup Wizard");

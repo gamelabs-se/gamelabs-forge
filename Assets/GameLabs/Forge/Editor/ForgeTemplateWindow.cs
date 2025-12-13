@@ -35,7 +35,7 @@ namespace GameLabs.Forge.Editor
 
         private const float LABEL_W = 120f; // unified label width
 
-        [MenuItem("GameLabs/Forge/AI Item Generator", priority = 5)]
+        [MenuItem("GameLabs/Forge/FORGE Window", priority = 0)]
         public static void OpenWindow()
         {
             var w = GetWindow<ForgeTemplateWindow>();
@@ -143,24 +143,27 @@ namespace GameLabs.Forge.Editor
         // ========= Bars =========
         private void DrawTopBar()
         {
-            // single-line header strip without odd margins
-            var rect = GUILayoutUtility.GetRect(0, 34, GUILayout.ExpandWidth(true));
-            EditorGUI.DrawRect(rect, UI.AccentDim);
-            using (new GUILayout.AreaScope(rect))
+            // single-line header strip without deadzone
+            EditorGUILayout.BeginHorizontal(GUILayout.Height(34));
+            var rect = EditorGUILayout.GetControlRect(GUILayout.Width(1), GUILayout.Height(34));
+            EditorGUI.DrawRect(new Rect(0, rect.y, position.width, 34), UI.AccentDim);
+            
+            GUILayout.Label(UI.Play, GUILayout.Width(20), GUILayout.Height(20));
+            GUILayout.Space(4);
+            GUILayout.Label("Forge – AI Item Generator", UI.Title);
+            GUILayout.FlexibleSpace();
+            
+            if (GUILayout.Button(new GUIContent(UI.Gear, "Settings"), GUILayout.Width(28), GUILayout.Height(28)))
             {
-                GUILayout.Space(6);
-                EditorGUILayout.BeginHorizontal();
-                GUILayout.Label(UI.Play, GUILayout.Width(20), GUILayout.Height(20));
-                GUILayout.Space(4);
-                GUILayout.Label("Forge – AI Item Generator", UI.Title);
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button(new GUIContent("", UI.Gear, "Settings"), GUILayout.Width(24), GUILayout.Height(22)))
-                {
-                    // Hook settings window if you have one
-                    EditorGUIUtility.PingObject(this);
-                }
-                EditorGUILayout.EndHorizontal();
+                ForgeSettingsWindow.Open();
             }
+            if (GUILayout.Button(new GUIContent(UI.Refresh, "Statistics"), GUILayout.Width(28), GUILayout.Height(28)))
+            {
+                ForgeStatisticsWindow.Open();
+            }
+            
+            GUILayout.Space(4);
+            EditorGUILayout.EndHorizontal();
         }
 
         private void DrawToolbar()

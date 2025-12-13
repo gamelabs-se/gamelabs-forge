@@ -12,12 +12,16 @@ namespace GameLabs.Forge.Editor
         private Vector2 scrollPos;
         private ForgeGeneratorSettings settings;
         
-        [MenuItem("GameLabs/Forge/Settings", priority = 1)]
+        [MenuItem("GameLabs/Forge/Settings", priority = 20)]
         public static void OpenWindow()
         {
             var window = GetWindow<ForgeSettingsWindow>("Forge Settings");
             window.minSize = new Vector2(450, 600);
             window.maxSize = new Vector2(600, 900);
+        }
+        
+        /// <summary>Static method for easy access from other windows.</summary>
+        public static void Open() => OpenWindow();
         }
         
         private void OnEnable()
