@@ -30,6 +30,7 @@ namespace GameLabs.Forge.Editor
         private MessageType _statusType = MessageType.None;
 
         private readonly List<ScriptableObject> _lastGenerated = new();
+        private readonly Dictionary<ScriptableObject, bool> _itemSavedState = new(); // track saved/unsaved
 
         private const float LABEL_W = 120f; // unified label width
 
@@ -65,6 +66,7 @@ namespace GameLabs.Forge.Editor
             public static Texture2D Trash => (Texture2D)EditorGUIUtility.IconContent("TreeEditor.Trash").image;
             public static Texture2D Refresh => (Texture2D)EditorGUIUtility.IconContent("d_Refresh").image;
             public static Texture2D Copy => (Texture2D)EditorGUIUtility.IconContent("Clipboard").image;
+            public static Texture2D Save => (Texture2D)EditorGUIUtility.IconContent("SaveFromPlay").image;
 
             public static void Init()
             {
@@ -384,28 +386,84 @@ namespace GameLabs.Forge.Editor
             DrawSectionHeader("Last Generated Items");
             using (new EditorGUILayout.VerticalScope(UI.Card))
             {
-                foreach (var x in _lastGenerated)
+                // Draw each generated item with action buttons
+                for (int i = 0; i < _lastGenerated.Count; i++)
                 {
-                    if (x == null) continue;
+                    var item = _lastGenerated[i];
+                    if (item == null) continue;
+
+                    bool isSaved = _itemSavedState.ContainsKey(item) && _itemSavedState[item];
+                    
                     EditorGUILayout.BeginHorizontal();
-                    GUILayout.Label("• " + x.name, GUILayout.ExpandWidth(true));
-                    if (GUILayout.Button("Ping", GUILayout.Width(56)))
+                    
+                    // Item name with saved/unsaved indicator
+                    string indicator = isSaved ? "✓ " : "○ ";
+                    EditorGUILayout.LabelField(indicator + item.name, GUILayout.ExpandWidth(true));
+                    
+                    // Action buttons
+                    if (GUILayout.Button("View", GUILayout.Width(50)))
                     {
-                        EditorGUIUtility.PingObject(x);
-                        Selection.activeObject = x;
+                        EditorGUIUtility.PingObject(item);
+                        Selection.activeObject = item;
                     }
+                    
+                    if (!isSaved && GUILayout.Button("Save", GUILayout.Width(50)))
+                    {
+                        SaveSingleItem(item, i);
+                    }
+                    
+                    // Red discard button
+                    GUI.backgroundColor = new Color(1f, 0.4f, 0.4f); // red
+                    if (GUILayout.Button("Discard", GUILayout.Width(60)))
+                    {
+                        _lastGenerated.RemoveAt(i);
+                        _itemSavedState.Remove(item);
+                        DestroyImmediate(item);
+                        i--;
+                    }
+                    GUI.backgroundColor = Color.white;
+                    
                     EditorGUILayout.EndHorizontal();
                 }
 
+                GUILayout.Space(10);
+                
+                // Bulk action buttons
+                EditorGUILayout.BeginHorizontal();
+                
+                // Save All button (enabled only if there are unsaved items)
+                bool hasUnsaved = _lastGenerated.Any(x => x != null && (!_itemSavedState.ContainsKey(x) || !_itemSavedState[x]));
+                using (new EditorGUI.DisabledScope(!hasUnsaved || _template == null))
+                {
+                    if (GUILayout.Button(new GUIContent(" Save All", UI.Save), GUILayout.Height(24)))
+                    {
+                        SaveAllUnsavedItems();
+                    }
+                }
+                
+                // Discard All button (red)
+                GUI.backgroundColor = new Color(1f, 0.4f, 0.4f); // red
+                if (GUILayout.Button(new GUIContent(" Discard All", UI.Trash), GUILayout.Height(24)))
+                {
+                    _lastGenerated.Clear();
+                    _itemSavedState.Clear();
+                    _status = "";
+                    _statusType = MessageType.None;
+                }
+                GUI.backgroundColor = Color.white;
+                
+                EditorGUILayout.EndHorizontal();
+                
                 GUILayout.Space(6);
                 EditorGUILayout.BeginHorizontal();
                 if (GUILayout.Button(new GUIContent(" Clear Results", UI.Trash), GUILayout.Height(24)))
                 {
                     _lastGenerated.Clear();
+                    _itemSavedState.Clear();
                     _status = "";
                     _statusType = MessageType.None;
                 }
-                using (new EditorGUI.DisabledScope(!(_autoSaveAsAsset && _template != null)))
+                using (new EditorGUI.DisabledScope(!(_template != null)))
                 {
                     if (GUILayout.Button(new GUIContent(" Open Folder", UI.Folder), GUILayout.Height(24)))
                         OpenGeneratedFolder();
@@ -471,7 +529,12 @@ namespace GameLabs.Forge.Editor
             }
 
             _lastGenerated.Clear();
+            _itemSavedState.Clear();
             _lastGenerated.AddRange(result.items);
+            
+            // Mark all as unsaved initially
+            foreach (var item in result.items)
+                _itemSavedState[item] = false;
 
             if (_autoSaveAsAsset && _template != null)
             {
@@ -480,6 +543,10 @@ namespace GameLabs.Forge.Editor
                     : _template.GetType().Name;
 
                 var saved = SaveGeneratedAssets(result.items, folder);
+                
+                // Mark saved items
+                for (int i = 0; i < saved && i < result.items.Count; i++)
+                    _itemSavedState[result.items[i]] = true;
 
                 _status = $"✓ Generated {result.items.Count} item(s) and saved {saved} asset(s)\n" +
                           $"Cost: ${result.estimatedCost:F6} ({result.promptTokens} prompt, {result.completionTokens} completion tokens)";
@@ -550,6 +617,94 @@ namespace GameLabs.Forge.Editor
                 AssetDatabase.CreateFolder(parentFolder, newFolder);
                 ForgeLogger.Log($"Created folder: {path}");
             }
+        }
+
+        private void SaveSingleItem(ScriptableObject item, int index)
+        {
+            if (item == null || _template == null) return;
+
+            string folder = _useCustomFolder && !string.IsNullOrEmpty(_customFolderName)
+                ? _customFolderName
+                : _template.GetType().Name;
+
+            string folderPath = Path.Combine(ForgeAssetExporter.GetGeneratedBasePath(), folder);
+            EnsureDir(folderPath);
+
+            string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string baseName = string.IsNullOrEmpty(item.name)
+                ? $"{item.GetType().Name}_{stamp}_{index + 1}"
+                : $"{item.name}_{stamp}_{index + 1}";
+
+            string unique = UniqueName(folderPath, baseName);
+            string full = Path.Combine(folderPath, unique + ".asset");
+
+            AssetDatabase.StartAssetEditing();
+            try
+            {
+                AssetDatabase.CreateAsset(item, full);
+                _itemSavedState[item] = true;
+                ForgeLogger.Log($"Saved asset: {full}");
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
+
+            Repaint();
+        }
+
+        private void SaveAllUnsavedItems()
+        {
+            if (_template == null) return;
+
+            string folder = _useCustomFolder && !string.IsNullOrEmpty(_customFolderName)
+                ? _customFolderName
+                : _template.GetType().Name;
+
+            string folderPath = Path.Combine(ForgeAssetExporter.GetGeneratedBasePath(), folder);
+            EnsureDir(folderPath);
+
+            int saved = 0;
+            string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
+            AssetDatabase.StartAssetEditing();
+            try
+            {
+                for (int i = 0; i < _lastGenerated.Count; i++)
+                {
+                    var item = _lastGenerated[i];
+                    if (item == null) continue;
+                    
+                    // Skip already saved items
+                    if (_itemSavedState.ContainsKey(item) && _itemSavedState[item])
+                        continue;
+
+                    string baseName = string.IsNullOrEmpty(item.name)
+                        ? $"{item.GetType().Name}_{stamp}_{i + 1}"
+                        : $"{item.name}_{stamp}_{i + 1}";
+
+                    string unique = UniqueName(folderPath, baseName);
+                    string full = Path.Combine(folderPath, unique + ".asset");
+
+                    AssetDatabase.CreateAsset(item, full);
+                    _itemSavedState[item] = true;
+                    saved++;
+                    ForgeLogger.Log($"Saved asset: {full}");
+                }
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
+
+            _status = $"Saved {saved} asset(s) to {folder}";
+            _statusType = MessageType.Info;
+            ForgeLogger.Log($"Batch save completed: {saved} assets saved to {folderPath}");
+            Repaint();
         }
 
         private string UniqueName(string folderPath, string baseName)
