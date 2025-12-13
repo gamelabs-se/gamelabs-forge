@@ -74,7 +74,7 @@ namespace GameLabs.Forge.Editor
             {
                 if (Title != null) return;
 
-                Title = new GUIStyle(EditorStyles.boldLabel) { fontSize = 17, alignment = TextAnchor.MiddleLeft };
+                Title = new GUIStyle(EditorStyles.boldLabel) { fontSize = 16, alignment = TextAnchor.MiddleLeft, fixedHeight = 24, contentOffset = Vector2.zero };
 
                 ToolbarBtn = new GUIStyle(EditorStyles.toolbarButton) { fixedHeight = 22 };
 
@@ -144,37 +144,43 @@ namespace GameLabs.Forge.Editor
         // ========= Bars =========
         private void DrawTopBar()
         {
-            // Tall header strip with centered content
-            EditorGUILayout.BeginVertical(GUILayout.Height(44));
+            // Create icon button style for consistent sizing and appearance
+            var iconBtnStyle = new GUIStyle(EditorStyles.iconButton)
+            {
+                fixedWidth = 32,
+                fixedHeight = 32,
+                margin = new RectOffset(2, 2, 6, 6),
+                padding = new RectOffset(4, 4, 4, 4)
+            };
+
+            // Draw background bar
+            var rect = EditorGUILayout.GetControlRect(GUILayout.Height(36));
+            EditorGUI.DrawRect(new Rect(0, rect.y, position.width, 36), UI.AccentDim);
             
-            // Draw background
-            var rect = EditorGUILayout.GetControlRect(GUILayout.Height(44));
-            EditorGUI.DrawRect(new Rect(0, rect.y, position.width, 44), UI.AccentDim);
+            // Content: icon + title on left, buttons on right
+            EditorGUILayout.BeginHorizontal(GUILayout.Height(36));
+            GUILayout.Space(12);
             
-            // Centered content inside
-            EditorGUILayout.BeginHorizontal(GUILayout.Height(44));
+            GUILayout.Label(UI.Play, GUILayout.Width(20), GUILayout.Height(20));
             GUILayout.Space(8);
-            
-            // Icon + Title (left side)
-            GUILayout.Label(UI.Play, GUILayout.Width(24), GUILayout.Height(24));
-            GUILayout.Space(6);
-            GUILayout.Label("Forge – AI Item Generator", UI.Title, GUILayout.ExpandWidth(true));
+            GUILayout.Label("Forge – AI Item Generator", UI.Title, GUILayout.Height(24));
             
             GUILayout.FlexibleSpace();
             
-            // Action buttons (right side)
-            if (GUILayout.Button(new GUIContent(UI.Gear, "Settings"), GUILayout.Width(36), GUILayout.Height(36)))
+            // Settings button
+            if (GUILayout.Button(new GUIContent(UI.Gear, "Settings"), iconBtnStyle))
             {
                 ForgeSettingsWindow.Open();
             }
-            if (GUILayout.Button(new GUIContent(UI.BarChart, "Statistics"), GUILayout.Width(36), GUILayout.Height(36)))
+            
+            // Statistics button
+            if (GUILayout.Button(new GUIContent(UI.BarChart, "Statistics"), iconBtnStyle))
             {
                 ForgeStatisticsWindow.Open();
             }
             
             GUILayout.Space(8);
             EditorGUILayout.EndHorizontal();
-            EditorGUILayout.EndVertical();
         }
 
         private void DrawToolbar()
