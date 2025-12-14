@@ -32,6 +32,10 @@ namespace GameLabs.Forge.Editor
 
         private int _foundCount = 0;
         private List<string> _foundJson = new();
+        
+        // ========= Discovery State =========
+        private string _lastDiscoveredTemplateName = "";
+        private string _lastDiscoveredPath = "";
 
         private bool _isGenerating = false;
         private string _status = "";
@@ -76,6 +80,8 @@ namespace GameLabs.Forge.Editor
             public static Texture2D Copy => (Texture2D)EditorGUIUtility.IconContent("Clipboard").image;
             public static Texture2D Save => (Texture2D)EditorGUIUtility.IconContent("SaveFromPlay").image;
             public static Texture2D BarChart => (Texture2D)EditorGUIUtility.IconContent("d_Refresh").image;
+            public static Texture2D Eye => (Texture2D)EditorGUIUtility.IconContent("d_View").image;
+            public static Texture2D Eye => (Texture2D)EditorGUIUtility.IconContent("d_View").image;
 
             public static void Init()
             {
@@ -244,8 +250,12 @@ namespace GameLabs.Forge.Editor
                 // Trigger refresh if blueprint changed
                 if (_blueprint != oldBlueprint)
                 {
-                    _foundCount = 0;
-                    _foundJson.Clear();
+                    // Clear count to trigger auto-find in next frame, but preserve if we haven't changed actual template
+                    if (oldBlueprint == null || oldBlueprint.Template != (_blueprint?.Template))
+                    {
+                        _foundCount = 0;
+                        _foundJson.Clear();
+                    }
                     // Load blueprint values into editor fields
                     if (_blueprint != null)
                     {
@@ -405,7 +415,7 @@ namespace GameLabs.Forge.Editor
                     EditorGUI.DrawRect(pillRect, new Color(0.2f, 0.75f, 0.35f, 0.18f));
                     GUI.Label(pillRect, $"Fields: {schema.fields.Count}", UI.Pill);
                     GUILayout.FlexibleSpace();
-                    if (GUILayout.Button(new GUIContent("Preview Schema", UI.Refresh), GUILayout.Height(22), GUILayout.Width(140)))
+                    if (GUILayout.Button(new GUIContent(UI.Eye, "Preview schema"), GUILayout.Height(22), GUILayout.Width(140)))
                     {
                         var desc = ForgeSchemaExtractor.GenerateSchemaDescription(schema);
                         EditorUtility.DisplayDialog("Schema Preview", desc, "OK");
@@ -439,16 +449,28 @@ namespace GameLabs.Forge.Editor
 
         private void DrawExistingSection()
         {
-            // Auto-find when template or blueprint changes
-            bool shouldAutoFind = false;
+            // Auto-find when template or discovery path changes
             var currentTemplate = _blueprint != null ? _blueprint.Template : _template;
-            if (currentTemplate != null && !string.IsNullOrEmpty(currentTemplate.GetType().Name))
+            string currentPath = "Resources";
+            if (_blueprint != null)
             {
-                shouldAutoFind = true;
+                currentPath = _blueprint.GetEffectiveDiscoveryPath();
+            }
+            else
+            {
+                var settings = ForgeConfig.GetGeneratorSettings();
+                currentPath = settings?.existingAssetsSearchPath ?? "Resources";
             }
 
-            if (shouldAutoFind && _foundCount == 0 && (currentTemplate != null))
+            string currentTemplateName = currentTemplate?.GetType().Name ?? "";
+            
+            // Check if template or path changed
+            bool templateOrPathChanged = (currentTemplateName != _lastDiscoveredTemplateName) || (currentPath != _lastDiscoveredPath);
+            
+            if (!string.IsNullOrEmpty(currentTemplateName) && templateOrPathChanged)
             {
+                _foundCount = 0;
+                _foundJson.Clear();
                 FindExistingItems();
             }
 
@@ -898,6 +920,10 @@ namespace GameLabs.Forge.Editor
 
             _foundJson = result ?? new List<string>();
             _foundCount = _foundJson.Count;
+            
+            // Track what we discovered
+            _lastDiscoveredTemplateName = itemType.Name;
+            _lastDiscoveredPath = searchPath;
 
             if (_foundCount == 0)
             {
