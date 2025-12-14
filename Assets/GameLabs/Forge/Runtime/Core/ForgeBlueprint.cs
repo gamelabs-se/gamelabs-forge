@@ -37,6 +37,9 @@ namespace GameLabs.Forge
         [SerializeField]
         private List<ScriptableObject> _existingItems = new List<ScriptableObject>();
 
+        [SerializeField]
+        private string _discoveryPathOverride = ""; // Empty = use global default
+
         /// <summary>
         /// The template ScriptableObject that defines the item schema.
         /// </summary>
@@ -70,6 +73,27 @@ namespace GameLabs.Forge
         public List<ScriptableObject> ExistingItems
         {
             get => _existingItems;
+        }
+
+        /// <summary>
+        /// Discovery path override for this blueprint (empty = use global default).
+        /// </summary>
+        public string DiscoveryPathOverride
+        {
+            get => _discoveryPathOverride;
+            set => _discoveryPathOverride = value;
+        }
+
+        /// <summary>
+        /// Gets the effective discovery path (override if set, otherwise global default).
+        /// </summary>
+        public string GetEffectiveDiscoveryPath()
+        {
+            if (!string.IsNullOrEmpty(_discoveryPathOverride))
+                return _discoveryPathOverride;
+            
+            var config = ForgeConfig.GetGeneratorSettings();
+            return config?.existingAssetsSearchPath ?? "Resources";
         }
 
         /// <summary>

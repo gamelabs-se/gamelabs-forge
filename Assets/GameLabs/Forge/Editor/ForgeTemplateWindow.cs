@@ -24,6 +24,12 @@ namespace GameLabs.Forge.Editor
         private bool _useCustomFolder = false;
         private bool _autoSaveAsAsset = true;
 
+        // ========= Blueprint Editing =========
+        private string _blueprintInstructions = "";
+        private ForgeDuplicateStrategy _blueprintStrategy = ForgeDuplicateStrategy.Ignore;
+        private string _blueprintDiscoveryPath = "";
+        private bool _blueprintDirty = false;
+
         private int _foundCount = 0;
         private List<string> _foundJson = new();
 
@@ -240,6 +246,14 @@ namespace GameLabs.Forge.Editor
                 {
                     _foundCount = 0;
                     _foundJson.Clear();
+                    // Load blueprint values into editor fields
+                    if (_blueprint != null)
+                    {
+                        _blueprintInstructions = _blueprint.Instructions;
+                        _blueprintStrategy = _blueprint.DuplicateStrategy;
+                        _blueprintDiscoveryPath = _blueprint.DiscoveryPathOverride;
+                        _blueprintDirty = false;
+                    }
                 }
 
                 if (GUILayout.Button(new GUIContent(UI.Search, "Create New Blueprint"), GUILayout.Width(32), GUILayout.Height(18)))
@@ -253,48 +267,73 @@ namespace GameLabs.Forge.Editor
                 {
                     EditorGUILayout.Space(6);
                     
-                    // Show blueprint settings
-                    EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                    // Editable blueprint settings
+                    EditorGUILayout.LabelField("Template", _blueprint.Template?.name ?? "None", UI.Hint);
                     
-                    GUILayout.Label($"Name: {_blueprint.DisplayName}", UI.Header);
-                    
-                    if (_blueprint.Template != null)
-                    {
-                        var templateType = _blueprint.Template.GetType();
-                        var schema = ForgeSchemaExtractor.ExtractSchema(templateType);
-                        GUILayout.Label($"Template: {schema.typeName}", UI.Hint);
-                    }
-                    else
-                    {
-                        EditorGUILayout.HelpBox("Blueprint has no template assigned.", MessageType.Warning);
-                    }
-
-                    GUILayout.Label($"Duplicate Strategy: {_blueprint.DuplicateStrategy}", UI.Hint);
-                    GUILayout.Label($"Saved Items: {_blueprint.ExistingItems.Count}", UI.Hint);
-
-                    if (!string.IsNullOrEmpty(_blueprint.Instructions))
-                    {
-                        EditorGUILayout.LabelField("Instructions:", _blueprint.Instructions, UI.Hint);
-                    }
-
-                    EditorGUILayout.EndVertical();
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField("Strategy");
+                    _blueprintStrategy = (ForgeDuplicateStrategy)EditorGUILayout.EnumPopup(_blueprintStrategy);
+                    if (_blueprintStrategy != _blueprint.DuplicateStrategy)
+                        _blueprintDirty = true;
 
                     EditorGUILayout.Space(4);
-
-                    // Button to edit blueprint
-                    if (GUILayout.Button("Edit Blueprint Settings", GUILayout.Height(22)))
+                    EditorGUILayout.LabelField("Instructions (Optional)");
+                    var newInstructions = EditorGUILayout.TextArea(_blueprintInstructions, UI.Code, GUILayout.MinHeight(50));
+                    if (newInstructions != _blueprintInstructions)
                     {
-                        Selection.activeObject = _blueprint;
-                        EditorGUIUtility.PingObject(_blueprint);
+                        _blueprintInstructions = newInstructions;
+                        _blueprintDirty = true;
                     }
+
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField("Discovery Path Override (empty = use global default)");
+                    var newPath = EditorGUILayout.TextField(_blueprintDiscoveryPath);
+                    if (newPath != _blueprintDiscoveryPath)
+                    {
+                        _blueprintDiscoveryPath = newPath;
+                        _blueprintDirty = true;
+                    }
+
+                    EditorGUILayout.Space(4);
+                    GUILayout.Label($"Discovered Items: {_blueprint.ExistingItems.Count}", UI.Hint);
+
+                    EditorGUILayout.Space(6);
+                    
+                    // Save/Discard buttons
+                    EditorGUILayout.BeginHorizontal();
+                    
+                    using (new EditorGUI.DisabledScope(!_blueprintDirty))
+                    {
+                        if (GUILayout.Button(new GUIContent(UI.Save, "Save changes to blueprint"), GUILayout.Height(24)))
+                        {
+                            _blueprint.Instructions = _blueprintInstructions;
+                            _blueprint.DuplicateStrategy = _blueprintStrategy;
+                            _blueprint.DiscoveryPathOverride = _blueprintDiscoveryPath;
+                            EditorUtility.SetDirty(_blueprint);
+                            AssetDatabase.SaveAssets();
+                            _blueprintDirty = false;
+                            ForgeLogger.Log($"Blueprint '{_blueprint.DisplayName}' saved.");
+                        }
+                    }
+                    
+                    if (GUILayout.Button("Discard", GUILayout.Height(24)))
+                    {
+                        _blueprintInstructions = _blueprint.Instructions;
+                        _blueprintStrategy = _blueprint.DuplicateStrategy;
+                        _blueprintDiscoveryPath = _blueprint.DiscoveryPathOverride;
+                        _blueprintDirty = false;
+                    }
+                    
+                    EditorGUILayout.EndHorizontal();
                 }
                 else
                 {
                     EditorGUILayout.HelpBox(
                         "Optionally select or create a ForgeBlueprint to:\n" +
                         "• Save generation settings and instructions\n" +
-                        "• Manage duplicate prevention strategy\n" +
-                        "• Create profiles for different item types (weapons, armor, etc.)",
+                        "• Configure duplicate prevention strategy\n" +
+                        "• Set custom discovery path\n" +
+                        "• Create profiles for different item types",
                         MessageType.Info);
                 }
 
@@ -310,10 +349,22 @@ namespace GameLabs.Forge.Editor
 
             var blueprint = ScriptableObject.CreateInstance<ForgeBlueprint>();
             blueprint.name = System.IO.Path.GetFileNameWithoutExtension(path);
+            
+            // Initialize with current template if available
+            if (_template != null)
+            {
+                blueprint.Template = _template;
+            }
+            
             AssetDatabase.CreateAsset(blueprint, path);
             AssetDatabase.SaveAssets();
 
             _blueprint = blueprint;
+            _blueprintInstructions = blueprint.Instructions;
+            _blueprintStrategy = blueprint.DuplicateStrategy;
+            _blueprintDiscoveryPath = blueprint.DiscoveryPathOverride;
+            _blueprintDirty = false;
+            
             ForgeLogger.Log($"Created new blueprint: {blueprint.DisplayName}");
         }
 
@@ -363,6 +414,16 @@ namespace GameLabs.Forge.Editor
 
                     GUILayout.Space(2);
                     GUILayout.Label(schema.description, UI.Hint);
+                    
+                    // "Save as Blueprint" button if not already using a blueprint
+                    if (_blueprint == null)
+                    {
+                        GUILayout.Space(4);
+                        if (GUILayout.Button("Save as Blueprint", GUILayout.Height(24)))
+                        {
+                            CreateNewBlueprint();
+                        }
+                    }
                 }
                 else
                 {
@@ -817,8 +878,18 @@ namespace GameLabs.Forge.Editor
             }
 
             var itemType = _template.GetType();
-            var settings = ForgeConfig.GetGeneratorSettings();
-            string searchPath = settings?.existingAssetsSearchPath ?? "Resources";
+            
+            // Get discovery path from blueprint override, or global default
+            string searchPath = "Resources";
+            if (_blueprint != null)
+            {
+                searchPath = _blueprint.GetEffectiveDiscoveryPath();
+            }
+            else
+            {
+                var settings = ForgeConfig.GetGeneratorSettings();
+                searchPath = settings?.existingAssetsSearchPath ?? "Resources";
+            }
 
             var method = typeof(ForgeAssetDiscovery).GetMethod(nameof(ForgeAssetDiscovery.DiscoverAssetsAsJson),
                 System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
@@ -837,7 +908,7 @@ namespace GameLabs.Forge.Editor
             }
             else
             {
-                ForgeLogger.Log($"Discovered {_foundCount} existing {itemType.Name} items");
+                ForgeLogger.Log($"Discovered {_foundCount} existing {itemType.Name} items in '{searchPath}'");
             }
 
             Repaint();
