@@ -425,7 +425,7 @@ namespace GameLabs.Forge.Editor
                     if (_blueprint == null)
                     {
                         GUILayout.Space(4);
-                        if (GUILayout.Button(new GUIContent(UI.Save, "Save current template as a blueprint"), GUILayout.Height(24)))
+                        if (GUILayout.Button(new GUIContent(UI.Save, "Save as Blueprint"), GUILayout.Height(24)))
                         {
                             if (_template != null)
                             {
@@ -531,10 +531,18 @@ namespace GameLabs.Forge.Editor
                 GUI.color = bc;
 
                 GUILayout.Space(6);
-                EditorGUILayout.LabelField("Additional Context (Optional)");
+                EditorGUILayout.LabelField("Custom Instructions (Optional)");
                 _additionalContext = EditorGUILayout.TextArea(_additionalContext, UI.Code, GUILayout.MinHeight(64));
                 GUILayout.Space(2);
-                GUILayout.Label("Tip: e.g. “Fire-themed items”, “Cyberpunk names”, or “For level 50+”.", UI.Hint);
+                var globalContext = ForgeConfig.GetGeneratorSettings()?.gameContext;
+                if (!string.IsNullOrEmpty(globalContext))
+                {
+                    GUILayout.Label($"Global game context from settings will be included.", UI.Hint);
+                }
+                else
+                {
+                    GUILayout.Label("Tip: e.g. \"Fire-themed items\", \"Cyberpunk names\", or \"For level 50+\".", UI.Hint);
+                }
 
                 EditorGUIUtility.labelWidth = old;
             }
