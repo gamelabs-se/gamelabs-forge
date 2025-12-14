@@ -534,10 +534,10 @@ namespace GameLabs.Forge.Editor
                 EditorGUILayout.LabelField("Custom Instructions (Optional)");
                 _additionalContext = EditorGUILayout.TextArea(_additionalContext, UI.Code, GUILayout.MinHeight(64));
                 GUILayout.Space(2);
-                var globalContext = ForgeConfig.GetGeneratorSettings()?.gameContext;
-                if (!string.IsNullOrEmpty(globalContext))
+                var globalSettings = ForgeConfig.GetGeneratorSettings();
+                if (globalSettings != null && !string.IsNullOrEmpty(globalSettings.gameDescription))
                 {
-                    GUILayout.Label($"Global game context from settings will be included.", UI.Hint);
+                    GUILayout.Label($"Game context: {globalSettings.gameDescription}", UI.Hint);
                 }
                 else
                 {
