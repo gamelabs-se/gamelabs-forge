@@ -19,7 +19,6 @@ namespace GameLabs.Forge.Editor
         private ForgeBlueprint _blueprint;
         private ScriptableObject _template;
         private int _itemCount = 20;
-        private string _additionalContext = "";
         private string _customFolderName = "";
         private bool _useCustomFolder = false;
         private bool _autoSaveAsAsset = true;
@@ -530,20 +529,6 @@ namespace GameLabs.Forge.Editor
                 GUI.Label(badge, _itemCount.ToString(), UI.Pill);
                 GUI.color = bc;
 
-                GUILayout.Space(6);
-                EditorGUILayout.LabelField("Custom Instructions (Optional)");
-                _additionalContext = EditorGUILayout.TextArea(_additionalContext, UI.Code, GUILayout.MinHeight(64));
-                GUILayout.Space(2);
-                var globalSettings = ForgeConfig.GetGeneratorSettings();
-                if (globalSettings != null && !string.IsNullOrEmpty(globalSettings.gameDescription))
-                {
-                    GUILayout.Label($"Game context: {globalSettings.gameDescription}", UI.Hint);
-                }
-                else
-                {
-                    GUILayout.Label("Tip: e.g. \"Fire-themed items\", \"Cyberpunk names\", or \"For level 50+\".", UI.Hint);
-                }
-
                 EditorGUIUtility.labelWidth = old;
             }
         }
@@ -643,8 +628,12 @@ namespace GameLabs.Forge.Editor
         // ========= Logic (unchanged) =========
         private void GenerateItems()
         {
-            // Prefer blueprint if available, otherwise use template
-            if (_blueprint == null && _template == null) return;
+            // Blueprint-based generation is now the primary method
+            if (_blueprint == null || _blueprint.Template == null)
+            {
+                EditorUtility.DisplayDialog("Error", "Please select or create a blueprint to generate items.", "OK");
+                return;
+            }
 
             _isGenerating = true;
             _status = "Generating items…";
@@ -653,26 +642,7 @@ namespace GameLabs.Forge.Editor
             Repaint();
 
             var generator = ForgeTemplateGenerator.Instance;
-
-            if (_blueprint != null && _blueprint.Template != null)
-            {
-                // Use blueprint-based generation
-                generator.GenerateFromBlueprint(_blueprint, _itemCount, OnGenerationComplete);
-            }
-            else
-            {
-                // Use template-based generation (legacy path)
-                if (_foundJson != null && _foundJson.Count > 0)
-                {
-                    generator.Settings.existingItemsJson.Clear();
-                    foreach (var j in _foundJson)
-                        if (!string.IsNullOrEmpty(j))
-                            generator.Settings.existingItemsJson.Add(j);
-                    ForgeLogger.Log($"Added {_foundJson.Count} existing items to generation context");
-                }
-
-                generator.GenerateFromTemplate(_template, _itemCount, OnGenerationComplete, _additionalContext);
-            }
+            generator.GenerateFromBlueprint(_blueprint, _itemCount, OnGenerationComplete);
         }
 
         private void OnGenerationComplete(ForgeTemplateGenerationResult result)
