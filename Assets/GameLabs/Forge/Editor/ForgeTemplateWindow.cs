@@ -303,9 +303,6 @@ namespace GameLabs.Forge.Editor
                         _blueprintDirty = true;
                     }
 
-                    EditorGUILayout.Space(4);
-                    GUILayout.Label($"Discovered Items: {_blueprint.ExistingItems.Count}", UI.Hint);
-
                     EditorGUILayout.Space(6);
                     
                     // Save/Discard buttons
@@ -428,9 +425,16 @@ namespace GameLabs.Forge.Editor
                     if (_blueprint == null)
                     {
                         GUILayout.Space(4);
-                        if (GUILayout.Button("Save as Blueprint", GUILayout.Height(24)))
+                        if (GUILayout.Button(new GUIContent(UI.Save, "Save current template as a blueprint"), GUILayout.Height(24)))
                         {
-                            CreateNewBlueprint();
+                            if (_template != null)
+                            {
+                                CreateNewBlueprint();
+                            }
+                            else
+                            {
+                                EditorUtility.DisplayDialog("Error", "Please select a template first.", "OK");
+                            }
                         }
                     }
                 }
