@@ -81,7 +81,6 @@ namespace GameLabs.Forge.Editor
             public static Texture2D Save => (Texture2D)EditorGUIUtility.IconContent("SaveFromPlay").image;
             public static Texture2D BarChart => (Texture2D)EditorGUIUtility.IconContent("d_Refresh").image;
             public static Texture2D Eye => (Texture2D)EditorGUIUtility.IconContent("d_View").image;
-            public static Texture2D Eye => (Texture2D)EditorGUIUtility.IconContent("d_View").image;
 
             public static void Init()
             {
