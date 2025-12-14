@@ -136,7 +136,6 @@ namespace GameLabs.Forge.Editor
             DrawSaveOptions();
             DrawPrimaryButton();
             DrawStatus();
-            DrawResults();
 
             EditorGUILayout.EndScrollView();
 
@@ -229,11 +228,19 @@ namespace GameLabs.Forge.Editor
 
                 EditorGUILayout.BeginHorizontal();
                 
+                var oldBlueprint = _blueprint;
                 _blueprint = (ForgeBlueprint)EditorGUILayout.ObjectField(
                     new GUIContent("Blueprint", "A ForgeBlueprint saves template, instructions, and duplicate strategy."),
                     _blueprint,
                     typeof(ForgeBlueprint),
                     false);
+
+                // Trigger refresh if blueprint changed
+                if (_blueprint != oldBlueprint)
+                {
+                    _foundCount = 0;
+                    _foundJson.Clear();
+                }
 
                 if (GUILayout.Button(new GUIContent(UI.Search, "Create New Blueprint"), GUILayout.Width(32), GUILayout.Height(18)))
                 {
@@ -319,11 +326,19 @@ namespace GameLabs.Forge.Editor
                 var old = EditorGUIUtility.labelWidth;
                 EditorGUIUtility.labelWidth = LABEL_W;
 
+                var oldTemplate = _template;
                 _template = (ScriptableObject)EditorGUILayout.ObjectField(
                     new GUIContent("ScriptableObject Template", "Pick the ScriptableObject that defines your item structure."),
                     _template,
                     typeof(ScriptableObject),
                     false);
+
+                // Trigger refresh if template changed
+                if (_template != oldTemplate)
+                {
+                    _foundCount = 0;
+                    _foundJson.Clear();
+                }
 
                 if (_template != null)
                 {
@@ -363,29 +378,46 @@ namespace GameLabs.Forge.Editor
 
         private void DrawExistingSection()
         {
-            DrawSectionHeader("Existing Items Context");
+            // Auto-find when template or blueprint changes
+            bool shouldAutoFind = false;
+            var currentTemplate = _blueprint != null ? _blueprint.Template : _template;
+            if (currentTemplate != null && !string.IsNullOrEmpty(currentTemplate.GetType().Name))
+            {
+                shouldAutoFind = true;
+            }
+
+            if (shouldAutoFind && _foundCount == 0 && (currentTemplate != null))
+            {
+                FindExistingItems();
+            }
+
+            DrawSectionHeader("Existing Items");
 
             using (new EditorGUILayout.VerticalScope(UI.Card))
             {
                 EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button(new GUIContent(" Find Existing Items", UI.Search), GUILayout.Height(26)))
+                
+                // Refresh button
+                if (GUILayout.Button(new GUIContent(UI.Refresh, "Refresh discovery"), GUILayout.Width(32), GUILayout.Height(22)))
                     FindExistingItems();
 
-                if (_foundCount > 0)
-                {
-                    var pillRect = GUILayoutUtility.GetRect(120, 22, GUILayout.Width(120));
-                    EditorGUI.DrawRect(pillRect, new Color(0.2f, 0.75f, 0.35f, 0.18f));
-                    GUI.Label(pillRect, $"Found: {_foundCount}", UI.Pill);
+                GUILayout.Space(8);
 
-                    if (GUILayout.Button("View", GUILayout.Width(70), GUILayout.Height(22)))
-                        ShowFoundPopup();
-                }
+                // Count display (always shown, aligned consistently)
+                string countText = _foundCount > 0 ? $"Discovered: {_foundCount}" : "No items found";
+                EditorGUILayout.LabelField(countText, UI.Header);
+
                 GUILayout.FlexibleSpace();
+
+                // View button (only if items found)
+                if (_foundCount > 0 && GUILayout.Button("View", GUILayout.Width(60), GUILayout.Height(22)))
+                    ShowFoundPopup();
+                
                 EditorGUILayout.EndHorizontal();
 
                 var s = ForgeConfig.GetGeneratorSettings();
                 GUILayout.Space(3);
-                GUILayout.Label($"Search path: {s?.existingAssetsSearchPath ?? "Resources"} — Discovered items inform naming & uniqueness.", UI.Hint);
+                GUILayout.Label($"Search path: {s?.existingAssetsSearchPath ?? "Resources"}", UI.Hint);
             }
         }
 
@@ -493,99 +525,6 @@ namespace GameLabs.Forge.Editor
             if (string.IsNullOrEmpty(_status)) return;
             GUILayout.Space(6);
             EditorGUILayout.HelpBox(_status, _statusType);
-        }
-
-        private void DrawResults()
-        {
-            if (_lastGenerated.Count == 0) return;
-
-            DrawSectionHeader("Last Generated Items");
-            using (new EditorGUILayout.VerticalScope(UI.Card))
-            {
-                // Draw each generated item with action buttons
-                for (int i = 0; i < _lastGenerated.Count; i++)
-                {
-                    var item = _lastGenerated[i];
-                    if (item == null) continue;
-
-                    bool isSaved = _itemSavedState.ContainsKey(item) && _itemSavedState[item];
-                    
-                    EditorGUILayout.BeginHorizontal();
-                    
-                    // Item name with saved/unsaved indicator
-                    string indicator = isSaved ? "✓ " : "○ ";
-                    EditorGUILayout.LabelField(indicator + item.name, GUILayout.ExpandWidth(true));
-                    
-                    // Action buttons
-                    if (GUILayout.Button("View", GUILayout.Width(50)))
-                    {
-                        EditorGUIUtility.PingObject(item);
-                        Selection.activeObject = item;
-                    }
-                    
-                    if (!isSaved && GUILayout.Button("Save", GUILayout.Width(50)))
-                    {
-                        SaveSingleItem(item, i);
-                    }
-                    
-                    // Red discard button
-                    GUI.backgroundColor = new Color(1f, 0.4f, 0.4f); // red
-                    if (GUILayout.Button("Discard", GUILayout.Width(60)))
-                    {
-                        _lastGenerated.RemoveAt(i);
-                        _itemSavedState.Remove(item);
-                        DestroyImmediate(item);
-                        i--;
-                    }
-                    GUI.backgroundColor = Color.white;
-                    
-                    EditorGUILayout.EndHorizontal();
-                }
-
-                GUILayout.Space(10);
-                
-                // Bulk action buttons
-                EditorGUILayout.BeginHorizontal();
-                
-                // Save All button (enabled only if there are unsaved items)
-                bool hasUnsaved = _lastGenerated.Any(x => x != null && (!_itemSavedState.ContainsKey(x) || !_itemSavedState[x]));
-                using (new EditorGUI.DisabledScope(!hasUnsaved || _template == null))
-                {
-                    if (GUILayout.Button(new GUIContent(" Save All", UI.Save), GUILayout.Height(24)))
-                    {
-                        SaveAllUnsavedItems();
-                    }
-                }
-                
-                // Discard All button (red)
-                GUI.backgroundColor = new Color(1f, 0.4f, 0.4f); // red
-                if (GUILayout.Button(new GUIContent(" Discard All", UI.Trash), GUILayout.Height(24)))
-                {
-                    _lastGenerated.Clear();
-                    _itemSavedState.Clear();
-                    _status = "";
-                    _statusType = MessageType.None;
-                }
-                GUI.backgroundColor = Color.white;
-                
-                EditorGUILayout.EndHorizontal();
-                
-                GUILayout.Space(6);
-                EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button(new GUIContent(" Clear Results", UI.Trash), GUILayout.Height(24)))
-                {
-                    _lastGenerated.Clear();
-                    _itemSavedState.Clear();
-                    _status = "";
-                    _statusType = MessageType.None;
-                }
-                using (new EditorGUI.DisabledScope(!(_template != null)))
-                {
-                    if (GUILayout.Button(new GUIContent(" Open Folder", UI.Folder), GUILayout.Height(24)))
-                        OpenGeneratedFolder();
-                }
-                EditorGUILayout.EndHorizontal();
-            }
         }
 
         private void DrawFooter()
