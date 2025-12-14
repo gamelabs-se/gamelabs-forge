@@ -76,6 +76,72 @@ namespace GameLabs.Forge
             
             StartCoroutine(GenerateFromTemplateCoroutine(template, count, callback, additionalContext));
         }
+
+        /// <summary>
+        /// Generates items based on a ForgeBlueprint, which includes template, instructions, and duplicate handling.
+        /// </summary>
+        /// <param name="blueprint">The blueprint containing template, instructions, and settings.</param>
+        /// <param name="count">Number of items to generate.</param>
+        /// <param name="callback">Callback with generated ScriptableObject instances.</param>
+        public void GenerateFromBlueprint(
+            ForgeBlueprint blueprint,
+            int count,
+            Action<ForgeTemplateGenerationResult> callback)
+        {
+            if (blueprint == null)
+            {
+                callback?.Invoke(ForgeTemplateGenerationResult.Error("Blueprint cannot be null."));
+                return;
+            }
+
+            if (blueprint.Template == null)
+            {
+                callback?.Invoke(ForgeTemplateGenerationResult.Error("Blueprint template cannot be null."));
+                return;
+            }
+
+            StartCoroutine(GenerateFromBlueprintCoroutine(blueprint, count, callback));
+        }
+
+        private IEnumerator GenerateFromBlueprintCoroutine(
+            ForgeBlueprint blueprint,
+            int count,
+            Action<ForgeTemplateGenerationResult> callback)
+        {
+            var client = ForgeOpenAIClient.Instance;
+
+            // Configure client
+            string modelName = ForgeAIModelHelper.GetModelName(settings.model);
+            client.SetModel(modelName);
+            client.SetTemperature(settings.temperature);
+            client.SetSystemRole(BuildSystemPrompt());
+
+            // Extract schema from blueprint template
+            var templateType = blueprint.Template.GetType();
+            var schema = ForgeSchemaExtractor.ExtractSchema(templateType);
+
+            // Build the user prompt with blueprint strategy
+            var prompt = BuildBlueprintPrompt(schema, count, blueprint);
+
+            ForgeLogger.Log($"Generating {count} {templateType.Name} item(s) from blueprint '{blueprint.DisplayName}'...");
+            ForgeLogger.Log($"Duplicate strategy: {blueprint.DuplicateStrategy}");
+            ForgeLogger.Log($"Schema fields: {schema.fields.Count}");
+
+            ForgeTemplateGenerationResult result = null;
+            bool completed = false;
+
+            client.Chat(prompt, response =>
+            {
+                result = ProcessResponse(response, templateType, count);
+                completed = true;
+            });
+
+            // Wait for completion
+            while (!completed)
+                yield return null;
+
+            callback?.Invoke(result);
+        }
         
         private IEnumerator GenerateFromTemplateCoroutine(
             ScriptableObject template,
@@ -191,6 +257,87 @@ CRITICAL RULES:
                 sb.AppendLine("- Generate completely NEW and UNIQUE items that are different from existing ones.");
             }
             
+            return sb.ToString();
+        }
+
+        private string BuildBlueprintPrompt(ForgeSchemaExtractor.TypeSchema schema, int count, ForgeBlueprint blueprint)
+        {
+            var template = ForgeSchemaExtractor.GenerateJsonTemplate(schema);
+            var schemaDesc = ForgeSchemaExtractor.GenerateSchemaDescription(schema);
+
+            var sb = new StringBuilder();
+
+            // Item schema
+            sb.AppendLine("=== ITEM SCHEMA ===");
+            sb.AppendLine(schemaDesc);
+            sb.AppendLine();
+
+            sb.AppendLine("=== JSON TEMPLATE ===");
+            sb.AppendLine(template);
+            sb.AppendLine();
+
+            // Existing items context based on duplicate strategy
+            if (blueprint.DuplicateStrategy != ForgeDuplicateStrategy.Ignore && blueprint.ExistingItems.Count > 0)
+            {
+                if (blueprint.DuplicateStrategy == ForgeDuplicateStrategy.NamesOnly)
+                {
+                    sb.AppendLine("=== EXISTING ITEM NAMES (AVOID THESE) ===");
+                    foreach (var item in blueprint.ExistingItems)
+                    {
+                        if (item != null)
+                        {
+                            var nameField = item.GetType().GetProperty("Name") ?? item.GetType().GetField("Name");
+                            var nameValue = nameField?.GetValue(item)?.ToString() ?? item.name;
+                            sb.AppendLine($"- {nameValue}");
+                        }
+                    }
+                    sb.AppendLine();
+                    sb.AppendLine("IMPORTANT: Avoid creating items with names matching those listed above.");
+                    sb.AppendLine();
+                }
+                else if (blueprint.DuplicateStrategy == ForgeDuplicateStrategy.FullComposition)
+                {
+                    sb.AppendLine("=== EXISTING ITEMS (AVOID DUPLICATING) ===");
+                    foreach (var item in blueprint.ExistingItems)
+                    {
+                        if (item != null)
+                        {
+                            sb.AppendLine(JsonUtility.ToJson(item, true));
+                        }
+                    }
+                    sb.AppendLine();
+                    sb.AppendLine("IMPORTANT: Do NOT create items that match the above items in structure or values.");
+                    sb.AppendLine();
+                }
+            }
+
+            // Blueprint-specific instructions
+            if (!string.IsNullOrEmpty(blueprint.Instructions))
+            {
+                sb.AppendLine("=== CUSTOM INSTRUCTIONS ===");
+                sb.AppendLine(blueprint.Instructions);
+                sb.AppendLine();
+            }
+
+            // Generation request
+            sb.AppendLine("=== REQUEST ===");
+            if (count == 1)
+            {
+                sb.AppendLine($"Generate exactly 1 unique {schema.typeName}.");
+                sb.AppendLine("Respond with a single JSON object (not an array).");
+            }
+            else
+            {
+                sb.AppendLine($"Generate exactly {count} unique {schema.typeName} items.");
+                sb.AppendLine("Respond with a JSON array containing all items.");
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("IMPORTANT:");
+            sb.AppendLine("- For enum fields, use ONLY the allowed values specified in the schema.");
+            sb.AppendLine("- Respect all [Range] constraints for numeric fields.");
+            sb.AppendLine("- Use the field descriptions as guidance for appropriate values.");
+
             return sb.ToString();
         }
         

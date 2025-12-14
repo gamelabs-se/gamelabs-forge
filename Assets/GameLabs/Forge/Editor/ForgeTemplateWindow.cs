@@ -16,6 +16,7 @@ namespace GameLabs.Forge.Editor
     {
         // ========= UI State =========
         private Vector2 _scroll;
+        private ForgeBlueprint _blueprint;
         private ScriptableObject _template;
         private int _itemCount = 20;
         private string _additionalContext = "";
@@ -128,6 +129,7 @@ namespace GameLabs.Forge.Editor
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
 
+            DrawBlueprintSection();
             DrawTemplateSection();
             DrawExistingSection();
             DrawGenerateOptions();
@@ -216,6 +218,98 @@ namespace GameLabs.Forge.Editor
         }
 
         // ========= Sections =========
+        private void DrawBlueprintSection()
+        {
+            DrawSectionHeader("Blueprint (Optional)");
+
+            using (new EditorGUILayout.VerticalScope(UI.Card))
+            {
+                var old = EditorGUIUtility.labelWidth;
+                EditorGUIUtility.labelWidth = LABEL_W;
+
+                EditorGUILayout.BeginHorizontal();
+                
+                _blueprint = (ForgeBlueprint)EditorGUILayout.ObjectField(
+                    new GUIContent("Blueprint", "A ForgeBlueprint saves template, instructions, and duplicate strategy."),
+                    _blueprint,
+                    typeof(ForgeBlueprint),
+                    false);
+
+                if (GUILayout.Button(new GUIContent(UI.Search, "Create New Blueprint"), GUILayout.Width(32), GUILayout.Height(18)))
+                {
+                    CreateNewBlueprint();
+                }
+
+                EditorGUILayout.EndHorizontal();
+
+                if (_blueprint != null)
+                {
+                    EditorGUILayout.Space(6);
+                    
+                    // Show blueprint settings
+                    EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                    
+                    GUILayout.Label($"Name: {_blueprint.DisplayName}", UI.Header);
+                    
+                    if (_blueprint.Template != null)
+                    {
+                        var templateType = _blueprint.Template.GetType();
+                        var schema = ForgeSchemaExtractor.ExtractSchema(templateType);
+                        GUILayout.Label($"Template: {schema.typeName}", UI.Hint);
+                    }
+                    else
+                    {
+                        EditorGUILayout.HelpBox("Blueprint has no template assigned.", MessageType.Warning);
+                    }
+
+                    GUILayout.Label($"Duplicate Strategy: {_blueprint.DuplicateStrategy}", UI.Hint);
+                    GUILayout.Label($"Saved Items: {_blueprint.ExistingItems.Count}", UI.Hint);
+
+                    if (!string.IsNullOrEmpty(_blueprint.Instructions))
+                    {
+                        EditorGUILayout.LabelField("Instructions:", _blueprint.Instructions, UI.Hint);
+                    }
+
+                    EditorGUILayout.EndVertical();
+
+                    EditorGUILayout.Space(4);
+
+                    // Button to edit blueprint
+                    if (GUILayout.Button("Edit Blueprint Settings", GUILayout.Height(22)))
+                    {
+                        Selection.activeObject = _blueprint;
+                        EditorGUIUtility.PingObject(_blueprint);
+                    }
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox(
+                        "Optionally select or create a ForgeBlueprint to:\n" +
+                        "• Save generation settings and instructions\n" +
+                        "• Manage duplicate prevention strategy\n" +
+                        "• Create profiles for different item types (weapons, armor, etc.)",
+                        MessageType.Info);
+                }
+
+                EditorGUIUtility.labelWidth = old;
+            }
+        }
+
+        private void CreateNewBlueprint()
+        {
+            var path = EditorUtility.SaveFilePanelInProject("Save New Blueprint", "New Blueprint", "asset", "");
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            var blueprint = ScriptableObject.CreateInstance<ForgeBlueprint>();
+            blueprint.name = System.IO.Path.GetFileNameWithoutExtension(path);
+            AssetDatabase.CreateAsset(blueprint, path);
+            AssetDatabase.SaveAssets();
+
+            _blueprint = blueprint;
+            ForgeLogger.Log($"Created new blueprint: {blueprint.DisplayName}");
+        }
+
         private void DrawTemplateSection()
         {
             DrawSectionHeader("Template");
@@ -367,14 +461,15 @@ namespace GameLabs.Forge.Editor
         // ========= Primary Generate Button =========
         private void DrawPrimaryButton()
         {
-            EditorGUI.BeginDisabledGroup(_isGenerating || _template == null);
+            bool hasTemplateOrBlueprint = _template != null || (_blueprint != null && _blueprint.Template != null);
+            EditorGUI.BeginDisabledGroup(_isGenerating || !hasTemplateOrBlueprint);
 
             var r = GUILayoutUtility.GetRect(0, 44, GUILayout.ExpandWidth(true));
 
             // background
             EditorGUI.DrawRect(r, new Color(0, 0, 0, 0.08f));
             // hover tint
-            if (r.Contains(Event.current.mousePosition) && !_isGenerating && _template != null)
+            if (r.Contains(Event.current.mousePosition) && !_isGenerating && hasTemplateOrBlueprint)
                 EditorGUI.DrawRect(r, UI.AccentDim);
 
             // click area
@@ -515,7 +610,8 @@ namespace GameLabs.Forge.Editor
         // ========= Logic (unchanged) =========
         private void GenerateItems()
         {
-            if (_template == null) return;
+            // Prefer blueprint if available, otherwise use template
+            if (_blueprint == null && _template == null) return;
 
             _isGenerating = true;
             _status = "Generating items…";
@@ -525,16 +621,25 @@ namespace GameLabs.Forge.Editor
 
             var generator = ForgeTemplateGenerator.Instance;
 
-            if (_foundJson != null && _foundJson.Count > 0)
+            if (_blueprint != null && _blueprint.Template != null)
             {
-                generator.Settings.existingItemsJson.Clear();
-                foreach (var j in _foundJson)
-                    if (!string.IsNullOrEmpty(j))
-                        generator.Settings.existingItemsJson.Add(j);
-                ForgeLogger.Log($"Added {_foundJson.Count} existing items to generation context");
+                // Use blueprint-based generation
+                generator.GenerateFromBlueprint(_blueprint, _itemCount, OnGenerationComplete);
             }
+            else
+            {
+                // Use template-based generation (legacy path)
+                if (_foundJson != null && _foundJson.Count > 0)
+                {
+                    generator.Settings.existingItemsJson.Clear();
+                    foreach (var j in _foundJson)
+                        if (!string.IsNullOrEmpty(j))
+                            generator.Settings.existingItemsJson.Add(j);
+                    ForgeLogger.Log($"Added {_foundJson.Count} existing items to generation context");
+                }
 
-            generator.GenerateFromTemplate(_template, _itemCount, OnGenerationComplete, _additionalContext);
+                generator.GenerateFromTemplate(_template, _itemCount, OnGenerationComplete, _additionalContext);
+            }
         }
 
         private void OnGenerationComplete(ForgeTemplateGenerationResult result)
