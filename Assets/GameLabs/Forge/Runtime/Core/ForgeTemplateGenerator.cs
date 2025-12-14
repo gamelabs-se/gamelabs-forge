@@ -286,8 +286,20 @@ CRITICAL RULES:
                     {
                         if (item != null)
                         {
-                            var nameField = item.GetType().GetProperty("Name") ?? item.GetType().GetField("Name");
-                            var nameValue = nameField?.GetValue(item)?.ToString() ?? item.name;
+                            string nameValue = item.name;
+                            var nameProp = item.GetType().GetProperty("Name");
+                            if (nameProp != null)
+                            {
+                                nameValue = nameProp.GetValue(item)?.ToString() ?? item.name;
+                            }
+                            else
+                            {
+                                var nameField = item.GetType().GetField("Name");
+                                if (nameField != null)
+                                {
+                                    nameValue = nameField.GetValue(item)?.ToString() ?? item.name;
+                                }
+                            }
                             sb.AppendLine($"- {nameValue}");
                         }
                     }
