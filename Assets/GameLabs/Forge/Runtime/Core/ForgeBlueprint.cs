@@ -10,10 +10,10 @@ namespace GameLabs.Forge
     {
         /// <summary>Don't send any existing items to the API (lowest cost, default).</summary>
         Ignore,
-        
+
         /// <summary>Send only item names with instruction to avoid them (low cost).</summary>
         NamesOnly,
-        
+
         /// <summary>Send full item data with instruction to avoid identical compositions (higher cost, highest quality).</summary>
         FullComposition
     }
@@ -91,7 +91,7 @@ namespace GameLabs.Forge
         {
             if (!string.IsNullOrEmpty(_discoveryPathOverride))
                 return _discoveryPathOverride;
-            
+
             var config = ForgeConfig.GetGeneratorSettings();
             return config?.existingAssetsSearchPath ?? "Resources";
         }

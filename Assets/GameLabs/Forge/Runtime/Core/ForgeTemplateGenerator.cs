@@ -16,22 +16,22 @@ namespace GameLabs.Forge
     {
         [Header("Generator Settings")]
         [SerializeField] private ForgeGeneratorSettings settings = new ForgeGeneratorSettings();
-        
+
         /// <summary>Current settings for generation.</summary>
         public ForgeGeneratorSettings Settings => settings;
-        
+
         private static ForgeTemplateGenerator _instance;
-        
+
         /// <summary>Singleton instance of the template generator.</summary>
         public static ForgeTemplateGenerator Instance
         {
             get
             {
                 if (_instance != null) return _instance;
-                
+
                 _instance = FindFirstObjectByType<ForgeTemplateGenerator>();
                 if (_instance != null) return _instance;
-                
+
 #if UNITY_EDITOR
                 var go = new GameObject("~ForgeTemplateGenerator");
                 go.hideFlags = HideFlags.HideAndDontSave;
@@ -44,7 +44,7 @@ namespace GameLabs.Forge
                 return _instance;
             }
         }
-        
+
         private void OnEnable()
         {
             // Initialize with default settings
@@ -54,7 +54,7 @@ namespace GameLabs.Forge
                 settings = new ForgeGeneratorSettings();
             }
         }
-        
+
         /// <summary>
         /// Generates items based on a ScriptableObject template.
         /// </summary>
@@ -63,7 +63,7 @@ namespace GameLabs.Forge
         /// <param name="callback">Callback with generated ScriptableObject instances.</param>
         /// <param name="additionalContext">Optional context for generation.</param>
         public void GenerateFromTemplate(
-            ScriptableObject template, 
+            ScriptableObject template,
             int count,
             Action<ForgeTemplateGenerationResult> callback,
             string additionalContext = "")
@@ -73,7 +73,7 @@ namespace GameLabs.Forge
                 callback?.Invoke(ForgeTemplateGenerationResult.Error("Template cannot be null."));
                 return;
             }
-            
+
             StartCoroutine(GenerateFromTemplateCoroutine(template, count, callback, additionalContext));
         }
 
@@ -142,7 +142,7 @@ namespace GameLabs.Forge
 
             callback?.Invoke(result);
         }
-        
+
         private IEnumerator GenerateFromTemplateCoroutine(
             ScriptableObject template,
             int count,
@@ -150,40 +150,40 @@ namespace GameLabs.Forge
             string additionalContext)
         {
             var client = ForgeOpenAIClient.Instance;
-            
+
             // Configure client
             string modelName = ForgeAIModelHelper.GetModelName(settings.model);
             client.SetModel(modelName);
             client.SetTemperature(settings.temperature);
             client.SetSystemRole(BuildSystemPrompt());
-            
+
             // Extract schema from template type
             var templateType = template.GetType();
             var schema = ForgeSchemaExtractor.ExtractSchema(templateType);
-            
+
             // Build the user prompt
             var prompt = BuildUserPrompt(schema, count, additionalContext);
-            
+
             ForgeLogger.Log($"Generating {count} {templateType.Name} item(s) from template...");
             ForgeLogger.Log($"Template type: {templateType.FullName}");
             ForgeLogger.Log($"Schema fields: {schema.fields.Count}");
-            
+
             ForgeTemplateGenerationResult result = null;
             bool completed = false;
-            
+
             client.Chat(prompt, response =>
             {
                 result = ProcessResponse(response, templateType, count);
                 completed = true;
             });
-            
+
             // Wait for completion
             while (!completed)
                 yield return null;
-            
+
             callback?.Invoke(result);
         }
-        
+
         private string BuildSystemPrompt()
         {
             return @"You are a game item generation API. Your job is to generate game items based on provided schemas and context.
@@ -198,23 +198,23 @@ CRITICAL RULES:
 7. Generate creative, balanced, and game-appropriate content.
 8. Respect all value ranges and enum constraints provided.";
         }
-        
+
         private string BuildUserPrompt(ForgeSchemaExtractor.TypeSchema schema, int count, string additionalContext)
         {
             var template = ForgeSchemaExtractor.GenerateJsonTemplate(schema);
             var schemaDesc = ForgeSchemaExtractor.GenerateSchemaDescription(schema);
-            
+
             var sb = new StringBuilder();
-            
+
             // Item schema - this is the most important part
             sb.AppendLine("=== ITEM SCHEMA ===");
             sb.AppendLine(schemaDesc);
             sb.AppendLine();
-            
+
             sb.AppendLine("=== JSON TEMPLATE ===");
             sb.AppendLine(template);
             sb.AppendLine();
-            
+
             // Existing items context (CRITICAL for preventing duplicates)
             if (settings.existingItemsJson != null && settings.existingItemsJson.Count > 0)
             {
@@ -222,7 +222,7 @@ CRITICAL RULES:
                 sb.AppendLine(settings.GetExistingItemsContext());
                 sb.AppendLine();
             }
-            
+
             // Additional context from user (if provided)
             if (!string.IsNullOrEmpty(additionalContext))
             {
@@ -230,7 +230,7 @@ CRITICAL RULES:
                 sb.AppendLine(additionalContext);
                 sb.AppendLine();
             }
-            
+
             // Generation request
             sb.AppendLine("=== REQUEST ===");
             if (count == 1)
@@ -243,20 +243,20 @@ CRITICAL RULES:
                 sb.AppendLine($"Generate exactly {count} unique {schema.typeName} items.");
                 sb.AppendLine("Respond with a JSON array containing all items.");
             }
-            
+
             sb.AppendLine();
             sb.AppendLine("IMPORTANT:");
             sb.AppendLine("- For enum fields, use ONLY the allowed values specified in the schema.");
             sb.AppendLine("- Respect all [Range] constraints for numeric fields.");
             sb.AppendLine("- Use the field descriptions as guidance for appropriate values.");
-            
+
             // Add explicit duplicate prevention instruction if existing items are present
             if (settings.existingItemsJson != null && settings.existingItemsJson.Count > 0)
             {
                 sb.AppendLine("- DO NOT duplicate any items from the EXISTING ITEMS list above.");
                 sb.AppendLine("- Generate completely NEW and UNIQUE items that are different from existing ones.");
             }
-            
+
             return sb.ToString();
         }
 
@@ -352,7 +352,7 @@ CRITICAL RULES:
 
             return sb.ToString();
         }
-        
+
         private ForgeTemplateGenerationResult ProcessResponse(
             ForgeOpenAIClient.OpenAIResponse response,
             Type templateType,
@@ -360,23 +360,23 @@ CRITICAL RULES:
         {
             if (response == null)
                 return ForgeTemplateGenerationResult.Error("No response from API.");
-            
+
             if (response.choices == null || response.choices.Count == 0)
                 return ForgeTemplateGenerationResult.Error("Empty choices in response.");
-            
+
             var content = response.choices[0].message?.content;
             if (string.IsNullOrEmpty(content))
                 return ForgeTemplateGenerationResult.Error("Empty content in response.");
-            
+
             // Clean up the content (remove markdown if present)
             content = CleanJsonContent(content);
-            
+
             ForgeLogger.Log($"Raw response:\n{content}");
-            
+
             try
             {
                 var items = new List<ScriptableObject>();
-                
+
                 if (expectedCount == 1)
                 {
                     // Single item - parse as object
@@ -394,12 +394,12 @@ CRITICAL RULES:
                     items = ParseJsonArray(templateType, content);
                     ForgeLogger.Log($"Parsed {items.Count} items from JSON");
                 }
-                
+
                 int promptTokens = response.usage?.prompt_tokens ?? 0;
                 int completionTokens = response.usage?.completion_tokens ?? 0;
-                
+
                 ForgeLogger.Log($"Successfully created {items.Count} ScriptableObject(s). Tokens: {promptTokens} prompt, {completionTokens} completion.");
-                
+
                 return ForgeTemplateGenerationResult.Success(items, templateType, promptTokens, completionTokens);
             }
             catch (Exception e)
@@ -408,7 +408,7 @@ CRITICAL RULES:
                 return ForgeTemplateGenerationResult.Error($"JSON parsing failed: {e.Message}\nContent: {content}");
             }
         }
-        
+
         private ScriptableObject CreateAndPopulateScriptableObject(Type type, string json)
         {
             try
@@ -419,14 +419,14 @@ CRITICAL RULES:
                     ForgeLogger.Error($"Failed to create instance of {type.Name}");
                     return null;
                 }
-                
+
                 // Preprocess JSON to convert enum string values to integers
                 // Unity's JsonUtility requires enums as integers, not strings
                 json = ConvertEnumStringsToIntegers(json, type);
-                
+
                 // Use Unity's JsonUtility to populate the instance
                 JsonUtility.FromJsonOverwrite(json, instance);
-                
+
                 // Try to extract a name from the JSON to set as the asset name
                 string assetName = ExtractNameFromJson(json, type);
                 if (!string.IsNullOrEmpty(assetName))
@@ -437,9 +437,9 @@ CRITICAL RULES:
                 {
                     instance.name = $"{type.Name}_{System.Guid.NewGuid().ToString().Substring(0, 8)}";
                 }
-                
+
                 ForgeLogger.Log($"Created ScriptableObject: {instance.name} ({type.Name})");
-                
+
                 return instance;
             }
             catch (Exception e)
@@ -448,35 +448,35 @@ CRITICAL RULES:
                 return null;
             }
         }
-        
+
         private string ConvertEnumStringsToIntegers(string json, Type type)
         {
             try
             {
                 // Get all enum fields in the type
                 var fields = type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                
+
                 foreach (var field in fields)
                 {
                     if (field.FieldType.IsEnum)
                     {
                         // Find the pattern: "fieldName":"EnumValue"
                         var enumValues = Enum.GetNames(field.FieldType);
-                        
+
                         foreach (var enumValue in enumValues)
                         {
                             var pattern = $"\"{field.Name}\"\\s*:\\s*\"{enumValue}\"";
                             var match = System.Text.RegularExpressions.Regex.Match(json, pattern);
-                            
+
                             if (match.Success)
                             {
                                 // Get the integer value for this enum
                                 var enumIndex = Array.IndexOf(enumValues, enumValue);
-                                
+
                                 // Replace the string with the integer
                                 var replacement = $"\"{field.Name}\":{enumIndex}";
                                 json = System.Text.RegularExpressions.Regex.Replace(json, pattern, replacement);
-                                
+
                                 ForgeLogger.Log($"Converted enum field '{field.Name}' from '{enumValue}' to {enumIndex}");
                             }
                         }
@@ -487,17 +487,17 @@ CRITICAL RULES:
             {
                 ForgeLogger.Warn($"Failed to convert enum strings: {e.Message}");
             }
-            
+
             return json;
         }
-        
+
         private string ExtractNameFromJson(string json, Type type)
         {
             try
             {
                 // Try to find common name fields
                 var nameFields = new[] { "name", "weaponName", "itemName", "displayName", "title" };
-                
+
                 foreach (var fieldName in nameFields)
                 {
                     // Check if the type has this field
@@ -518,15 +518,15 @@ CRITICAL RULES:
             {
                 // Ignore errors and return empty
             }
-            
+
             return null;
         }
-        
+
         private string SanitizeAssetName(string input)
         {
             if (string.IsNullOrEmpty(input))
                 return "Unnamed";
-            
+
             var chars = input.ToCharArray();
             for (int i = 0; i < chars.Length; i++)
             {
@@ -535,29 +535,29 @@ CRITICAL RULES:
                     chars[i] = '_';
                 }
             }
-            
+
             var result = new string(chars).Trim();
-            
+
             if (result.Length > 0 && char.IsDigit(result[0]))
             {
                 result = "_" + result;
             }
-            
+
             return string.IsNullOrEmpty(result) ? "Unnamed" : result;
         }
-        
+
         private List<ScriptableObject> ParseJsonArray(Type type, string json)
         {
             var items = new List<ScriptableObject>();
-            
+
             try
             {
                 // Wrap the array in an object for JsonUtility
                 var wrapped = $"{{\"items\":{json}}}";
-                
+
                 // Use a generic wrapper approach
                 var wrapperType = typeof(JsonArrayWrapper<>).MakeGenericType(typeof(Dictionary<string, object>));
-                
+
                 // Parse as raw dictionaries first, then convert
                 // This is a workaround since JsonUtility doesn't support root arrays
                 // We'll parse each item individually
@@ -567,7 +567,7 @@ CRITICAL RULES:
                     // Extract individual JSON objects
                     var arrayContent = arrayMatch.Groups[1].Value;
                     var objects = SplitJsonArray(arrayContent);
-                    
+
                     foreach (var objJson in objects)
                     {
                         var item = CreateAndPopulateScriptableObject(type, objJson);
@@ -582,10 +582,10 @@ CRITICAL RULES:
             {
                 ForgeLogger.Error($"Failed to parse JSON array: {e.Message}");
             }
-            
+
             return items;
         }
-        
+
         private List<string> SplitJsonArray(string arrayContent)
         {
             var result = new List<string>();
@@ -593,7 +593,7 @@ CRITICAL RULES:
             var currentObject = new StringBuilder();
             var inString = false;
             var escapeNext = false;
-            
+
             foreach (char c in arrayContent)
             {
                 if (escapeNext)
@@ -602,21 +602,21 @@ CRITICAL RULES:
                     escapeNext = false;
                     continue;
                 }
-                
+
                 if (c == '\\')
                 {
                     currentObject.Append(c);
                     escapeNext = true;
                     continue;
                 }
-                
+
                 if (c == '"')
                 {
                     inString = !inString;
                     currentObject.Append(c);
                     continue;
                 }
-                
+
                 if (!inString)
                 {
                     if (c == '{')
@@ -628,7 +628,7 @@ CRITICAL RULES:
                     {
                         depth--;
                         currentObject.Append(c);
-                        
+
                         if (depth == 0)
                         {
                             result.Add(currentObject.ToString().Trim());
@@ -650,7 +650,7 @@ CRITICAL RULES:
                     currentObject.Append(c);
                 }
             }
-            
+
             // Add any remaining object
             if (currentObject.Length > 0)
             {
@@ -660,15 +660,15 @@ CRITICAL RULES:
                     result.Add(remaining);
                 }
             }
-            
+
             return result;
         }
-        
+
         private string CleanJsonContent(string content)
         {
             // Remove markdown code blocks
             content = content.Trim();
-            
+
             // Remove ```json or ``` markers at the start
             if (content.StartsWith("```"))
             {
@@ -685,23 +685,23 @@ CRITICAL RULES:
                         content = content.Substring(jsonStart);
                 }
             }
-            
+
             // Remove trailing ``` markers
             if (content.EndsWith("```"))
             {
                 content = content.Substring(0, content.Length - 3);
             }
-            
+
             return content.Trim();
         }
-        
+
         [Serializable]
         private class JsonArrayWrapper<T>
         {
             public List<T> items;
         }
     }
-    
+
     /// <summary>
     /// Result of a template-based generation request.
     /// </summary>
@@ -715,7 +715,7 @@ CRITICAL RULES:
         public int promptTokens;
         public int completionTokens;
         public float estimatedCost;
-        
+
         public static ForgeTemplateGenerationResult Error(string message)
         {
             return new ForgeTemplateGenerationResult
@@ -724,7 +724,7 @@ CRITICAL RULES:
                 errorMessage = message
             };
         }
-        
+
         public static ForgeTemplateGenerationResult Success(
             List<ScriptableObject> items,
             Type itemType,
@@ -741,7 +741,7 @@ CRITICAL RULES:
                 estimatedCost = CalculateCost(promptTokens, completionTokens)
             };
         }
-        
+
         private static float CalculateCost(int prompt, int completion)
         {
             // GPT-4o-mini pricing (as of late 2024): $0.15/1M input, $0.60/1M output
