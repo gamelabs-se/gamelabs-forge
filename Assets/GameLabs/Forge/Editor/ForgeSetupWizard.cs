@@ -17,9 +17,7 @@ namespace GameLabs.Forge.Editor
         
         // Step 1: API Configuration
         private string apiKey = "";
-        private string model = "gpt-4o-mini";
-        private readonly string[] availableModels = { "gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo" };
-        private int selectedModelIndex = 0;
+        private ForgeAIModel model = ForgeAIModel.GPT4o;
         
         // Step 2: Game Context
         private string gameName = "My Game";
@@ -42,13 +40,13 @@ namespace GameLabs.Forge.Editor
         
         // Validation
         private bool apiKeyValid = false;
-        private string validationMessage = "";
         
-        [MenuItem("GameLabs/Forge/Setup Wizard", priority = 0)]
+        [MenuItem("GameLabs/Forge/Setup Wizard", priority = 11)]
         public static void Open()
         {
             var window = GetWindow<ForgeSetupWizard>("Forge Setup Wizard");
-            window.minSize = new Vector2(500, 600);
+            window.minSize = new Vector2(550, 650);
+            window.maxSize = new Vector2(700, 900);
             window.LoadSavedSettings();
         }
         
@@ -56,7 +54,8 @@ namespace GameLabs.Forge.Editor
         public static void OpenQuickSettings()
         {
             var window = GetWindow<ForgeSetupWizard>("Forge Setup Wizard");
-            window.minSize = new Vector2(500, 600);
+            window.minSize = new Vector2(550, 650);
+            window.maxSize = new Vector2(700, 900);
             window.LoadSavedSettings();
             window.currentStep = 0; // Go to API key step
         }
@@ -78,7 +77,7 @@ namespace GameLabs.Forge.Editor
                     if (config != null)
                     {
                         apiKey = config.openaiApiKey ?? "";
-                        model = config.model ?? "gpt-4o-mini";
+                        model = (ForgeAIModel)config.model;
                         gameName = config.gameName ?? "My Game";
                         gameDescription = config.gameDescription ?? "";
                         targetAudience = config.targetAudience ?? "General";
@@ -92,9 +91,6 @@ namespace GameLabs.Forge.Editor
                         intent = (ExistingItemsIntent)config.intent;
                         
                         // Update indices
-                        selectedModelIndex = Array.IndexOf(availableModels, model);
-                        if (selectedModelIndex < 0) selectedModelIndex = 0;
-                        
                         selectedAudienceIndex = Array.IndexOf(audienceOptions, targetAudience);
                         if (selectedAudienceIndex < 0) selectedAudienceIndex = 0;
                         
@@ -117,7 +113,7 @@ namespace GameLabs.Forge.Editor
                 var config = new ForgeConfigData
                 {
                     openaiApiKey = apiKey,
-                    model = model,
+                    model = (int)model,
                     gameName = gameName,
                     gameDescription = gameDescription,
                     targetAudience = targetAudience,
@@ -245,7 +241,7 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.HelpBox(
                 "Enter your OpenAI API key. This is required for item generation.\n" +
                 "Get your API key from: https://platform.openai.com/api-keys",
-                MessageType.Info);
+                MessageType.Info, true);
             
             EditorGUILayout.Space(5);
             
@@ -260,27 +256,29 @@ namespace GameLabs.Forge.Editor
             {
                 if (apiKey.StartsWith("sk-"))
                 {
-                    EditorGUILayout.HelpBox("✓ API key format looks valid", MessageType.None);
+                    EditorGUILayout.HelpBox("✓ API key format looks valid", MessageType.None, true);
                 }
                 else
                 {
-                    EditorGUILayout.HelpBox("⚠ API key should start with 'sk-'", MessageType.Warning);
+                    EditorGUILayout.HelpBox("⚠ API key should start with 'sk-'", MessageType.Warning, true);
                 }
             }
             
             EditorGUILayout.Space(15);
             
             EditorGUILayout.LabelField("AI Model", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox(
-                "Select the AI model to use for generation.\n" +
-                "• gpt-4o-mini: Fast & cheap (recommended)\n" +
-                "• gpt-4o: Higher quality, more expensive\n" +
-                "• gpt-4-turbo: Legacy high-quality model\n" +
-                "• gpt-3.5-turbo: Fastest, lowest cost",
-                MessageType.Info);
             
-            selectedModelIndex = EditorGUILayout.Popup("Model", selectedModelIndex, availableModels);
-            model = availableModels[selectedModelIndex];
+            model = (ForgeAIModel)EditorGUILayout.EnumPopup("Model", model);
+            
+            // Show model description
+            string modelDesc = ForgeAIModelHelper.GetDescription(model);
+            EditorGUILayout.HelpBox(modelDesc, MessageType.Info, true);
+            
+            // Show pricing
+            var (inputCost, outputCost) = ForgeAIModelHelper.GetPricing(model);
+            EditorGUILayout.HelpBox(
+                $"Pricing: ${inputCost:F2}/1M input tokens, ${outputCost:F2}/1M output tokens",
+                MessageType.None, true);
         }
         
         private void DrawGameContextStep()
@@ -294,13 +292,13 @@ namespace GameLabs.Forge.Editor
             gameName = EditorGUILayout.TextField("Game Name", gameName);
             
             EditorGUILayout.Space(5);
-            EditorGUILayout.LabelField("Game Description");
+            EditorGUILayout.LabelField("Game Description", EditorStyles.miniLabel);
             gameDescription = EditorGUILayout.TextArea(gameDescription, GUILayout.Height(80));
             
             EditorGUILayout.HelpBox(
                 "Describe your game's setting, theme, art style, and any unique characteristics. " +
                 "This helps the AI generate items that fit your game.",
-                MessageType.Info);
+                MessageType.Info, true);
             
             EditorGUILayout.Space(10);
             
@@ -315,7 +313,7 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.HelpBox(
                 "Add any specific rules or guidelines for item generation.\n" +
                 "Example: 'All weapons should have unique names' or 'Avoid generic fantasy tropes'",
-                MessageType.Info);
+                MessageType.Info, true);
         }
         
         private void DrawGenerationSettingsStep()
@@ -326,8 +324,15 @@ namespace GameLabs.Forge.Editor
             
             EditorGUILayout.LabelField("Batch Settings", EditorStyles.boldLabel);
             
-            defaultBatchSize = EditorGUILayout.IntSlider("Default Batch Size", defaultBatchSize, 1, 50);
-            maxBatchSize = EditorGUILayout.IntSlider("Max Batch Size", maxBatchSize, 1, 100);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Default Batch Size", GUILayout.Width(150));
+            defaultBatchSize = EditorGUILayout.IntSlider(defaultBatchSize, 1, 50);
+            EditorGUILayout.EndHorizontal();
+            
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Max Batch Size", GUILayout.Width(150));
+            maxBatchSize = EditorGUILayout.IntSlider(maxBatchSize, 1, 100);
+            EditorGUILayout.EndHorizontal();
             
             if (maxBatchSize < defaultBatchSize)
             {
@@ -337,12 +342,16 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.HelpBox(
                 "Batch size determines how many items are generated per request.\n" +
                 "Larger batches are more cost-effective but may hit token limits.",
-                MessageType.Info);
+                MessageType.Info, true);
             
             EditorGUILayout.Space(15);
             
             EditorGUILayout.LabelField("AI Creativity", EditorStyles.boldLabel);
-            temperature = EditorGUILayout.Slider("Temperature", temperature, 0f, 2f);
+            
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Temperature", GUILayout.Width(150));
+            temperature = EditorGUILayout.Slider(temperature, 0f, 2f);
+            EditorGUILayout.EndHorizontal();
             
             string tempDesc = temperature switch
             {
@@ -437,20 +446,13 @@ namespace GameLabs.Forge.Editor
             
             EditorGUILayout.Space(20);
             
-            EditorGUILayout.LabelField("Quick Start", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Next Steps", EditorStyles.boldLabel);
             
             EditorGUILayout.Space(10);
             
-            if (GUILayout.Button("Add ForgeItemGenerator to Scene", GUILayout.Height(35)))
+            if (GUILayout.Button("Open Forge AI Item Generator", GUILayout.Height(35)))
             {
-                CreateForgeGenerator();
-            }
-            
-            EditorGUILayout.Space(5);
-            
-            if (GUILayout.Button("Open Demo Scene", GUILayout.Height(25)))
-            {
-                OpenDemoScene();
+                EditorWindow.GetWindow<ForgeTemplateWindow>();
             }
             
             EditorGUILayout.Space(5);
@@ -463,11 +465,11 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.Space(20);
             
             EditorGUILayout.HelpBox(
-                "Next Steps:\n" +
-                "1. Create your item classes (inherit from ForgeItemDefinition or use any class)\n" +
-                "2. Add ForgeItemGenerator to your scene\n" +
-                "3. Call GenerateSingle<YourItem>() or GenerateBatch<YourItem>(count)\n" +
-                "4. Use the generated items in your game!",
+                "Ready to generate!\n" +
+                "1. Open the Forge AI Item Generator window (above)\n" +
+                "2. Select a ScriptableObject template for your item type\n" +
+                "3. Adjust generation settings and create items\n" +
+                "4. Generated items are saved as Unity assets",
                 MessageType.Info);
         }
         
@@ -502,7 +504,7 @@ namespace GameLabs.Forge.Editor
                 {
                     if (ValidateCurrentStep())
                     {
-                        SaveSettings();
+                        SaveSettings(); // Auto-save when clicking Next/Finish
                         currentStep++;
                     }
                 }
@@ -511,6 +513,7 @@ namespace GameLabs.Forge.Editor
             {
                 if (GUILayout.Button("Close", GUILayout.Height(30), GUILayout.Width(100)))
                 {
+                    SaveSettings(); // Save one final time on close
                     Close();
                 }
             }
@@ -558,57 +561,11 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.Space(5);
         }
         
-        private void CreateForgeGenerator()
-        {
-            var existing = FindFirstObjectByType<ForgeItemGenerator>();
-            if (existing != null)
-            {
-                Selection.activeObject = existing.gameObject;
-                EditorUtility.DisplayDialog("Forge", "ForgeItemGenerator already exists in scene.", "OK");
-                return;
-            }
-            
-            var go = new GameObject("ForgeItemGenerator");
-            var generator = go.AddComponent<ForgeItemGenerator>();
-            
-            // Apply settings
-            var settings = new ForgeGeneratorSettings
-            {
-                gameName = gameName,
-                gameDescription = gameDescription,
-                targetAudience = targetAudience,
-                defaultBatchSize = defaultBatchSize,
-                maxBatchSize = maxBatchSize,
-                temperature = temperature,
-                model = model,
-                additionalRules = additionalRules
-            };
-            generator.UpdateSettings(settings);
-            
-            Selection.activeObject = go;
-            EditorGUIUtility.PingObject(go);
-            
-            ForgeLogger.Log("ForgeItemGenerator added to scene.");
-        }
-        
-        private void OpenDemoScene()
-        {
-            string demoScenePath = "Assets/GameLabs/Forge/Demo/ForgeDemo.unity";
-            if (File.Exists(demoScenePath))
-            {
-                UnityEditor.SceneManagement.EditorSceneManager.OpenScene(demoScenePath);
-            }
-            else
-            {
-                EditorUtility.DisplayDialog("Forge", "Demo scene not found. Create a new scene and add ForgeItemGenerator.", "OK");
-            }
-        }
-        
         [Serializable]
         private class ForgeConfigData
         {
             public string openaiApiKey;
-            public string model;
+            public int model; // ForgeAIModel enum value
             public string gameName;
             public string gameDescription;
             public string targetAudience;

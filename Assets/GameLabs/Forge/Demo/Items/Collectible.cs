@@ -2,12 +2,14 @@ using System;
 using UnityEngine;
 using GameLabs.Forge;
 
-/// <summary>
-/// Example collectible/treasure item for Forge demo.
-/// Use this as a template in the Forge Template Generator.
-/// </summary>
-[CreateAssetMenu(fileName = "New Collectible", menuName = "GameLabs/Forge Demo/Collectible")]
-public class Collectible : ScriptableObject
+namespace GameLabs.Forge.Demo
+{
+    /// <summary>
+    /// Example collectible/treasure item for Forge demo.
+    /// Use this as a template in the Forge Template Generator.
+    /// </summary>
+    [CreateAssetMenu(fileName = "New Collectible", menuName = "GameLabs/Forge Demo/Collectible")]
+    public class Collectible : ScriptableObject
 {
     [Tooltip("Name of the collectible")]
     public string name;
@@ -30,19 +32,20 @@ public class Collectible : ScriptableObject
     
     [Tooltip("Set name if part of a collection")]
     public string setName = "";
-}
+    }
 
-/// <summary>
-/// Categories of collectibles.
-/// </summary>
-public enum CollectibleCategory
-{
-    Gem,
-    Artifact,
-    Relic,
-    Scroll,
-    Coin,
-    Trophy,
-    Art,
-    Book
+    /// <summary>
+    /// Categories of collectibles.
+    /// </summary>
+    public enum CollectibleCategory
+    {
+        Gem,
+        Artifact,
+        Relic,
+        Scroll,
+        Coin,
+        Trophy,
+        Art,
+        Book
+    }
 }

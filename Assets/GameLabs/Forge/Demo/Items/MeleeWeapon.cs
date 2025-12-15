@@ -2,12 +2,14 @@ using System;
 using UnityEngine;
 using GameLabs.Forge;
 
-/// <summary>
-/// Example melee weapon item for Forge demo.
-/// Use this as a template in the Forge Template Generator.
-/// </summary>
-[CreateAssetMenu(fileName = "New Melee Weapon", menuName = "GameLabs/Forge Demo/Melee Weapon")]
-public class MeleeWeapon : ScriptableObject
+namespace GameLabs.Forge.Demo
+{
+    /// <summary>
+    /// Example melee weapon item for Forge demo.
+    /// Use this as a template in the Forge Template Generator.
+    /// </summary>
+    [CreateAssetMenu(fileName = "New Melee Weapon", menuName = "GameLabs/Forge Demo/Melee Weapon")]
+    public class MeleeWeapon : ScriptableObject
 {
     [Tooltip("Name of the weapon")]
     public string name;
@@ -36,31 +38,32 @@ public class MeleeWeapon : ScriptableObject
 
     [Tooltip("Rarity tier of the weapon")]
     public ItemRarity rarity;
-}
+    }
 
-/// <summary>
-/// Types of melee weapons available.
-/// </summary>
-public enum MeleeWeaponType
-{
-    Sword,
-    Axe,
-    Mace,
-    Dagger,
-    Spear,
-    Hammer,
-    Staff,
-    Flail
-}
+    /// <summary>
+    /// Types of melee weapons available.
+    /// </summary>
+    public enum MeleeWeaponType
+    {
+        Sword,
+        Axe,
+        Mace,
+        Dagger,
+        Spear,
+        Hammer,
+        Staff,
+        Flail
+    }
 
-/// <summary>
-/// Rarity tiers for items.
-/// </summary>
-public enum ItemRarity
-{
-    Common,
-    Uncommon,
-    Rare,
-    Epic,
-    Legendary
+    /// <summary>
+    /// Rarity tiers for items.
+    /// </summary>
+    public enum ItemRarity
+    {
+        Common,
+        Uncommon,
+        Rare,
+        Epic,
+        Legendary
+    }
 }

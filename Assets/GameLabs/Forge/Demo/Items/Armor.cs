@@ -2,12 +2,14 @@ using System;
 using UnityEngine;
 using GameLabs.Forge;
 
-/// <summary>
-/// Example armor/equipment item for Forge demo.
-/// Use this as a template in the Forge Template Generator.
-/// </summary>
-[CreateAssetMenu(fileName = "New Armor", menuName = "GameLabs/Forge Demo/Armor")]
-public class Armor : ScriptableObject
+namespace GameLabs.Forge.Demo
+{
+    /// <summary>
+    /// Example armor/equipment item for Forge demo.
+    /// Use this as a template in the Forge Template Generator.
+    /// </summary>
+    [CreateAssetMenu(fileName = "New Armor", menuName = "GameLabs/Forge Demo/Armor")]
+    public class Armor : ScriptableObject
 {
     [Tooltip("Name of the armor")]
     public string name;
@@ -43,31 +45,32 @@ public class Armor : ScriptableObject
     [Tooltip("Movement speed modifier (1.0 = normal)")]
     [Range(0.5f, 1.5f)]
     public float speedModifier = 1.0f;
-}
+    }
 
-/// <summary>
-/// Armor equipment slots.
-/// </summary>
-public enum ArmorSlot
-{
-    Head,
-    Chest,
-    Legs,
-    Feet,
-    Hands,
-    Shield
-}
+    /// <summary>
+    /// Armor equipment slots.
+    /// </summary>
+    public enum ArmorSlot
+    {
+        Head,
+        Chest,
+        Legs,
+        Feet,
+        Hands,
+        Shield
+    }
 
-/// <summary>
-/// Types of armor materials.
-/// </summary>
-public enum ArmorType
-{
-    Cloth,
-    Leather,
-    Chainmail,
-    Plate,
-    Scale,
-    Bone,
-    Magical
+    /// <summary>
+    /// Types of armor materials.
+    /// </summary>
+    public enum ArmorType
+    {
+        Cloth,
+        Leather,
+        Chainmail,
+        Plate,
+        Scale,
+        Bone,
+        Magical
+    }
 }

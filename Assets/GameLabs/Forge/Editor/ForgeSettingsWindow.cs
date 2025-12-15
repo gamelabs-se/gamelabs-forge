@@ -12,12 +12,16 @@ namespace GameLabs.Forge.Editor
         private Vector2 scrollPos;
         private ForgeGeneratorSettings settings;
         
-        [MenuItem("GameLabs/Forge/Settings", priority = 1)]
+        [MenuItem("GameLabs/Forge/Settings", priority = 20)]
         public static void OpenWindow()
         {
             var window = GetWindow<ForgeSettingsWindow>("Forge Settings");
-            window.minSize = new Vector2(400, 500);
+            window.minSize = new Vector2(450, 600);
+            window.maxSize = new Vector2(600, 900);
         }
+        
+        /// <summary>Static method for easy access from other windows.</summary>
+        public static void Open() => OpenWindow();
         
         private void OnEnable()
         {
@@ -81,9 +85,12 @@ namespace GameLabs.Forge.Editor
             EditorGUI.BeginChangeCheck();
             
             settings.gameName = EditorGUILayout.TextField("Game Name", settings.gameName);
-            settings.gameDescription = EditorGUILayout.TextArea(settings.gameDescription, GUILayout.Height(60), GUILayout.ExpandHeight(false));
-            EditorGUILayout.LabelField("Target Audience");
-            settings.targetAudience = EditorGUILayout.TextField(settings.targetAudience);
+            
+            EditorGUILayout.LabelField("Game Description", EditorStyles.miniLabel);
+            settings.gameDescription = EditorGUILayout.TextArea(settings.gameDescription, 
+                GUILayout.Height(60), GUILayout.ExpandHeight(false));
+            
+            settings.targetAudience = EditorGUILayout.TextField("Target Audience", settings.targetAudience);
             
             if (EditorGUI.EndChangeCheck())
             {
@@ -97,14 +104,31 @@ namespace GameLabs.Forge.Editor
             
             EditorGUI.BeginChangeCheck();
             
-            settings.defaultBatchSize = EditorGUILayout.IntSlider("Default Batch Size", settings.defaultBatchSize, 1, 50);
-            settings.maxBatchSize = EditorGUILayout.IntSlider("Max Batch Size", settings.maxBatchSize, 1, 100);
-            settings.temperature = EditorGUILayout.Slider("Temperature", settings.temperature, 0f, 2f);
-            settings.model = EditorGUILayout.TextField("Model", settings.model);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Default Batch Size", GUILayout.Width(150));
+            settings.defaultBatchSize = EditorGUILayout.IntSlider(settings.defaultBatchSize, 1, 50);
+            EditorGUILayout.EndHorizontal();
+            
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Max Batch Size", GUILayout.Width(150));
+            settings.maxBatchSize = EditorGUILayout.IntSlider(settings.maxBatchSize, 1, 100);
+            EditorGUILayout.EndHorizontal();
+            
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Temperature (Creativity)", GUILayout.Width(150));
+            settings.temperature = EditorGUILayout.Slider(settings.temperature, 0f, 2f);
+            EditorGUILayout.EndHorizontal();
+            
+            settings.model = (ForgeAIModel)EditorGUILayout.EnumPopup("Model", settings.model);
+            
+            // Show model info
+            string modelInfo = ForgeAIModelHelper.GetDescription(settings.model);
+            EditorGUILayout.HelpBox(modelInfo, MessageType.None, true);
             
             EditorGUILayout.Space(5);
-            EditorGUILayout.LabelField("Additional Rules (Optional)");
-            settings.additionalRules = EditorGUILayout.TextArea(settings.additionalRules, GUILayout.Height(60), GUILayout.ExpandHeight(false));
+            EditorGUILayout.LabelField("Additional Rules (Optional)", EditorStyles.miniLabel);
+            settings.additionalRules = EditorGUILayout.TextArea(settings.additionalRules, 
+                GUILayout.Height(60), GUILayout.ExpandHeight(false));
             
             if (EditorGUI.EndChangeCheck())
             {
@@ -118,13 +142,17 @@ namespace GameLabs.Forge.Editor
             
             EditorGUI.BeginChangeCheck();
             
-            settings.existingAssetsSearchPath = EditorGUILayout.TextField("Search Path", settings.existingAssetsSearchPath);
-            EditorGUILayout.HelpBox("Where to search for existing assets (relative to Assets folder)", MessageType.None);
+            settings.existingAssetsSearchPath = EditorGUILayout.TextField("Search Path", 
+                settings.existingAssetsSearchPath);
+            EditorGUILayout.HelpBox("Where to search for existing assets (relative to Assets folder)", 
+                MessageType.None, true);
             
             EditorGUILayout.Space(3);
             
-            settings.generatedAssetsBasePath = EditorGUILayout.TextField("Generated Path", settings.generatedAssetsBasePath);
-            EditorGUILayout.HelpBox("Where to save generated assets (relative to Assets folder)", MessageType.None);
+            settings.generatedAssetsBasePath = EditorGUILayout.TextField("Generated Path", 
+                settings.generatedAssetsBasePath);
+            EditorGUILayout.HelpBox("Where to save generated assets (relative to Assets folder)", 
+                MessageType.None, true);
             
             if (EditorGUI.EndChangeCheck())
             {
@@ -203,7 +231,7 @@ namespace GameLabs.Forge.Editor
                 var configData = new ForgeConfigDataDto
                 {
                     openaiApiKey = ForgeConfig.GetOpenAIKey() ?? "",
-                    model = settings.model,
+                    model = (int)settings.model,
                     gameName = settings.gameName,
                     gameDescription = settings.gameDescription,
                     targetAudience = settings.targetAudience,
@@ -244,7 +272,7 @@ namespace GameLabs.Forge.Editor
         private class ForgeConfigDataDto
         {
             public string openaiApiKey;
-            public string model;
+            public int model;
             public string gameName;
             public string gameDescription;
             public string targetAudience;

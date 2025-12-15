@@ -17,9 +17,11 @@ Logs/*
 level.txt
 Assets/GameLabs/Forge/Settings/forge.config.json
 
-# Generated items (keep folder structure, ignore contents except .gitkeep)
-Assets/GameLabs/Forge/Generated/*.json
-Assets/GameLabs/Forge/Generated/*.json.meta
+# Generated items - keep folder structure but ignore all contents
+Assets/Resources/Generated/
+Assets/GameLabs/Forge/Generated/
+*.generated.asset
+*.generated.asset.meta
 
 #Core/
 #Core
@@ -35,3 +37,4 @@ Thumbs.db
 $RECYCLE.BIN/
 Desktop.ini
 
+Assets/GameLabs/Forge/Settings/forge.stats.json
