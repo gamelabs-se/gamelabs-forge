@@ -23,11 +23,15 @@ namespace GameLabs.Forge.Editor
         private bool _useCustomFolder = false;
         private bool _autoSaveAsAsset = true;
 
-        // ========= Blueprint Editing =========
+        // ========= Blueprint & Window-Level Settings =========
         private string _blueprintInstructions = "";
         private ForgeDuplicateStrategy _blueprintStrategy = ForgeDuplicateStrategy.Ignore;
         private string _blueprintDiscoveryPath = "";
         private bool _blueprintDirty = false;
+        // Window-level settings (used when no blueprint selected)
+        private string _windowInstructions = "";
+        private ForgeDuplicateStrategy _windowStrategy = ForgeDuplicateStrategy.Ignore;
+        private string _windowDiscoveryPath = "";
 
         private int _foundCount = 0;
         private List<string> _foundJson = new();
@@ -262,6 +266,7 @@ namespace GameLabs.Forge.Editor
                         _blueprintDiscoveryPath = _blueprint.DiscoveryPathOverride;
                         _blueprintDirty = false;
                     }
+                    // NOTE: Window settings are preserved even if blueprint is removed
                 }
 
                 if (GUILayout.Button(new GUIContent(UI.Search, "Create New Blueprint"), GUILayout.Width(32), GUILayout.Height(18)))
@@ -334,12 +339,21 @@ namespace GameLabs.Forge.Editor
                 else
                 {
                     EditorGUILayout.HelpBox(
-                        "Optionally select or create a ForgeBlueprint to:\n" +
-                        "• Save generation settings and instructions\n" +
-                        "• Configure duplicate prevention strategy\n" +
-                        "• Set custom discovery path\n" +
-                        "• Create profiles for different item types",
+                        "Optionally select or create a ForgeBlueprint to save generation profiles.\n" +
+                        "Without a blueprint, use the settings below for a one-off generation.",
                         MessageType.Info);
+                    
+                    EditorGUILayout.Space(6);
+                    EditorGUILayout.LabelField("Strategy (without blueprint)");
+                    _windowStrategy = (ForgeDuplicateStrategy)EditorGUILayout.EnumPopup(_windowStrategy);
+                    
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField("Instructions (without blueprint)");
+                    _windowInstructions = EditorGUILayout.TextArea(_windowInstructions, UI.Code, GUILayout.MinHeight(50));
+                    
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField("Discovery Path Override (empty = global default)");
+                    _windowDiscoveryPath = EditorGUILayout.TextField(_windowDiscoveryPath);
                 }
 
                 EditorGUIUtility.labelWidth = old;
@@ -625,24 +639,38 @@ namespace GameLabs.Forge.Editor
             EditorGUI.LabelField(rect, title, UI.Section);
         }
 
-        // ========= Logic (unchanged) =========
+        // ========= Logic =========
         private void GenerateItems()
         {
-            // Blueprint-based generation is now the primary method
-            if (_blueprint == null || _blueprint.Template == null)
+            // Support both blueprint-based and window-level generation
+            if (_blueprint != null && _blueprint.Template != null)
             {
-                EditorUtility.DisplayDialog("Error", "Please select or create a blueprint to generate items.", "OK");
-                return;
+                // Blueprint-based generation
+                _isGenerating = true;
+                _status = "Generating items…";
+                _statusType = MessageType.Info;
+                _lastGenerated.Clear();
+                Repaint();
+
+                var generator = ForgeTemplateGenerator.Instance;
+                generator.GenerateFromBlueprint(_blueprint, _itemCount, OnGenerationComplete);
             }
+            else if (_template != null)
+            {
+                // Window-level generation (no blueprint)
+                _isGenerating = true;
+                _status = "Generating items…";
+                _statusType = MessageType.Info;
+                _lastGenerated.Clear();
+                Repaint();
 
-            _isGenerating = true;
-            _status = "Generating items…";
-            _statusType = MessageType.Info;
-            _lastGenerated.Clear();
-            Repaint();
-
-            var generator = ForgeTemplateGenerator.Instance;
-            generator.GenerateFromBlueprint(_blueprint, _itemCount, OnGenerationComplete);
+                var generator = ForgeTemplateGenerator.Instance;
+                generator.GenerateFromTemplate(_template, _itemCount, _windowInstructions, OnGenerationComplete);
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("Error", "Please select a template or blueprint to generate items.", "OK");
+            }
         }
 
         private void OnGenerationComplete(ForgeTemplateGenerationResult result)
