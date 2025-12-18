@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6eebfa051f02a49ffa05eced22e664fd, type: 3}
-  m_Name: Spaceship
+  m_Name: Peacekeeper
   m_EditorClassIdentifier: GameLabs.Forge.Demo::GameLabs.Forge.Demo.Spaceship
   displayName: Peacekeeper
   description: A standard spaceship used in both offenseive and defensive situations.
