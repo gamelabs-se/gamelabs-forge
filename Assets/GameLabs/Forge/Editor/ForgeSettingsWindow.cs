@@ -12,10 +12,11 @@ namespace GameLabs.Forge.Editor
         private Vector2 scrollPos;
         private ForgeGeneratorSettings settings;
         
-        [MenuItem("GameLabs/Forge/Settings", priority = 20)]
+        // Accessible via FORGE window
+        // [MenuItem("GameLabs/Forge/Settings", priority = 20)]
         public static void OpenWindow()
         {
-            var window = GetWindow<ForgeSettingsWindow>("Forge Settings");
+            var window = GetWindow<ForgeSettingsWindow>("Settings");
             window.minSize = new Vector2(450, 600);
             window.maxSize = new Vector2(600, 900);
         }
@@ -67,13 +68,13 @@ namespace GameLabs.Forge.Editor
                 alignment = TextAnchor.MiddleCenter
             };
             
-            EditorGUILayout.LabelField("⚙️ Forge Settings", headerStyle);
+            EditorGUILayout.LabelField("Settings", headerStyle);
             
             var subtitleStyle = new GUIStyle(EditorStyles.centeredGreyMiniLabel)
             {
                 fontSize = 11
             };
-            EditorGUILayout.LabelField("Configure AI Item Generation", subtitleStyle);
+            EditorGUILayout.LabelField("Configure Generation", subtitleStyle);
             
             DrawSeparator();
         }
@@ -144,14 +145,14 @@ namespace GameLabs.Forge.Editor
             
             settings.existingAssetsSearchPath = EditorGUILayout.TextField("Search Path", 
                 settings.existingAssetsSearchPath);
-            EditorGUILayout.HelpBox("Where to search for existing assets (relative to Assets folder)", 
+            EditorGUILayout.HelpBox("Search location for existing assets (relative to Assets folder)", 
                 MessageType.None, true);
             
             EditorGUILayout.Space(3);
             
             settings.generatedAssetsBasePath = EditorGUILayout.TextField("Generated Path", 
                 settings.generatedAssetsBasePath);
-            EditorGUILayout.HelpBox("Where to save generated assets (relative to Assets folder)", 
+            EditorGUILayout.HelpBox("Save location for generated assets (relative to Assets folder)", 
                 MessageType.None, true);
             
             if (EditorGUI.EndChangeCheck())
@@ -251,12 +252,12 @@ namespace GameLabs.Forge.Editor
                 
                 ForgeConfig.ClearCache();
                 ForgeLogger.Log("Settings saved successfully.");
-                EditorUtility.DisplayDialog("Settings Saved", "Your Forge settings have been saved.", "OK");
+                EditorUtility.DisplayDialog("Settings", "Settings saved successfully.", "OK");
             }
             catch (System.Exception e)
             {
                 ForgeLogger.Error($"Failed to save settings: {e.Message}");
-                EditorUtility.DisplayDialog("Error", $"Failed to save settings: {e.Message}", "OK");
+                EditorUtility.DisplayDialog("Settings", $"Failed to save settings: {e.Message}", "OK");
             }
         }
         

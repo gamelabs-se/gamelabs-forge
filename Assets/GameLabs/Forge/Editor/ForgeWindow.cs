@@ -9,10 +9,9 @@ using UnityEngine;
 namespace GameLabs.Forge.Editor
 {
     /// <summary>
-    /// Forge – AI Item Generator (polished IMGUI for Unity 6.3).
-    /// Pure UI overhaul: alignment, spacing, button styling. Logic intact.
+    /// Forge - AI-powered item generator for Unity.
     /// </summary>
-    public class ForgeTemplateWindow : EditorWindow
+    public class ForgeWindow : EditorWindow
     {
         // ========= UI State =========
         private Vector2 _scroll;
@@ -51,11 +50,11 @@ namespace GameLabs.Forge.Editor
 
         private const float LABEL_W = 120f; // unified label width
 
-        [MenuItem("GameLabs/Forge/FORGE Window", priority = 0)]
+        [MenuItem("GameLabs/Forge/FORGE", priority = 0)]
         public static void OpenWindow()
         {
-            var w = GetWindow<ForgeTemplateWindow>();
-            w.titleContent = new GUIContent("Forge – AI Item Generator", EditorGUIUtility.IconContent("d_PlayButton On").image);
+            var w = GetWindow<ForgeWindow>();
+            w.titleContent = new GUIContent("FORGE", EditorGUIUtility.IconContent("d_PlayButton On").image);
             w.minSize = new Vector2(560, 660);
             w.maxSize = new Vector2(1200, 1400);
         }
@@ -181,7 +180,7 @@ namespace GameLabs.Forge.Editor
             
             GUILayout.Label(UI.Play, GUILayout.Width(20), GUILayout.Height(20));
             GUILayout.Space(8);
-            GUILayout.Label("Forge – AI Item Generator", UI.Title, GUILayout.Height(24));
+            GUILayout.Label("FORGE", UI.Title, GUILayout.Height(24));
             
             GUILayout.FlexibleSpace();
             
@@ -204,7 +203,7 @@ namespace GameLabs.Forge.Editor
         private void DrawToolbar()
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-            GUILayout.Label("Quick Actions", GUILayout.Width(90));
+            GUILayout.Label("Actions", GUILayout.Width(60));
 
             using (new EditorGUI.DisabledScope(_template == null))
             {
@@ -215,7 +214,7 @@ namespace GameLabs.Forge.Editor
                     OpenGeneratedFolder();
             }
 
-            if (GUILayout.Button(new GUIContent(" Clear Results", UI.Trash), UI.ToolbarBtn))
+            if (GUILayout.Button(new GUIContent(" Clear", UI.Trash), UI.ToolbarBtn))
             {
                 _lastGenerated.Clear();
                 _status = "";
@@ -247,7 +246,7 @@ namespace GameLabs.Forge.Editor
                 
                 var oldBlueprint = _blueprint;
                 _blueprint = (ForgeBlueprint)EditorGUILayout.ObjectField(
-                    new GUIContent("Blueprint", "A ForgeBlueprint saves template, instructions, and duplicate strategy."),
+                    new GUIContent("Blueprint", "Saves template, instructions, and duplicate strategy"),
                     _blueprint,
                     typeof(ForgeBlueprint),
                     false);
@@ -364,7 +363,7 @@ namespace GameLabs.Forge.Editor
                 else
                 {
                     EditorGUILayout.HelpBox(
-                        "Optionally select or create a ForgeBlueprint to save generation profiles.",
+                        "Select or create a Blueprint to save generation settings.",
                         MessageType.Info);
                     EditorGUILayout.Space(6);
                     EditorGUILayout.LabelField("Strategy");
@@ -446,7 +445,7 @@ namespace GameLabs.Forge.Editor
 
                 var oldTemplate = _template;
                 _template = (ScriptableObject)EditorGUILayout.ObjectField(
-                    new GUIContent("ScriptableObject Template", "Pick the ScriptableObject that defines your item structure."),
+                    new GUIContent("Template", "ScriptableObject defining the item structure"),
                     _template,
                     typeof(ScriptableObject),
                     false);
@@ -502,8 +501,7 @@ namespace GameLabs.Forge.Editor
                 else
                 {
                     EditorGUILayout.HelpBox(
-                        "Select a ScriptableObject template to define the structure:\n" +
-                        "• Fields & types  • [Range] constraints  • [Tooltip] descriptions  • Enum options",
+                        "Select a template to define the item structure.",
                         MessageType.Info);
                 }
 
@@ -601,7 +599,7 @@ namespace GameLabs.Forge.Editor
 
             using (new EditorGUILayout.VerticalScope(UI.Card))
             {
-                _autoSaveAsAsset = EditorGUILayout.ToggleLeft(new GUIContent("Auto-Save as Asset", "Create assets immediately after generation."), _autoSaveAsAsset);
+                _autoSaveAsAsset = EditorGUILayout.ToggleLeft(new GUIContent("Auto-Save Assets", "Automatically create assets after generation"), _autoSaveAsAsset);
                 using (new EditorGUI.DisabledScope(!_autoSaveAsAsset))
                 {
                     var old = EditorGUIUtility.labelWidth;
@@ -619,7 +617,7 @@ namespace GameLabs.Forge.Editor
 
                     GUILayout.Space(4);
                     string basePath = ForgeAssetExporter.GetGeneratedBasePath();
-                    GUILayout.Label(new GUIContent("Base Path", "Configured in ForgeGeneratorSettings or config file."), UI.Hint);
+                    GUILayout.Label(new GUIContent("Base Path", "Configured in settings"), UI.Hint);
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.SelectableLabel(basePath, EditorStyles.textField, GUILayout.Height(18));
                     if (GUILayout.Button(new GUIContent("", UI.Copy, "Copy path"), GUILayout.Width(24), GUILayout.Height(18)))
@@ -654,7 +652,7 @@ namespace GameLabs.Forge.Editor
             GUI.DrawTexture(iconRect, UI.Play, ScaleMode.ScaleToFit, true);
 
             // label (centered)
-            string text = _isGenerating ? "Generating…" : $"Generate {_itemCount} Item(s)";
+            string text = _isGenerating ? "Generating..." : $"Generate {_itemCount} Items";
             EditorGUI.LabelField(r, text, UI.PrimaryBtnText);
 
             EditorGUI.EndDisabledGroup();
@@ -766,7 +764,7 @@ namespace GameLabs.Forge.Editor
             var r = EditorGUILayout.GetControlRect(false, 22);
             EditorGUI.DrawRect(new Rect(r.x, r.y, r.width, 1), UI.Line);
             GUILayout.Space(2);
-            GUILayout.Label("Forge • GameLabs — Generate faster. Keep control.", UI.Hint);
+            GUILayout.Label("FORGE • GameLabs", UI.Hint);
             GUILayout.Space(2);
         }
 
@@ -810,7 +808,7 @@ namespace GameLabs.Forge.Editor
             }
             else
             {
-                EditorUtility.DisplayDialog("Error", "Please select a template or blueprint to generate items.", "OK");
+                EditorUtility.DisplayDialog("FORGE", "Select a template or blueprint to generate items.", "OK");
             }
         }
 
@@ -1037,7 +1035,7 @@ namespace GameLabs.Forge.Editor
             }
             else
             {
-                EditorUtility.DisplayDialog("Folder Not Found", $"No folder at:\n{path}\nIt will be created on first save.", "OK");
+                EditorUtility.DisplayDialog("FORGE", $"Folder not found:\n{path}\n\nIt will be created on first save.", "OK");
             }
         }
 
@@ -1078,9 +1076,8 @@ namespace GameLabs.Forge.Editor
 
             if (_foundCount == 0)
             {
-                EditorUtility.DisplayDialog("Existing Items",
-                    $"No existing {itemType.Name} items found in '{searchPath}'.\n\n" +
-                    "Make sure you have ScriptableObject assets of this type in the search path.",
+                EditorUtility.DisplayDialog("FORGE",
+                    $"No existing {itemType.Name} items found in '{searchPath}'.",
                     "OK");
             }
             else
@@ -1112,7 +1109,7 @@ namespace GameLabs.Forge.Editor
         {
             GUILayout.Space(8);
             EditorGUILayout.LabelField("Discovered Items", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox("These items guide generation to avoid duplicates and keep naming/style consistent.", MessageType.Info);
+            EditorGUILayout.HelpBox("Existing items used to avoid duplicates and maintain consistency.", MessageType.Info);
 
             GUILayout.Space(6);
             var r = EditorGUILayout.GetControlRect(false, 1);

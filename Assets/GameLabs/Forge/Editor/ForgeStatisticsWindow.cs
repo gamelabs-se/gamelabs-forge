@@ -12,10 +12,11 @@ namespace GameLabs.Forge.Editor
         private Vector2 scrollPos;
         private ForgeStatistics stats;
         
-        [MenuItem("GameLabs/Forge/Statistics", priority = 21)]
+        // Accessible via FORGE window
+        // [MenuItem("GameLabs/Forge/Statistics", priority = 21)]
         public static void OpenWindow()
         {
-            var window = GetWindow<ForgeStatisticsWindow>("Forge Statistics");
+            var window = GetWindow<ForgeStatisticsWindow>("Statistics");
             window.minSize = new Vector2(400, 500);
             window.maxSize = new Vector2(600, 800);
         }
@@ -62,13 +63,13 @@ namespace GameLabs.Forge.Editor
                 alignment = TextAnchor.MiddleCenter
             };
             
-            EditorGUILayout.LabelField("📊 FORGE Statistics", headerStyle);
+            EditorGUILayout.LabelField("Statistics", headerStyle);
             
             var subtitleStyle = new GUIStyle(EditorStyles.centeredGreyMiniLabel)
             {
                 fontSize = 11
             };
-            EditorGUILayout.LabelField("Usage Tracking and Metrics", subtitleStyle);
+            EditorGUILayout.LabelField("Usage Tracking", subtitleStyle);
             
             DrawSeparator();
         }
@@ -180,7 +181,7 @@ namespace GameLabs.Forge.Editor
             if (GUILayout.Button("Reset Statistics", GUILayout.Height(30)))
             {
                 if (EditorUtility.DisplayDialog("Reset Statistics", 
-                    "Are you sure you want to reset all statistics?\n\nThis will clear:\n• Generation history\n• Token usage\n• Cost tracking\n• All timestamps\n\nThis action cannot be undone.", 
+                    "Reset all statistics? This cannot be undone.", 
                     "Reset", "Cancel"))
                 {
                     stats.Reset();
@@ -196,8 +197,8 @@ namespace GameLabs.Forge.Editor
             if (GUILayout.Button("Export Statistics to Console", GUILayout.Height(25)))
             {
                 Debug.Log(stats.ToString());
-                EditorUtility.DisplayDialog("Statistics Exported", 
-                    "Full statistics have been logged to the Console.", "OK");
+                EditorUtility.DisplayDialog("Statistics", 
+                    "Statistics exported to Console.", "OK");
             }
         }
         

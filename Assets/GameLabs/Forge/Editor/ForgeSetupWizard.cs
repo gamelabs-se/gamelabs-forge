@@ -41,24 +41,20 @@ namespace GameLabs.Forge.Editor
         // Validation
         private bool apiKeyValid = false;
         
+        [MenuItem("GameLabs/Forge/ ", priority = 10)]
+        private static void AddSeparator() { }
+
         [MenuItem("GameLabs/Forge/Setup Wizard", priority = 11)]
         public static void Open()
         {
-            var window = GetWindow<ForgeSetupWizard>("Forge Setup Wizard");
+            var window = GetWindow<ForgeSetupWizard>("Setup Wizard");
             window.minSize = new Vector2(550, 650);
             window.maxSize = new Vector2(700, 900);
             window.LoadSavedSettings();
         }
         
-        [MenuItem("GameLabs/Forge/Quick Settings", priority = 1)]
-        public static void OpenQuickSettings()
-        {
-            var window = GetWindow<ForgeSetupWizard>("Forge Setup Wizard");
-            window.minSize = new Vector2(550, 650);
-            window.maxSize = new Vector2(700, 900);
-            window.LoadSavedSettings();
-            window.currentStep = 0; // Go to API key step
-        }
+        [MenuItem("GameLabs/Forge/ ", priority = 10, validate = true)]
+        private static bool AddSeparatorValidate() { return false; }
         
         private void OnEnable()
         {
@@ -180,13 +176,13 @@ namespace GameLabs.Forge.Editor
                 alignment = TextAnchor.MiddleCenter
             };
             
-            EditorGUILayout.LabelField("🔥 FORGE Setup Wizard", headerStyle);
+            EditorGUILayout.LabelField("Setup Wizard", headerStyle);
             
             var subtitleStyle = new GUIStyle(EditorStyles.centeredGreyMiniLabel)
             {
                 fontSize = 12
             };
-            EditorGUILayout.LabelField("Dynamic AI-Powered Item Generator", subtitleStyle);
+            EditorGUILayout.LabelField("Configure FORGE", subtitleStyle);
             
             EditorGUILayout.Space(5);
             DrawSeparator();
@@ -239,7 +235,7 @@ namespace GameLabs.Forge.Editor
             
             EditorGUILayout.LabelField("OpenAI API Key", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Enter your OpenAI API key. This is required for item generation.\n" +
+                "Enter your OpenAI API key. Required for item generation.\n" +
                 "Get your API key from: https://platform.openai.com/api-keys",
                 MessageType.Info, true);
             
@@ -283,7 +279,7 @@ namespace GameLabs.Forge.Editor
         
         private void DrawGameContextStep()
         {
-            DrawSectionHeader("Game Context", "Tell Forge about your game");
+            DrawSectionHeader("Game Context", "Configure game settings");
             
             EditorGUILayout.Space(10);
             
@@ -296,8 +292,7 @@ namespace GameLabs.Forge.Editor
             gameDescription = EditorGUILayout.TextArea(gameDescription, GUILayout.Height(80));
             
             EditorGUILayout.HelpBox(
-                "Describe your game's setting, theme, art style, and any unique characteristics. " +
-                "This helps the AI generate items that fit your game.",
+                "Describe your game's setting, theme, and style to help generate appropriate items.",
                 MessageType.Info, true);
             
             EditorGUILayout.Space(10);
@@ -311,8 +306,7 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.LabelField("Additional Rules (Optional)", EditorStyles.boldLabel);
             additionalRules = EditorGUILayout.TextArea(additionalRules, GUILayout.Height(60));
             EditorGUILayout.HelpBox(
-                "Add any specific rules or guidelines for item generation.\n" +
-                "Example: 'All weapons should have unique names' or 'Avoid generic fantasy tropes'",
+                "Add specific rules for item generation (e.g., naming conventions, constraints).",
                 MessageType.Info, true);
         }
         
@@ -428,7 +422,7 @@ namespace GameLabs.Forge.Editor
         
         private void DrawCompletionStep()
         {
-            DrawSectionHeader("Setup Complete!", "Your Forge is ready to create items");
+            DrawSectionHeader("Setup Complete", "FORGE is ready");
             
             EditorGUILayout.Space(20);
             
@@ -450,9 +444,9 @@ namespace GameLabs.Forge.Editor
             
             EditorGUILayout.Space(10);
             
-            if (GUILayout.Button("Open Forge AI Item Generator", GUILayout.Height(35)))
+            if (GUILayout.Button("Open FORGE", GUILayout.Height(35)))
             {
-                EditorWindow.GetWindow<ForgeTemplateWindow>();
+                EditorWindow.GetWindow<ForgeWindow>();
             }
             
             EditorGUILayout.Space(5);
@@ -465,11 +459,11 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.Space(20);
             
             EditorGUILayout.HelpBox(
-                "Ready to generate!\n" +
-                "1. Open the Forge AI Item Generator window (above)\n" +
-                "2. Select a ScriptableObject template for your item type\n" +
-                "3. Adjust generation settings and create items\n" +
-                "4. Generated items are saved as Unity assets",
+                "Ready to generate items:\n" +
+                "1. Open FORGE (above)\n" +
+                "2. Select a template\n" +
+                "3. Configure settings\n" +
+                "4. Generate items",
                 MessageType.Info);
         }
         
@@ -528,7 +522,7 @@ namespace GameLabs.Forge.Editor
                 case 0:
                     if (string.IsNullOrEmpty(apiKey))
                     {
-                        EditorUtility.DisplayDialog("Forge", "Please enter your OpenAI API key.", "OK");
+                        EditorUtility.DisplayDialog("Setup Wizard", "Enter your OpenAI API key.", "OK");
                         return false;
                     }
                     return true;
@@ -536,7 +530,7 @@ namespace GameLabs.Forge.Editor
                 case 1:
                     if (string.IsNullOrEmpty(gameName))
                     {
-                        EditorUtility.DisplayDialog("Forge", "Please enter your game name.", "OK");
+                        EditorUtility.DisplayDialog("Setup Wizard", "Enter your game name.", "OK");
                         return false;
                     }
                     return true;
