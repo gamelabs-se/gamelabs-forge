@@ -29,7 +29,7 @@ namespace GameLabs.Forge
             
             if (!Directory.Exists(fullPath))
             {
-                ForgeLogger.Debug($"Search path does not exist: {fullPath}");
+                ForgeLogger.DebugLog($"Search path does not exist: {fullPath}");
                 return assets;
             }
             
@@ -47,7 +47,7 @@ namespace GameLabs.Forge
                 }
             }
             
-            ForgeLogger.Debug($"Discovered {assets.Count} existing {typeof(T).Name} assets in {fullPath}");
+            ForgeLogger.DebugLog($"Discovered {assets.Count} existing {typeof(T).Name} assets in {fullPath}");
 #else
             // At runtime, use Resources.LoadAll if the search path is Resources or starts with Resources/
             bool isResourcesPath = searchPath.Equals("Resources", StringComparison.OrdinalIgnoreCase) || 
@@ -76,7 +76,7 @@ namespace GameLabs.Forge
                 }
                 
                 assets.AddRange(loadedAssets);
-                ForgeLogger.Debug($"Loaded {assets.Count} existing {typeof(T).Name} assets from Resources");
+                ForgeLogger.DebugLog($"Loaded {assets.Count} existing {typeof(T).Name} assets from Resources");
             }
             else
             {
@@ -103,7 +103,7 @@ namespace GameLabs.Forge
             
             if (!Directory.Exists(fullPath))
             {
-                ForgeLogger.Debug($"Search path does not exist: {fullPath}");
+                ForgeLogger.DebugLog($"Search path does not exist: {fullPath}");
                 return assets;
             }
             
@@ -121,7 +121,7 @@ namespace GameLabs.Forge
                 }
             }
             
-            ForgeLogger.Debug($"Discovered {assets.Count} existing {typeName} generated assets in {fullPath}");
+            ForgeLogger.DebugLog($"Discovered {assets.Count} existing {typeName} generated assets in {fullPath}");
 #else
             // At runtime, use Resources.LoadAll if the search path is Resources or starts with Resources/
             bool isResourcesPath = searchPath.Equals("Resources", StringComparison.OrdinalIgnoreCase) || 
@@ -154,7 +154,7 @@ namespace GameLabs.Forge
                     }
                 }
                 
-                ForgeLogger.Debug($"Loaded {assets.Count} existing {typeName} generated assets from Resources");
+                ForgeLogger.DebugLog($"Loaded {assets.Count} existing {typeName} generated assets from Resources");
             }
             else
             {

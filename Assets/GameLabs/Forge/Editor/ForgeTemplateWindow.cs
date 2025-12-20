@@ -9,9 +9,10 @@ using UnityEngine;
 namespace GameLabs.Forge.Editor
 {
     /// <summary>
-    /// Forge - AI-powered item generator for Unity.
+    /// Forge – AI Item Generator (polished IMGUI for Unity 6.3).
+    /// Pure UI overhaul: alignment, spacing, button styling. Logic intact.
     /// </summary>
-    public class ForgeWindow : EditorWindow
+    public class ForgeTemplateWindow : EditorWindow
     {
         // ========= UI State =========
         private Vector2 _scroll;
@@ -50,11 +51,11 @@ namespace GameLabs.Forge.Editor
 
         private const float LABEL_W = 120f; // unified label width
 
-        [MenuItem("GameLabs/Forge/FORGE", priority = 0)]
+        [MenuItem("GameLabs/Forge/FORGE Window", priority = 0)]
         public static void OpenWindow()
         {
-            var w = GetWindow<ForgeWindow>();
-            w.titleContent = new GUIContent("FORGE", EditorGUIUtility.IconContent("d_PlayButton On").image);
+            var w = GetWindow<ForgeTemplateWindow>();
+            w.titleContent = new GUIContent("Forge – AI Item Generator", EditorGUIUtility.IconContent("d_PlayButton On").image);
             w.minSize = new Vector2(560, 660);
             w.maxSize = new Vector2(1200, 1400);
         }
@@ -180,7 +181,7 @@ namespace GameLabs.Forge.Editor
             
             GUILayout.Label(UI.Play, GUILayout.Width(20), GUILayout.Height(20));
             GUILayout.Space(8);
-            GUILayout.Label("FORGE", UI.Title, GUILayout.Height(24));
+            GUILayout.Label("Forge – AI Item Generator", UI.Title, GUILayout.Height(24));
             
             GUILayout.FlexibleSpace();
             
@@ -203,7 +204,7 @@ namespace GameLabs.Forge.Editor
         private void DrawToolbar()
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-            GUILayout.Label("Actions", GUILayout.Width(60));
+            GUILayout.Label("Quick Actions", GUILayout.Width(90));
 
             using (new EditorGUI.DisabledScope(_template == null))
             {
@@ -214,7 +215,7 @@ namespace GameLabs.Forge.Editor
                     OpenGeneratedFolder();
             }
 
-            if (GUILayout.Button(new GUIContent(" Clear", UI.Trash), UI.ToolbarBtn))
+            if (GUILayout.Button(new GUIContent(" Clear Results", UI.Trash), UI.ToolbarBtn))
             {
                 _lastGenerated.Clear();
                 _status = "";
@@ -246,7 +247,7 @@ namespace GameLabs.Forge.Editor
                 
                 var oldBlueprint = _blueprint;
                 _blueprint = (ForgeBlueprint)EditorGUILayout.ObjectField(
-                    new GUIContent("Blueprint", "Saves template, instructions, and duplicate strategy"),
+                    new GUIContent("Blueprint", "A ForgeBlueprint saves template, instructions, and duplicate strategy."),
                     _blueprint,
                     typeof(ForgeBlueprint),
                     false);
@@ -304,11 +305,11 @@ namespace GameLabs.Forge.Editor
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.LabelField("Discovery Path", GUILayout.Width(LABEL_W), GUILayout.Height(18));
                     EditorGUI.BeginDisabledGroup(true);
-                    EditorGUILayout.TextField(string.IsNullOrEmpty(_blueprintDiscoveryPath) ? "Assets (default)" : _blueprintDiscoveryPath, GUILayout.Height(18));
+                    EditorGUILayout.TextField(string.IsNullOrEmpty(_blueprintDiscoveryPath) ? "Resources (default)" : _blueprintDiscoveryPath, GUILayout.Height(18));
                     EditorGUI.EndDisabledGroup();
                     if (GUILayout.Button(new GUIContent(UI.Folder, "Browse for folder"), GUILayout.Width(32), GUILayout.Height(18)))
                     {
-                        string initialPath = string.IsNullOrEmpty(_blueprintDiscoveryPath) ? "Assets" : _blueprintDiscoveryPath;
+                        string initialPath = string.IsNullOrEmpty(_blueprintDiscoveryPath) ? "Assets/Resources" : _blueprintDiscoveryPath;
                         string selected = EditorUtility.OpenFolderPanel("Select Discovery Path", initialPath, "");
                         if (!string.IsNullOrEmpty(selected))
                         {
@@ -346,7 +347,7 @@ namespace GameLabs.Forge.Editor
                             EditorUtility.SetDirty(_blueprint);
                             AssetDatabase.SaveAssets();
                             _blueprintDirty = false;
-                            ForgeLogger.DebugLog($"Blueprint '{_blueprint.DisplayName}' saved.");
+                            ForgeLogger.Log($"Blueprint '{_blueprint.DisplayName}' saved.");
                         }
                     }
                     
@@ -363,7 +364,7 @@ namespace GameLabs.Forge.Editor
                 else
                 {
                     EditorGUILayout.HelpBox(
-                        "Select or create a Blueprint to save generation settings.",
+                        "Optionally select or create a ForgeBlueprint to save generation profiles.",
                         MessageType.Info);
                     EditorGUILayout.Space(6);
                     EditorGUILayout.LabelField("Strategy");
@@ -377,11 +378,11 @@ namespace GameLabs.Forge.Editor
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.LabelField("Discovery Path", GUILayout.Width(LABEL_W), GUILayout.Height(18));
                     EditorGUI.BeginDisabledGroup(true);
-                    EditorGUILayout.TextField(string.IsNullOrEmpty(_windowDiscoveryPath) ? "Assets (default)" : _windowDiscoveryPath, GUILayout.Height(18));
+                    EditorGUILayout.TextField(string.IsNullOrEmpty(_windowDiscoveryPath) ? "Resources (default)" : _windowDiscoveryPath, GUILayout.Height(18));
                     EditorGUI.EndDisabledGroup();
                     if (GUILayout.Button(new GUIContent(UI.Folder, "Browse for folder"), GUILayout.Width(32), GUILayout.Height(18)))
                     {
-                        string initialPath = string.IsNullOrEmpty(_windowDiscoveryPath) ? "Assets" : _windowDiscoveryPath;
+                        string initialPath = string.IsNullOrEmpty(_windowDiscoveryPath) ? "Assets/Resources" : _windowDiscoveryPath;
                         string selected = EditorUtility.OpenFolderPanel("Select Discovery Path", initialPath, "");
                         if (!string.IsNullOrEmpty(selected))
                         {
@@ -431,7 +432,7 @@ namespace GameLabs.Forge.Editor
             _blueprintDiscoveryPath = blueprint.DiscoveryPathOverride;
             _blueprintDirty = false;
             
-            ForgeLogger.DebugLog($"Created new blueprint: {blueprint.DisplayName}");
+            ForgeLogger.Log($"Created new blueprint: {blueprint.DisplayName}");
         }
 
         private void DrawTemplateSection()
@@ -445,7 +446,7 @@ namespace GameLabs.Forge.Editor
 
                 var oldTemplate = _template;
                 _template = (ScriptableObject)EditorGUILayout.ObjectField(
-                    new GUIContent("Template", "ScriptableObject defining the item structure"),
+                    new GUIContent("ScriptableObject Template", "Pick the ScriptableObject that defines your item structure."),
                     _template,
                     typeof(ScriptableObject),
                     false);
@@ -501,7 +502,8 @@ namespace GameLabs.Forge.Editor
                 else
                 {
                     EditorGUILayout.HelpBox(
-                        "Select a template to define the item structure.",
+                        "Select a ScriptableObject template to define the structure:\n" +
+                        "• Fields & types  • [Range] constraints  • [Tooltip] descriptions  • Enum options",
                         MessageType.Info);
                 }
 
@@ -513,7 +515,7 @@ namespace GameLabs.Forge.Editor
         {
             // Auto-find when template or discovery path changes
             var currentTemplate = _blueprint != null ? _blueprint.Template : _template;
-            string currentPath = "Assets";
+            string currentPath = "Resources";
             if (_blueprint != null)
             {
                 currentPath = _blueprint.GetEffectiveDiscoveryPath();
@@ -521,7 +523,7 @@ namespace GameLabs.Forge.Editor
             else
             {
                 var settings = ForgeConfig.GetGeneratorSettings();
-                currentPath = settings?.existingAssetsSearchPath ?? "Assets";
+                currentPath = settings?.existingAssetsSearchPath ?? "Resources";
             }
 
             string currentTemplateName = currentTemplate?.GetType().Name ?? "";
@@ -562,7 +564,7 @@ namespace GameLabs.Forge.Editor
 
                 var s = ForgeConfig.GetGeneratorSettings();
                 GUILayout.Space(3);
-                GUILayout.Label($"Search path: {s?.existingAssetsSearchPath ?? "Assets"}", UI.Hint);
+                GUILayout.Label($"Search path: {s?.existingAssetsSearchPath ?? "Resources"}", UI.Hint);
             }
         }
 
@@ -599,7 +601,7 @@ namespace GameLabs.Forge.Editor
 
             using (new EditorGUILayout.VerticalScope(UI.Card))
             {
-                _autoSaveAsAsset = EditorGUILayout.ToggleLeft(new GUIContent("Auto-Save Assets", "Automatically create assets after generation"), _autoSaveAsAsset);
+                _autoSaveAsAsset = EditorGUILayout.ToggleLeft(new GUIContent("Auto-Save as Asset", "Create assets immediately after generation."), _autoSaveAsAsset);
                 using (new EditorGUI.DisabledScope(!_autoSaveAsAsset))
                 {
                     var old = EditorGUIUtility.labelWidth;
@@ -617,7 +619,7 @@ namespace GameLabs.Forge.Editor
 
                     GUILayout.Space(4);
                     string basePath = ForgeAssetExporter.GetGeneratedBasePath();
-                    GUILayout.Label(new GUIContent("Base Path", "Configured in settings"), UI.Hint);
+                    GUILayout.Label(new GUIContent("Base Path", "Configured in ForgeGeneratorSettings or config file."), UI.Hint);
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.SelectableLabel(basePath, EditorStyles.textField, GUILayout.Height(18));
                     if (GUILayout.Button(new GUIContent("", UI.Copy, "Copy path"), GUILayout.Width(24), GUILayout.Height(18)))
@@ -652,7 +654,7 @@ namespace GameLabs.Forge.Editor
             GUI.DrawTexture(iconRect, UI.Play, ScaleMode.ScaleToFit, true);
 
             // label (centered)
-            string text = _isGenerating ? "Generating..." : $"Generate {_itemCount} Items";
+            string text = _isGenerating ? "Generating…" : $"Generate {_itemCount} Item(s)";
             EditorGUI.LabelField(r, text, UI.PrimaryBtnText);
 
             EditorGUI.EndDisabledGroup();
@@ -764,7 +766,7 @@ namespace GameLabs.Forge.Editor
             var r = EditorGUILayout.GetControlRect(false, 22);
             EditorGUI.DrawRect(new Rect(r.x, r.y, r.width, 1), UI.Line);
             GUILayout.Space(2);
-            GUILayout.Label("FORGE • GameLabs", UI.Hint);
+            GUILayout.Label("Forge • GameLabs — Generate faster. Keep control.", UI.Hint);
             GUILayout.Space(2);
         }
 
@@ -808,7 +810,7 @@ namespace GameLabs.Forge.Editor
             }
             else
             {
-                EditorUtility.DisplayDialog("FORGE", "Select a template or blueprint to generate items.", "OK");
+                EditorUtility.DisplayDialog("Error", "Please select a template or blueprint to generate items.", "OK");
             }
         }
 
@@ -884,7 +886,7 @@ namespace GameLabs.Forge.Editor
 
                     AssetDatabase.CreateAsset(itm, full);
                     saved++;
-                    ForgeLogger.DebugLog($"Saved asset: {full}");
+                    ForgeLogger.Log($"Saved asset: {full}");
                 }
             }
             finally
@@ -894,7 +896,7 @@ namespace GameLabs.Forge.Editor
                 AssetDatabase.Refresh();
             }
 
-            ForgeLogger.DebugLog($"Batch save completed: {saved} assets saved to {folderPath}");
+            ForgeLogger.Log($"Batch save completed: {saved} assets saved to {folderPath}");
             return saved;
         }
 
@@ -911,7 +913,7 @@ namespace GameLabs.Forge.Editor
             if (!string.IsNullOrEmpty(parentFolder) && !string.IsNullOrEmpty(newFolder))
             {
                 AssetDatabase.CreateFolder(parentFolder, newFolder);
-                ForgeLogger.DebugLog($"Created folder: {path}");
+                ForgeLogger.Log($"Created folder: {path}");
             }
         }
 
@@ -939,7 +941,7 @@ namespace GameLabs.Forge.Editor
             {
                 AssetDatabase.CreateAsset(item, full);
                 _itemSavedState[item] = true;
-                ForgeLogger.DebugLog($"Saved asset: {full}");
+                ForgeLogger.Log($"Saved asset: {full}");
             }
             finally
             {
@@ -987,7 +989,7 @@ namespace GameLabs.Forge.Editor
                     AssetDatabase.CreateAsset(item, full);
                     _itemSavedState[item] = true;
                     saved++;
-                    ForgeLogger.DebugLog($"Saved asset: {full}");
+                    ForgeLogger.Log($"Saved asset: {full}");
                 }
             }
             finally
@@ -999,7 +1001,7 @@ namespace GameLabs.Forge.Editor
 
             _status = $"Saved {saved} asset(s) to {folder}";
             _statusType = MessageType.Info;
-            ForgeLogger.DebugLog($"Batch save completed: {saved} assets saved to {folderPath}");
+            ForgeLogger.Log($"Batch save completed: {saved} assets saved to {folderPath}");
             Repaint();
         }
 
@@ -1035,7 +1037,7 @@ namespace GameLabs.Forge.Editor
             }
             else
             {
-                EditorUtility.DisplayDialog("FORGE", $"Folder not found:\n{path}\n\nIt will be created on first save.", "OK");
+                EditorUtility.DisplayDialog("Folder Not Found", $"No folder at:\n{path}\nIt will be created on first save.", "OK");
             }
         }
 
@@ -1051,7 +1053,7 @@ namespace GameLabs.Forge.Editor
             var itemType = _template.GetType();
             
             // Get discovery path from blueprint override, or global default
-            string searchPath = "Assets";
+            string searchPath = "Resources";
             if (_blueprint != null)
             {
                 searchPath = _blueprint.GetEffectiveDiscoveryPath();
@@ -1059,7 +1061,7 @@ namespace GameLabs.Forge.Editor
             else
             {
                 var settings = ForgeConfig.GetGeneratorSettings();
-                searchPath = settings?.existingAssetsSearchPath ?? "Assets";
+                searchPath = settings?.existingAssetsSearchPath ?? "Resources";
             }
 
             var method = typeof(ForgeAssetDiscovery).GetMethod(nameof(ForgeAssetDiscovery.DiscoverAssetsAsJson),
@@ -1076,13 +1078,14 @@ namespace GameLabs.Forge.Editor
 
             if (_foundCount == 0)
             {
-                EditorUtility.DisplayDialog("FORGE",
-                    $"No existing {itemType.Name} items found in '{searchPath}'.",
+                EditorUtility.DisplayDialog("Existing Items",
+                    $"No existing {itemType.Name} items found in '{searchPath}'.\n\n" +
+                    "Make sure you have ScriptableObject assets of this type in the search path.",
                     "OK");
             }
             else
             {
-                ForgeLogger.DebugLog($"Discovered {_foundCount} existing {itemType.Name} items in '{searchPath}'");
+                ForgeLogger.Log($"Discovered {_foundCount} existing {itemType.Name} items in '{searchPath}'");
             }
 
             Repaint();
@@ -1109,7 +1112,7 @@ namespace GameLabs.Forge.Editor
         {
             GUILayout.Space(8);
             EditorGUILayout.LabelField("Discovered Items", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox("Existing items used to avoid duplicates and maintain consistency.", MessageType.Info);
+            EditorGUILayout.HelpBox("These items guide generation to avoid duplicates and keep naming/style consistent.", MessageType.Info);
 
             GUILayout.Space(6);
             var r = EditorGUILayout.GetControlRect(false, 1);

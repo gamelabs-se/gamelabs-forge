@@ -104,7 +104,7 @@ namespace GameLabs.Forge.Editor
                 AssetDatabase.CreateAsset(asset, fullPath);
                 AssetDatabase.SaveAssets();
                 
-                ForgeLogger.Debug($"Created asset: {fullPath}");
+                ForgeLogger.DebugLog($"Created asset: {fullPath}");
                 return asset;
             }
             catch (Exception e)
@@ -168,7 +168,7 @@ namespace GameLabs.Forge.Editor
             
             if (!Directory.Exists(folderPath))
             {
-                ForgeLogger.Debug($"No assets found in folder {customFolder}");
+                ForgeLogger.DebugLog($"No assets found in folder {customFolder}");
                 return assets;
             }
             
@@ -185,7 +185,7 @@ namespace GameLabs.Forge.Editor
                 }
             }
             
-            ForgeLogger.Debug($"Loaded {assets.Count} assets from {customFolder}");
+            ForgeLogger.DebugLog($"Loaded {assets.Count} assets from {customFolder}");
             return assets;
         }
         
@@ -297,7 +297,7 @@ namespace GameLabs.Forge.Editor
             if (!string.IsNullOrEmpty(parentFolder) && !string.IsNullOrEmpty(newFolderName))
             {
                 AssetDatabase.CreateFolder(parentFolder, newFolderName);
-                ForgeLogger.Debug($"Created folder: {path}");
+                ForgeLogger.DebugLog($"Created folder: {path}");
             }
         }
         

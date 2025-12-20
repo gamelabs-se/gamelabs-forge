@@ -198,7 +198,7 @@ namespace GameLabs.Forge
                     var stats = JsonUtility.FromJson<ForgeStatistics>(json);
                     if (stats != null)
                     {
-                        ForgeLogger.Debug("Statistics loaded.");
+                        ForgeLogger.DebugLog("Statistics loaded.");
                         return stats;
                     }
                 }

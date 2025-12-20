@@ -16,7 +16,7 @@ namespace GameLabs.Forge
         {
             get
             {
-                if (!_debugMode.hasValue)
+                if (!_debugMode.HasValue)
                 {
                     _debugMode = ForgeConfig.GetDebugMode();
                 }
@@ -30,12 +30,12 @@ namespace GameLabs.Forge
         public static void Log(string msg)
         {
             if (DebugMode)
-                Debug.Log(Prefix + msg);
+                UnityEngine.Debug.Log(Prefix + msg);
         }
         
         /// <summary>Logs a debug message (only in debug mode).</summary>
         /// <param name="msg">The debug message to log.</param>
-        public static void Debug(string msg)
+        public static void DebugLog(string msg)
         {
             if (DebugMode)
                 UnityEngine.Debug.Log(Prefix + "[DEBUG] " + msg);

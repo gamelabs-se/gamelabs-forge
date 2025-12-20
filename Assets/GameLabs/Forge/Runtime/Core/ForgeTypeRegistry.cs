@@ -29,7 +29,7 @@ namespace GameLabs.Forge
             _registeredTypes[name] = type;
             _schemaCache[type] = ForgeSchemaExtractor.ExtractSchema<T>();
             
-            ForgeLogger.Debug($"Registered type: {name}");
+            ForgeLogger.DebugLog($"Registered type: {name}");
         }
         
         /// <summary>
@@ -113,11 +113,11 @@ namespace GameLabs.Forge
                 catch (Exception e)
                 {
                     // Skip assemblies that can't be inspected - this is expected for some system assemblies
-                    ForgeLogger.Debug($"Skipped assembly during auto-registration: {assembly.FullName} ({e.GetType().Name})");
+                    ForgeLogger.DebugLog($"Skipped assembly during auto-registration: {assembly.FullName} ({e.GetType().Name})");
                 }
             }
             
-            ForgeLogger.Debug($"Auto-registered {_registeredTypes.Count} item types.");
+            ForgeLogger.DebugLog($"Auto-registered {_registeredTypes.Count} item types.");
         }
     }
 }

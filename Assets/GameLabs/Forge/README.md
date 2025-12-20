@@ -1,4 +1,4 @@
-# 🔥 Forge - AI-Powered Item Generator for Unity
+# GameLabs | FORGE - AI-Powered Item Generator for Unity
 
 **Generate game items with AI. Fast, flexible, and production-ready.**
 
@@ -8,7 +8,7 @@ Forge uses OpenAI's GPT models to generate game items based on your custom Scrip
 
 ### Unity Package
 
-1. Download `FORGE-v1.0.0-beta.unitypackage`
+1. Download `FORGE-v0.1.0-beta.unitypackage`
 2. In Unity: `Assets → Import Package → Custom Package`
 3. Select the downloaded file
 4. Click "Import" (imports to `Assets/GameLabs/Forge/`)
@@ -16,6 +16,7 @@ Forge uses OpenAI's GPT models to generate game items based on your custom Scrip
 ### First Run
 
 After importing:
+
 1. Open `GameLabs → Forge → Setup Wizard`
 2. Enter your OpenAI API key ([get one here](https://platform.openai.com/api-keys))
 3. Configure game settings
@@ -27,16 +28,16 @@ After importing:
 
 ## Features
 
-- **Item-Agnostic**: Define any item type as a C# class - Forge extracts the schema automatically
+- **Item-Agnostic**: Define any item type as a ScriptableObject - Forge extracts the schema automatically
 - **Dynamic Schema Extraction**: Uses reflection to understand your item structure including ranges, enums, and descriptions
 - **Single & Batch Generation**: Generate one item or many at once
-- **Typed Assets** ⭐ NEW: Create real ScriptableObject assets with actual properties - usable immediately!
+- **Typed Assets** Create real ScriptableObject assets with actual properties - usable immediately!
 - **ScriptableObject Assets**: Save generated items as ScriptableObject assets organized by type
 - **Context-Aware**: Provide existing items as reference to ensure variety
 - **JSON Export/Import**: Save generated items for use in your game
 - **Generator Window**: Easy-to-use editor window for generating and saving items
 - **Setup Wizard**: Easy first-time configuration with cost estimation
-- **Custom Attributes**: Fine-tune generation with `[ForgeDescription]`, `[ForgeConstraint]`, and `[ForgeAssetBinding]`
+- **Custom Attributes**: Fine-tune generation with `[ForgeDescription]`
 
 ## Quick Start
 
@@ -65,18 +66,18 @@ public class MeleeWeapon : ForgeItemDefinition
     [Tooltip("Base damage dealt by the weapon")]
     [Range(1, 100)]
     public int damage = 10;
-    
+
     [Tooltip("Weight of the weapon in kg")]
     [Range(0.1f, 50f)]
     public float weight = 1.0f;
-    
+
     [Tooltip("Gold value of the weapon")]
     [Range(1, 10000)]
     public int value = 50;
-    
+
     [Tooltip("Type/category of melee weapon")]
     public WeaponType weaponType;
-    
+
     [Tooltip("Rarity tier")]
     public ItemRarity rarity;
 }
@@ -117,7 +118,7 @@ public class MyItemManager : MonoBehaviour
     void GenerateWeapons()
     {
         var generator = ForgeItemGenerator.Instance;
-        
+
         // Generate a single item
         generator.GenerateSingle<MeleeWeapon>(result =>
         {
@@ -127,7 +128,7 @@ public class MyItemManager : MonoBehaviour
                 Debug.Log($"Generated: {weapon.name} - {weapon.damage} damage");
             }
         });
-        
+
         // Generate a batch of items
         generator.GenerateBatch<MeleeWeapon>(5, result =>
         {
@@ -155,7 +156,7 @@ var generator = ForgeItemGenerator.Instance;
 generator.AddExistingItems(myExistingWeapons);
 
 // Generate with additional context
-generator.GenerateSingle<MeleeWeapon>(result => 
+generator.GenerateSingle<MeleeWeapon>(result =>
 {
     // Handle result
 }, "Generate a legendary fire-enchanted sword for a level 50 player");
@@ -208,12 +209,12 @@ public class MeleeWeaponAsset : ForgeTypedAsset
     [Header("Combat Stats")]
     public int damage;
     public float attackSpeed;
-    
+
     [Header("Properties")]
     public float weight;
     public int value;
     public ItemRarity rarity;
-    
+
     // Add custom methods!
     public float CalculateDPS() => damage * attackSpeed;
 }
@@ -258,7 +259,7 @@ public class WeaponManager : MonoBehaviour
 {
     // Reference typed assets directly - no JSON parsing needed!
     [SerializeField] private MeleeWeaponAsset[] weapons;
-    
+
     void Start()
     {
         foreach (var weapon in weapons)
@@ -295,7 +296,7 @@ generator.GenerateBatch<MeleeWeapon>(5, result =>
     {
         // Saves to Generated/MeleeWeapon/ folder
         var assets = ForgeAssetExporter.CreateAssets(result.items);
-        
+
         // Or use a custom folder name
         var customAssets = ForgeAssetExporter.CreateAssets(result.items, "MyWeapons");
     }
@@ -310,7 +311,7 @@ public class WeaponManager : MonoBehaviour
 {
     // Reference assets directly in the Inspector
     [SerializeField] private ForgeItemAsset<MeleeWeapon>[] weapons;
-    
+
     void Start()
     {
         foreach (var weaponAsset in weapons)
@@ -326,13 +327,13 @@ public class WeaponManager : MonoBehaviour
 
 ### Schema Attributes
 
-| Attribute | Target | Description |
-|-----------|--------|-------------|
-| `[ForgeDescription("...")]` | Class, Field | Provides description for AI context |
-| `[Range(min, max)]` | Field | Sets numeric range constraints |
-| `[Min(value)]` | Field | Sets minimum value |
-| `[Tooltip("...")]` | Field | Used as field description if no ForgeDescription |
-| `[ForgeAssetBinding(type)]` | Class | Binds to a ScriptableObject type for typed assets |
+| Attribute                   | Target       | Description                                       |
+| --------------------------- | ------------ | ------------------------------------------------- |
+| `[ForgeDescription("...")]` | Class, Field | Provides description for AI context               |
+| `[Range(min, max)]`         | Field        | Sets numeric range constraints                    |
+| `[Min(value)]`              | Field        | Sets minimum value                                |
+| `[Tooltip("...")]`          | Field        | Used as field description if no ForgeDescription  |
+| `[ForgeAssetBinding(type)]` | Class        | Binds to a ScriptableObject type for typed assets |
 
 ### Custom Constraints
 
@@ -392,18 +393,18 @@ You can also configure these in the Unity Inspector when selecting a ForgeItemGe
 
 ### Generator Settings
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `gameName` | Your game's name | "My Game" |
-| `gameDescription` | Game setting/theme description | "" |
-| `targetAudience` | Target audience (General, Casual, Hardcore, etc.) | "General" |
-| `defaultBatchSize` | Default items per batch | 5 |
-| `maxBatchSize` | Maximum items per request | 20 |
-| `temperature` | AI creativity (0-2, higher = more creative) | 0.8 |
-| `model` | OpenAI model to use | "gpt-4o-mini" |
-| `existingAssetsSearchPath` | Where to search for existing assets | "Assets" |
-| `generatedAssetsBasePath` | Where to save generated assets | "Resources/Generated" |
-| `autoLoadExistingAssets` | Auto-load existing assets into context | true |
+| Setting                    | Description                                       | Default               |
+| -------------------------- | ------------------------------------------------- | --------------------- |
+| `gameName`                 | Your game's name                                  | "My Game"             |
+| `gameDescription`          | Game setting/theme description                    | ""                    |
+| `targetAudience`           | Target audience (General, Casual, Hardcore, etc.) | "General"             |
+| `defaultBatchSize`         | Default items per batch                           | 5                     |
+| `maxBatchSize`             | Maximum items per request                         | 20                    |
+| `temperature`              | AI creativity (0-2, higher = more creative)       | 0.8                   |
+| `model`                    | OpenAI model to use                               | "gpt-4o-mini"         |
+| `existingAssetsSearchPath` | Where to search for existing assets               | "Assets"              |
+| `generatedAssetsBasePath`  | Where to save generated assets                    | "Resources/Generated" |
+| `autoLoadExistingAssets`   | Auto-load existing assets into context            | true                  |
 
 ## API Reference
 
@@ -492,10 +493,10 @@ public abstract class ForgeTypedAsset : ScriptableObject
     public string id;
     public new string name;
     public string description;
-    
+
     // Override for custom post-processing
     public virtual void OnValidateGenerated() { }
-    
+
     // Metadata
     public string SourceTypeName { get; }
     public DateTime GeneratedAt { get; }
@@ -533,12 +534,14 @@ DateTime CreatedAt { get; }
 The package includes example item types in `Assets/GameLabs/Forge/Demo/Items/`:
 
 ### Item Definitions
+
 - **MeleeWeapon** - Swords, axes, maces with damage, weight, durability
 - **Consumable** - Potions, food with effects and duration
 - **Collectible** - Treasures with lore and rarity
 - **Armor** - Equipment with defense, weight, slots
 
 ### Typed Asset Classes (NEW!)
+
 - **MeleeWeaponAsset** - Real ScriptableObject with combat stats and helper methods
 - **ConsumableAsset** - Ready-to-use consumable items
 - **CollectibleAsset** - Treasures with value calculations
@@ -547,6 +550,7 @@ The package includes example item types in `Assets/GameLabs/Forge/Demo/Items/`:
 ## Cost Estimation
 
 Using GPT-4o-mini (recommended for cost efficiency):
+
 - Single item: ~$0.00002
 - Batch of 5 items: ~$0.00008
 - Batch of 20 items: ~$0.00025
@@ -554,12 +558,15 @@ Using GPT-4o-mini (recommended for cost efficiency):
 ## Troubleshooting
 
 ### "API key missing" error
+
 Run the Setup Wizard (**GameLabs → Forge → Setup Wizard**) to configure your API key.
 
 ### Items not matching schema
+
 Ensure your class is marked `[Serializable]` and fields are public. The AI respects `[Range]` and enum constraints.
 
 ### Empty or null items
+
 Check the Unity Console for error messages. The AI response may have failed to parse - try reducing batch size or simplifying your item schema.
 
 ## File Structure
