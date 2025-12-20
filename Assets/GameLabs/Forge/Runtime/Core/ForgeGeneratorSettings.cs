@@ -44,8 +44,8 @@ namespace GameLabs.Forge
         public string additionalRules = "";
         
         [Header("Asset Paths")]
-        [Tooltip("Base path to search for existing assets (relative to Assets folder). Default: 'Resources'")]
-        public string existingAssetsSearchPath = "Resources";
+        [Tooltip("Base path to search for existing assets (relative to Assets folder). Default: 'Assets'")]
+        public string existingAssetsSearchPath = "Assets";
         
         [Tooltip("Base path for generated assets (relative to Assets folder). Default: 'Resources/Generated'")]
         public string generatedAssetsBasePath = "Resources/Generated";

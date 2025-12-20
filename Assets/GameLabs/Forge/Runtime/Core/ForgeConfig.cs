@@ -83,7 +83,7 @@ namespace GameLabs.Forge
                 temperature = config.temperature,
                 model = (ForgeAIModel)config.model,
                 additionalRules = config.additionalRules ?? "",
-                existingAssetsSearchPath = string.IsNullOrEmpty(config.existingAssetsSearchPath) ? "Resources" : config.existingAssetsSearchPath,
+                existingAssetsSearchPath = string.IsNullOrEmpty(config.existingAssetsSearchPath) ? "Assets" : config.existingAssetsSearchPath,
                 generatedAssetsBasePath = string.IsNullOrEmpty(config.generatedAssetsBasePath) ? "Resources/Generated" : config.generatedAssetsBasePath,
                 autoLoadExistingAssets = config.autoLoadExistingAssets,
                 intent = (ExistingItemsIntent)config.intent

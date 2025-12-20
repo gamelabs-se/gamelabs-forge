@@ -304,11 +304,11 @@ namespace GameLabs.Forge.Editor
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.LabelField("Discovery Path", GUILayout.Width(LABEL_W), GUILayout.Height(18));
                     EditorGUI.BeginDisabledGroup(true);
-                    EditorGUILayout.TextField(string.IsNullOrEmpty(_blueprintDiscoveryPath) ? "Resources (default)" : _blueprintDiscoveryPath, GUILayout.Height(18));
+                    EditorGUILayout.TextField(string.IsNullOrEmpty(_blueprintDiscoveryPath) ? "Assets (default)" : _blueprintDiscoveryPath, GUILayout.Height(18));
                     EditorGUI.EndDisabledGroup();
                     if (GUILayout.Button(new GUIContent(UI.Folder, "Browse for folder"), GUILayout.Width(32), GUILayout.Height(18)))
                     {
-                        string initialPath = string.IsNullOrEmpty(_blueprintDiscoveryPath) ? "Assets/Resources" : _blueprintDiscoveryPath;
+                        string initialPath = string.IsNullOrEmpty(_blueprintDiscoveryPath) ? "Assets" : _blueprintDiscoveryPath;
                         string selected = EditorUtility.OpenFolderPanel("Select Discovery Path", initialPath, "");
                         if (!string.IsNullOrEmpty(selected))
                         {
@@ -377,11 +377,11 @@ namespace GameLabs.Forge.Editor
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.LabelField("Discovery Path", GUILayout.Width(LABEL_W), GUILayout.Height(18));
                     EditorGUI.BeginDisabledGroup(true);
-                    EditorGUILayout.TextField(string.IsNullOrEmpty(_windowDiscoveryPath) ? "Resources (default)" : _windowDiscoveryPath, GUILayout.Height(18));
+                    EditorGUILayout.TextField(string.IsNullOrEmpty(_windowDiscoveryPath) ? "Assets (default)" : _windowDiscoveryPath, GUILayout.Height(18));
                     EditorGUI.EndDisabledGroup();
                     if (GUILayout.Button(new GUIContent(UI.Folder, "Browse for folder"), GUILayout.Width(32), GUILayout.Height(18)))
                     {
-                        string initialPath = string.IsNullOrEmpty(_windowDiscoveryPath) ? "Assets/Resources" : _windowDiscoveryPath;
+                        string initialPath = string.IsNullOrEmpty(_windowDiscoveryPath) ? "Assets" : _windowDiscoveryPath;
                         string selected = EditorUtility.OpenFolderPanel("Select Discovery Path", initialPath, "");
                         if (!string.IsNullOrEmpty(selected))
                         {
@@ -513,7 +513,7 @@ namespace GameLabs.Forge.Editor
         {
             // Auto-find when template or discovery path changes
             var currentTemplate = _blueprint != null ? _blueprint.Template : _template;
-            string currentPath = "Resources";
+            string currentPath = "Assets";
             if (_blueprint != null)
             {
                 currentPath = _blueprint.GetEffectiveDiscoveryPath();
@@ -521,7 +521,7 @@ namespace GameLabs.Forge.Editor
             else
             {
                 var settings = ForgeConfig.GetGeneratorSettings();
-                currentPath = settings?.existingAssetsSearchPath ?? "Resources";
+                currentPath = settings?.existingAssetsSearchPath ?? "Assets";
             }
 
             string currentTemplateName = currentTemplate?.GetType().Name ?? "";
@@ -562,7 +562,7 @@ namespace GameLabs.Forge.Editor
 
                 var s = ForgeConfig.GetGeneratorSettings();
                 GUILayout.Space(3);
-                GUILayout.Label($"Search path: {s?.existingAssetsSearchPath ?? "Resources"}", UI.Hint);
+                GUILayout.Label($"Search path: {s?.existingAssetsSearchPath ?? "Assets"}", UI.Hint);
             }
         }
 
@@ -1051,7 +1051,7 @@ namespace GameLabs.Forge.Editor
             var itemType = _template.GetType();
             
             // Get discovery path from blueprint override, or global default
-            string searchPath = "Resources";
+            string searchPath = "Assets";
             if (_blueprint != null)
             {
                 searchPath = _blueprint.GetEffectiveDiscoveryPath();
@@ -1059,7 +1059,7 @@ namespace GameLabs.Forge.Editor
             else
             {
                 var settings = ForgeConfig.GetGeneratorSettings();
-                searchPath = settings?.existingAssetsSearchPath ?? "Resources";
+                searchPath = settings?.existingAssetsSearchPath ?? "Assets";
             }
 
             var method = typeof(ForgeAssetDiscovery).GetMethod(nameof(ForgeAssetDiscovery.DiscoverAssetsAsJson),

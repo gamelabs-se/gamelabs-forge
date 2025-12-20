@@ -378,7 +378,7 @@ You can also configure these in the Unity Inspector when selecting a ForgeItemGe
 | `maxBatchSize` | Maximum items per request | 20 |
 | `temperature` | AI creativity (0-2, higher = more creative) | 0.8 |
 | `model` | OpenAI model to use | "gpt-4o-mini" |
-| `existingAssetsSearchPath` | Where to search for existing assets | "Resources" |
+| `existingAssetsSearchPath` | Where to search for existing assets | "Assets" |
 | `generatedAssetsBasePath` | Where to save generated assets | "Resources/Generated" |
 | `autoLoadExistingAssets` | Auto-load existing assets into context | true |
 

@@ -93,7 +93,7 @@ namespace GameLabs.Forge
                 return _discoveryPathOverride;
 
             var config = ForgeConfig.GetGeneratorSettings();
-            return config?.existingAssetsSearchPath ?? "Resources";
+            return config?.existingAssetsSearchPath ?? "Assets";
         }
 
         /// <summary>

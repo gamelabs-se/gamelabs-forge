@@ -33,7 +33,7 @@ namespace GameLabs.Forge.Editor
         private string additionalRules = "";
         
         // Step 4: Asset Path Settings
-        private string existingAssetsSearchPath = "Resources";
+        private string existingAssetsSearchPath = "Assets";
         private string generatedAssetsBasePath = "Resources/Generated";
         private bool autoLoadExistingAssets = true;
         private ExistingItemsIntent intent = ExistingItemsIntent.PreventDuplicatesAndRefineNaming;
@@ -81,7 +81,7 @@ namespace GameLabs.Forge.Editor
                         maxBatchSize = config.maxBatchSize > 0 ? config.maxBatchSize : 20;
                         temperature = config.temperature;
                         additionalRules = config.additionalRules ?? "";
-                        existingAssetsSearchPath = string.IsNullOrEmpty(config.existingAssetsSearchPath) ? "Resources" : config.existingAssetsSearchPath;
+                        existingAssetsSearchPath = string.IsNullOrEmpty(config.existingAssetsSearchPath) ? "Assets" : config.existingAssetsSearchPath;
                         generatedAssetsBasePath = string.IsNullOrEmpty(config.generatedAssetsBasePath) ? "Resources/Generated" : config.generatedAssetsBasePath;
                         autoLoadExistingAssets = config.autoLoadExistingAssets;
                         intent = (ExistingItemsIntent)config.intent;
