@@ -1,6 +1,29 @@
 # 🔥 Forge - AI-Powered Item Generator for Unity
 
-Forge is a dynamic, AI-powered item generation system for Unity that uses OpenAI's GPT models to generate game items based on your custom C# class definitions. It's designed for offline game development workflows, helping you quickly create batches of items for your game.
+**Generate game items with AI. Fast, flexible, and production-ready.**
+
+Forge uses OpenAI's GPT models to generate game items based on your custom ScriptableObject definitions. Perfect for rapid prototyping or populating your game world with unique items.
+
+## Installation
+
+### Unity Package
+
+1. Download `FORGE-v1.0.0-beta.unitypackage`
+2. In Unity: `Assets → Import Package → Custom Package`
+3. Select the downloaded file
+4. Click "Import" (imports to `Assets/GameLabs/Forge/`)
+
+### First Run
+
+After importing:
+1. Open `GameLabs → Forge → Setup Wizard`
+2. Enter your OpenAI API key ([get one here](https://platform.openai.com/api-keys))
+3. Configure game settings
+4. Done!
+
+📖 **See [QUICKSTART.md](QUICKSTART.md) for a 3-minute guide.**
+
+---
 
 ## Features
 
