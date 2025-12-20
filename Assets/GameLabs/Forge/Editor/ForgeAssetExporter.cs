@@ -104,7 +104,7 @@ namespace GameLabs.Forge.Editor
                 AssetDatabase.CreateAsset(asset, fullPath);
                 AssetDatabase.SaveAssets();
                 
-                ForgeLogger.Log($"Created asset: {fullPath}");
+                ForgeLogger.Debug($"Created asset: {fullPath}");
                 return asset;
             }
             catch (Exception e)
@@ -151,7 +151,7 @@ namespace GameLabs.Forge.Editor
                 AssetDatabase.Refresh();
             }
             
-            ForgeLogger.Log($"Created {createdAssets.Count} assets in {Path.Combine(GetGeneratedBasePath(), customFolder ?? typeof(T).Name)}");
+            ForgeLogger.Success($"Created {createdAssets.Count} assets in {Path.Combine(GetGeneratedBasePath(), customFolder ?? typeof(T).Name)}");
             return createdAssets;
         }
         
@@ -168,7 +168,7 @@ namespace GameLabs.Forge.Editor
             
             if (!Directory.Exists(folderPath))
             {
-                ForgeLogger.Log($"No assets found in folder {customFolder}");
+                ForgeLogger.Debug($"No assets found in folder {customFolder}");
                 return assets;
             }
             
@@ -185,7 +185,7 @@ namespace GameLabs.Forge.Editor
                 }
             }
             
-            ForgeLogger.Log($"Loaded {assets.Count} assets from {customFolder}");
+            ForgeLogger.Debug($"Loaded {assets.Count} assets from {customFolder}");
             return assets;
         }
         
@@ -255,7 +255,7 @@ namespace GameLabs.Forge.Editor
             }
             
             AssetDatabase.Refresh();
-            ForgeLogger.Log($"Deleted {count} {typeof(T).Name} assets");
+            ForgeLogger.Success($"Deleted {count} {typeof(T).Name} assets");
             return count;
         }
         
@@ -297,7 +297,7 @@ namespace GameLabs.Forge.Editor
             if (!string.IsNullOrEmpty(parentFolder) && !string.IsNullOrEmpty(newFolderName))
             {
                 AssetDatabase.CreateFolder(parentFolder, newFolderName);
-                ForgeLogger.Log($"Created folder: {path}");
+                ForgeLogger.Debug($"Created folder: {path}");
             }
         }
         

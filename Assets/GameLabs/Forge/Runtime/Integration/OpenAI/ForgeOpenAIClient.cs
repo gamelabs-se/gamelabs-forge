@@ -123,7 +123,7 @@ namespace GameLabs.Forge.Integration.OpenAI
             uwr.SetRequestHeader("Content-Type", "application/json");
             uwr.SetRequestHeader("Authorization", "Bearer " + apiKey);
 
-            ForgeLogger.Log("Sending OpenAI chat request…");
+            ForgeLogger.Debug("Sending OpenAI chat request...");
             var op = uwr.SendWebRequest();
             yield return op;
 

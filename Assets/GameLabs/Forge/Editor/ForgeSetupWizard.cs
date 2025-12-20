@@ -127,7 +127,7 @@ namespace GameLabs.Forge.Editor
                 File.WriteAllText(ConfigPath, json);
                 AssetDatabase.Refresh();
                 
-                ForgeLogger.Log("Configuration saved successfully.");
+                ForgeLogger.Success("Configuration saved.");
             }
             catch (Exception e)
             {

@@ -123,9 +123,9 @@ namespace GameLabs.Forge
             // Build the user prompt with blueprint strategy
             var prompt = BuildBlueprintPrompt(schema, count, blueprint);
 
-            ForgeLogger.Log($"Generating {count} {templateType.Name} item(s) from blueprint '{blueprint.DisplayName}'...");
-            ForgeLogger.Log($"Duplicate strategy: {blueprint.DuplicateStrategy}");
-            ForgeLogger.Log($"Schema fields: {schema.fields.Count}");
+            ForgeLogger.Debug($"Generating {count} {templateType.Name} item(s) from blueprint '{blueprint.DisplayName}'...");
+            ForgeLogger.Debug($"Duplicate strategy: {blueprint.DuplicateStrategy}");
+            ForgeLogger.Debug($"Schema fields: {schema.fields.Count}");
 
             ForgeTemplateGenerationResult result = null;
             bool completed = false;
@@ -164,9 +164,9 @@ namespace GameLabs.Forge
             // Build the user prompt
             var prompt = BuildUserPrompt(schema, count, additionalContext);
 
-            ForgeLogger.Log($"Generating {count} {templateType.Name} item(s) from template...");
-            ForgeLogger.Log($"Template type: {templateType.FullName}");
-            ForgeLogger.Log($"Schema fields: {schema.fields.Count}");
+            ForgeLogger.Debug($"Generating {count} {templateType.Name} item(s) from template...");
+            ForgeLogger.Debug($"Template type: {templateType.FullName}");
+            ForgeLogger.Debug($"Schema fields: {schema.fields.Count}");
 
             ForgeTemplateGenerationResult result = null;
             bool completed = false;
@@ -371,7 +371,7 @@ CRITICAL RULES:
             // Clean up the content (remove markdown if present)
             content = CleanJsonContent(content);
 
-            ForgeLogger.Log($"Raw response:\n{content}");
+            ForgeLogger.Debug($"Raw response:\n{content}");
 
             try
             {
@@ -380,7 +380,7 @@ CRITICAL RULES:
                 if (expectedCount == 1)
                 {
                     // Single item - parse as object
-                    ForgeLogger.Log("Parsing single item from JSON...");
+                    ForgeLogger.Debug("Parsing single item from JSON...");
                     var item = CreateAndPopulateScriptableObject(templateType, content);
                     if (item != null)
                     {
@@ -390,15 +390,15 @@ CRITICAL RULES:
                 else
                 {
                     // Batch - parse as array
-                    ForgeLogger.Log($"Parsing {expectedCount} items from JSON array...");
+                    ForgeLogger.Debug($"Parsing {expectedCount} items from JSON array...");
                     items = ParseJsonArray(templateType, content);
-                    ForgeLogger.Log($"Parsed {items.Count} items from JSON");
+                    ForgeLogger.Debug($"Parsed {items.Count} items from JSON");
                 }
 
                 int promptTokens = response.usage?.prompt_tokens ?? 0;
                 int completionTokens = response.usage?.completion_tokens ?? 0;
 
-                ForgeLogger.Log($"Successfully created {items.Count} ScriptableObject(s). Tokens: {promptTokens} prompt, {completionTokens} completion.");
+                ForgeLogger.Success($"Generated {items.Count} item(s). Tokens: {promptTokens} prompt, {completionTokens} completion.");
 
                 return ForgeTemplateGenerationResult.Success(items, templateType, promptTokens, completionTokens);
             }
@@ -438,7 +438,7 @@ CRITICAL RULES:
                     instance.name = $"{type.Name}_{System.Guid.NewGuid().ToString().Substring(0, 8)}";
                 }
 
-                ForgeLogger.Log($"Created ScriptableObject: {instance.name} ({type.Name})");
+                ForgeLogger.Debug($"Created ScriptableObject: {instance.name} ({type.Name})");
 
                 return instance;
             }
@@ -477,7 +477,7 @@ CRITICAL RULES:
                                 var replacement = $"\"{field.Name}\":{enumIndex}";
                                 json = System.Text.RegularExpressions.Regex.Replace(json, pattern, replacement);
 
-                                ForgeLogger.Log($"Converted enum field '{field.Name}' from '{enumValue}' to {enumIndex}");
+                                ForgeLogger.Debug($"Converted enum field '{field.Name}' from '{enumValue}' to {enumIndex}");
                             }
                         }
                     }

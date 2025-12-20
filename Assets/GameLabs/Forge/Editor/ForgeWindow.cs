@@ -346,7 +346,7 @@ namespace GameLabs.Forge.Editor
                             EditorUtility.SetDirty(_blueprint);
                             AssetDatabase.SaveAssets();
                             _blueprintDirty = false;
-                            ForgeLogger.Log($"Blueprint '{_blueprint.DisplayName}' saved.");
+                            ForgeLogger.Debug($"Blueprint '{_blueprint.DisplayName}' saved.");
                         }
                     }
                     
@@ -431,7 +431,7 @@ namespace GameLabs.Forge.Editor
             _blueprintDiscoveryPath = blueprint.DiscoveryPathOverride;
             _blueprintDirty = false;
             
-            ForgeLogger.Log($"Created new blueprint: {blueprint.DisplayName}");
+            ForgeLogger.Debug($"Created new blueprint: {blueprint.DisplayName}");
         }
 
         private void DrawTemplateSection()
@@ -884,7 +884,7 @@ namespace GameLabs.Forge.Editor
 
                     AssetDatabase.CreateAsset(itm, full);
                     saved++;
-                    ForgeLogger.Log($"Saved asset: {full}");
+                    ForgeLogger.Debug($"Saved asset: {full}");
                 }
             }
             finally
@@ -894,7 +894,7 @@ namespace GameLabs.Forge.Editor
                 AssetDatabase.Refresh();
             }
 
-            ForgeLogger.Log($"Batch save completed: {saved} assets saved to {folderPath}");
+            ForgeLogger.Debug($"Batch save completed: {saved} assets saved to {folderPath}");
             return saved;
         }
 
@@ -911,7 +911,7 @@ namespace GameLabs.Forge.Editor
             if (!string.IsNullOrEmpty(parentFolder) && !string.IsNullOrEmpty(newFolder))
             {
                 AssetDatabase.CreateFolder(parentFolder, newFolder);
-                ForgeLogger.Log($"Created folder: {path}");
+                ForgeLogger.Debug($"Created folder: {path}");
             }
         }
 
@@ -939,7 +939,7 @@ namespace GameLabs.Forge.Editor
             {
                 AssetDatabase.CreateAsset(item, full);
                 _itemSavedState[item] = true;
-                ForgeLogger.Log($"Saved asset: {full}");
+                ForgeLogger.Debug($"Saved asset: {full}");
             }
             finally
             {
@@ -987,7 +987,7 @@ namespace GameLabs.Forge.Editor
                     AssetDatabase.CreateAsset(item, full);
                     _itemSavedState[item] = true;
                     saved++;
-                    ForgeLogger.Log($"Saved asset: {full}");
+                    ForgeLogger.Debug($"Saved asset: {full}");
                 }
             }
             finally
@@ -999,7 +999,7 @@ namespace GameLabs.Forge.Editor
 
             _status = $"Saved {saved} asset(s) to {folder}";
             _statusType = MessageType.Info;
-            ForgeLogger.Log($"Batch save completed: {saved} assets saved to {folderPath}");
+            ForgeLogger.Debug($"Batch save completed: {saved} assets saved to {folderPath}");
             Repaint();
         }
 
@@ -1082,7 +1082,7 @@ namespace GameLabs.Forge.Editor
             }
             else
             {
-                ForgeLogger.Log($"Discovered {_foundCount} existing {itemType.Name} items in '{searchPath}'");
+                ForgeLogger.Debug($"Discovered {_foundCount} existing {itemType.Name} items in '{searchPath}'");
             }
 
             Repaint();

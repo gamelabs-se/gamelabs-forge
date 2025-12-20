@@ -51,6 +51,9 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.Space(10);
             
             DrawExistingItemsSettings();
+            EditorGUILayout.Space(10);
+            
+            DrawDebugSettings();
             EditorGUILayout.Space(15);
             
             DrawActions();
@@ -192,6 +195,23 @@ namespace GameLabs.Forge.Editor
             }
         }
         
+        private void DrawDebugSettings()
+        {
+            EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
+            
+            EditorGUI.BeginChangeCheck();
+            
+            bool debugMode = ForgeConfig.GetDebugMode();
+            debugMode = EditorGUILayout.Toggle("Enable Debug Logging", debugMode);
+            
+            if (EditorGUI.EndChangeCheck())
+            {
+                ForgeLogger.DebugMode = debugMode;
+            }
+            
+            EditorGUILayout.HelpBox("When disabled, only errors, warnings, and success messages are logged. Enable for detailed generation logs.", MessageType.None);
+        }
+        
         private void DrawActions()
         {
             EditorGUILayout.BeginHorizontal();
@@ -243,7 +263,8 @@ namespace GameLabs.Forge.Editor
                     existingAssetsSearchPath = settings.existingAssetsSearchPath,
                     generatedAssetsBasePath = settings.generatedAssetsBasePath,
                     autoLoadExistingAssets = settings.autoLoadExistingAssets,
-                    intent = (int)settings.intent
+                    intent = (int)settings.intent,
+                    debugMode = ForgeLogger.DebugMode
                 };
                 
                 var json = JsonUtility.ToJson(configData, true);
@@ -251,7 +272,7 @@ namespace GameLabs.Forge.Editor
                 AssetDatabase.Refresh();
                 
                 ForgeConfig.ClearCache();
-                ForgeLogger.Log("Settings saved successfully.");
+                ForgeLogger.Success("Settings saved.");
                 EditorUtility.DisplayDialog("Settings", "Settings saved successfully.", "OK");
             }
             catch (System.Exception e)
@@ -285,6 +306,7 @@ namespace GameLabs.Forge.Editor
             public string generatedAssetsBasePath;
             public bool autoLoadExistingAssets;
             public int intent;
+            public bool debugMode;
         }
     }
 }

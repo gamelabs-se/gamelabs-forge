@@ -165,7 +165,7 @@ namespace GameLabs.Forge
             sessionItemsGenerated = 0;
             
             Save();
-            ForgeLogger.Log("Statistics reset.");
+            ForgeLogger.Success("Statistics reset.");
         }
         
         /// <summary>
@@ -198,7 +198,7 @@ namespace GameLabs.Forge
                     var stats = JsonUtility.FromJson<ForgeStatistics>(json);
                     if (stats != null)
                     {
-                        ForgeLogger.Log("Statistics loaded.");
+                        ForgeLogger.Debug("Statistics loaded.");
                         return stats;
                     }
                 }

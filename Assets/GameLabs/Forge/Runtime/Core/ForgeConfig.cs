@@ -30,6 +30,7 @@ namespace GameLabs.Forge
             public string generatedAssetsBasePath;
             public bool autoLoadExistingAssets;
             public int intent; // ExistingItemsIntent enum value
+            public bool debugMode; // Enable verbose logging
         }
 
         private static ForgeConfigDto _cachedConfig;
@@ -60,6 +61,15 @@ namespace GameLabs.Forge
         {
             var config = LoadConfig(path);
             return config?.temperature ?? 0.8f;
+        }
+        
+        /// <summary>Gets the debug mode setting from the configuration.</summary>
+        /// <param name="path">Path to the config file (defaults to DefaultPath).</param>
+        /// <returns>True if debug logging is enabled, false otherwise (default: false).</returns>
+        public static bool GetDebugMode(string path = DefaultPath)
+        {
+            var config = LoadConfig(path);
+            return config?.debugMode ?? false;
         }
         
         /// <summary>
