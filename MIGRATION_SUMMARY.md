@@ -97,8 +97,12 @@
 If you have an existing project with the old version:
 
 1. **Your API key will be automatically migrated** from forge.config.json to EditorPrefs on first run
-2. **No action needed** - everything should work seamlessly
-3. **Bonus:** Your API key is now more secure and won't be shared accidentally
+2. **The API key remains in the config file** but will be ignored in favor of EditorPrefs
+3. **Going forward:** New saves from Setup Wizard or Settings will write empty string to the config file's `openaiApiKey` field
+4. **No action needed** - everything should work seamlessly
+5. **Bonus:** Your API key is now more secure and won't be shared accidentally
+
+**Note:** If you want to manually clean up, you can safely edit forge.config.json and set `"openaiApiKey": ""` - the system will use the EditorPrefs value.
 
 ## For Package Developers
 

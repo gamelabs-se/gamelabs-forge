@@ -53,7 +53,7 @@ namespace GameLabs.Forge.Editor
         {
 #if UNITY_EDITOR
             // Try EditorPrefs first (new preferred location)
-            var apiKey = EditorPrefs.GetString(ApiKeyPrefKey, null);
+            var apiKey = EditorPrefs.GetString(ApiKeyPrefKey, string.Empty);
             if (!string.IsNullOrWhiteSpace(apiKey))
             {
                 return apiKey.Trim();
