@@ -1,5 +1,5 @@
 {
-    "_comment": "This is a template configuration file for Forge. DO NOT manually edit - use Setup Wizard instead (GameLabs > Forge > Setup Wizard). The API key field is intentionally empty because API keys are stored in EditorPrefs (user-specific) and never in this file.",
+    "_comment": "This is an OPTIONAL template configuration file for Forge. All user settings are now stored in EditorPrefs (user-specific). This file can be used by developers to define system defaults or available models, but is no longer used to store user preferences like game name, API keys, etc. Users should configure their settings via Setup Wizard (GameLabs > Forge > Setup Wizard).",
     "openaiApiKey": "",
     "model": 3,
     "gameName": "My Game",

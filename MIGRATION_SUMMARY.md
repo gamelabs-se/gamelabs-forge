@@ -30,30 +30,32 @@
 
 **Changes:**
 1. ✅ Modified `ForgeConfig.cs`:
-   - Added `SetOpenAIKey(string)` method to store API key in EditorPrefs
-   - Modified `GetOpenAIKey()` to read from EditorPrefs first
-   - Falls back to config file for backwards compatibility (with auto-migration)
-   - EditorPrefs key: `GameLabs.Forge.OpenAIKey`
+   - All user settings now stored in EditorPrefs (not just API key)
+   - Added getter/setter methods for all settings
+   - Added `SaveGeneratorSettings()` and `GetGeneratorSettings()` methods
+   - Automatic migration from config file to EditorPrefs
+   - Config file now optional, used only for developer-controlled system defaults
+   - EditorPrefs keys: `GameLabs.Forge.OpenAIKey`, `GameLabs.Forge.GameName`, `GameLabs.Forge.GameDescription`, etc.
 
 2. ✅ Updated `ForgeSetupWizard.cs`:
-   - Saves API key to EditorPrefs instead of config file
-   - Loads API key from EditorPrefs (with config file fallback)
-   - Config file now saves empty string for `openaiApiKey` field
+   - Saves all settings to EditorPrefs (not config file)
+   - Loads from EditorPrefs (with auto-migration from old config files)
 
 3. ✅ Updated `ForgeSettingsWindow.cs`:
-   - Saves empty string for API key in config file
+   - Saves all settings to EditorPrefs (not config file)
 
-4. ✅ Created documentation:
-   - `Settings/README.md` - Explains the new approach
-   - `Settings/forge.config.template.json` - Template for reference
-   - Updated `PACKAGE_EXPORT_GUIDE.md` with security notes
+4. ✅ Updated documentation:
+   - `Settings/README.md` - Explains that ALL settings are now in EditorPrefs
+   - `Settings/forge.config.template.json` - Marked as optional/developer-controlled
+   - Updated `PACKAGE_EXPORT_GUIDE.md` with new approach
 
 **Benefits:**
-- ✅ **DX (Developer Experience):** No risk of accidentally sharing API key
-- ✅ **UX (User Experience):** Users never receive someone else's API key
-- ✅ **Security:** API keys are user-specific, never in version control or packages
-- ✅ **Team-friendly:** Each team member uses their own API key
-- ✅ **Backwards compatible:** Old config files are automatically migrated
+- ✅ **DX (Developer Experience):** No risk of accidentally sharing API key or project-specific settings
+- ✅ **UX (User Experience):** Users never receive someone else's settings, game name, or API key
+- ✅ **Security:** All user settings are user-specific, never in version control or packages
+- ✅ **Team-friendly:** Each team member has their own configuration
+- ✅ **Backwards compatible:** Old config files are automatically migrated on first use
+- ✅ **Clean exports:** .unitypackage files don't contain any user-specific data
 
 ## Testing Checklist
 
@@ -63,11 +65,11 @@
 - [ ] Demo items are still visible and usable in Project window
 - [ ] Can drag demo items to templates in Forge window
 
-### Task 2 (API Key Security)
-- [ ] Setup Wizard saves API key to EditorPrefs (verify it's not in forge.config.json)
-- [ ] Setup Wizard loads API key from EditorPrefs correctly
-- [ ] Settings window works correctly with API key in EditorPrefs
-- [ ] Can generate items successfully with API key from EditorPrefs
+### Task 2 (All Settings in EditorPrefs)
+- [ ] Setup Wizard saves all settings to EditorPrefs
+- [ ] Setup Wizard loads settings from EditorPrefs correctly
+- [ ] Settings window saves/loads all settings from EditorPrefs
+- [ ] Can generate items successfully with settings from EditorPrefs
 - [ ] Old forge.config.json files with API key are migrated automatically
 - [ ] Exporting .unitypackage doesn't include API key in any file
 - [ ] Importing package in new project requires running Setup Wizard
@@ -96,15 +98,18 @@
 
 If you have an existing project with the old version:
 
-1. **Your API key will be automatically migrated** from forge.config.json to EditorPrefs on first run
-2. **The old API key in the config file is left as-is** for backwards compatibility:
+1. **All settings will be automatically migrated** from forge.config.json to EditorPrefs on first use
+2. **This includes:**
+   - API key
+   - Game name and description
+   - All generation settings (model, temperature, batch sizes, etc.)
+   - Asset paths and preferences
+3. **The old config file is preserved** for backwards compatibility:
    - If you roll back to an older version, it will still work
-   - The key is still in .gitignore so it won't be committed
-   - Future saves will write empty string to this field
-3. **Optional cleanup:** You can manually edit forge.config.json and set `"openaiApiKey": ""` if you want, but it's not necessary
-4. **Security improvement:** Even if the old key remains in the file, it won't be used (EditorPrefs takes priority)
-5. **No action needed** - everything should work seamlessly
-6. **Bonus:** Your API key is now more secure and won't be shared accidentally in .unitypackage exports
+   - Future saves no longer write to this file
+   - You can safely delete it if you want
+4. **No action needed** - everything should work seamlessly
+5. **Benefits:** All your settings are now user-specific and won't be shared accidentally
 
 ## For Package Developers
 

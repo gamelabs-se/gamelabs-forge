@@ -1,15 +1,17 @@
 # FORGE Unity Package Export Guide
 
-## ⚠️ Important: API Key Security
+## ⚠️ Important: User Settings Security
 
-**Good news!** As of the latest version, your OpenAI API key is stored in EditorPrefs (user-specific), NOT in any file. This means:
+**Great news!** As of the latest version, **ALL user settings** are stored in EditorPrefs (user-specific), NOT in any file. This means:
 
 - ✅ Your API key will **NEVER** be included in .unitypackage exports
-- ✅ Your API key will **NEVER** be committed to Git (it's not in any file)
-- ✅ Each user will use their own API key
+- ✅ Your game name and description will **NEVER** be included
+- ✅ All your generation preferences are user-specific
+- ✅ Settings are **NEVER** committed to Git (stored in EditorPrefs only)
+- ✅ Each user configures their own settings via Setup Wizard
 - ✅ No need to manually exclude files when exporting
 
-The `forge.config.json` file only contains non-sensitive settings like game name and model preferences.
+The `forge.config.json` file is now optional and can be used by developers for system defaults only.
 
 ---
 

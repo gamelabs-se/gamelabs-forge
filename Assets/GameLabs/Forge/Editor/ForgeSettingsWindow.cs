@@ -246,34 +246,12 @@ namespace GameLabs.Forge.Editor
         {
             try
             {
-                var configPath = ForgeConfig.DefaultPath;
-                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(configPath));
+                // Save all settings to EditorPrefs
+                ForgeConfig.SaveGeneratorSettings(settings);
+                ForgeConfig.SetDebugMode(ForgeLogger.DebugMode);
                 
-                var configData = new ForgeConfigDataDto
-                {
-                    openaiApiKey = "", // Don't save API key to file, it's in EditorPrefs
-                    model = (int)settings.model,
-                    gameName = settings.gameName,
-                    gameDescription = settings.gameDescription,
-                    targetAudience = settings.targetAudience,
-                    defaultBatchSize = settings.defaultBatchSize,
-                    maxBatchSize = settings.maxBatchSize,
-                    temperature = settings.temperature,
-                    additionalRules = settings.additionalRules,
-                    existingAssetsSearchPath = settings.existingAssetsSearchPath,
-                    generatedAssetsBasePath = settings.generatedAssetsBasePath,
-                    autoLoadExistingAssets = settings.autoLoadExistingAssets,
-                    intent = (int)settings.intent,
-                    debugMode = ForgeLogger.DebugMode
-                };
-                
-                var json = JsonUtility.ToJson(configData, true);
-                System.IO.File.WriteAllText(configPath, json);
-                AssetDatabase.Refresh();
-                
-                ForgeConfig.ClearCache();
-                ForgeLogger.Success("Settings saved.");
-                EditorUtility.DisplayDialog("Settings", "Settings saved successfully.", "OK");
+                ForgeLogger.Success("Settings saved to EditorPrefs (user-specific).");
+                EditorUtility.DisplayDialog("Settings", "Settings saved successfully to EditorPrefs.", "OK");
             }
             catch (System.Exception e)
             {
