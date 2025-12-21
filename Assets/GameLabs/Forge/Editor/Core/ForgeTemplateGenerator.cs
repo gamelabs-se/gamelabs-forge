@@ -29,28 +29,65 @@ namespace GameLabs.Forge.Editor
             {
                 if (_instance != null) return _instance;
 
-                _instance = FindFirstObjectByType<ForgeTemplateGenerator>();
-                if (_instance != null) return _instance;
+                try
+                {
+                    _instance = FindFirstObjectByType<ForgeTemplateGenerator>();
+                    if (_instance != null)
+                    {
+                        ForgeLogger.DebugLog("Found existing ForgeTemplateGenerator instance");
+                        return _instance;
+                    }
 
 #if UNITY_EDITOR
-                var go = new GameObject("~ForgeTemplateGenerator");
-                go.hideFlags = HideFlags.HideAndDontSave;
-                _instance = go.AddComponent<ForgeTemplateGenerator>();
+                    ForgeLogger.DebugLog("Creating new ForgeTemplateGenerator instance");
+                    var go = new GameObject("~ForgeTemplateGenerator");
+                    go.hideFlags = HideFlags.HideAndDontSave;
+                    _instance = go.AddComponent<ForgeTemplateGenerator>();
+                    
+                    if (_instance == null)
+                    {
+                        ForgeLogger.Error("Failed to add ForgeTemplateGenerator component to GameObject");
+                        return null;
+                    }
+                    
+                    // Ensure settings are loaded
+                    if (_instance.settings == null)
+                    {
+                        _instance.settings = new ForgeGeneratorSettings();
+                        ForgeLogger.DebugLog("Initialized default settings");
+                    }
+                    
+                    ForgeLogger.DebugLog("ForgeTemplateGenerator instance created successfully");
 #else
-                var go = new GameObject("ForgeTemplateGenerator");
-                _instance = go.AddComponent<ForgeTemplateGenerator>();
-                DontDestroyOnLoad(go);
+                    var go = new GameObject("ForgeTemplateGenerator");
+                    _instance = go.AddComponent<ForgeTemplateGenerator>();
+                    DontDestroyOnLoad(go);
 #endif
+                }
+                catch (System.Exception e)
+                {
+                    ForgeLogger.Error($"Exception creating ForgeTemplateGenerator instance: {e.Message}\n{e.StackTrace}");
+                    return null;
+                }
+                
                 return _instance;
             }
         }
 
         private void OnEnable()
         {
-            // Load settings from EditorPrefs (user-specific)
-            settings = ForgeConfig.GetGeneratorSettings();
-            if (settings == null)
+            try
             {
+                // Load settings from EditorPrefs (user-specific)
+                settings = ForgeConfig.GetGeneratorSettings();
+                if (settings == null)
+                {
+                    settings = new ForgeGeneratorSettings();
+                }
+            }
+            catch (System.Exception e)
+            {
+                ForgeLogger.Error($"Failed to load settings in ForgeTemplateGenerator.OnEnable: {e.Message}");
                 settings = new ForgeGeneratorSettings();
             }
         }
@@ -74,7 +111,7 @@ namespace GameLabs.Forge.Editor
                 return;
             }
 
-            StartCoroutine(GenerateFromTemplateCoroutine(template, count, callback, additionalContext));
+            ForgeEditorCoroutine.Start(GenerateFromTemplateCoroutine(template, count, callback, additionalContext));
         }
 
         /// <summary>
@@ -100,7 +137,7 @@ namespace GameLabs.Forge.Editor
                 return;
             }
 
-            StartCoroutine(GenerateFromBlueprintCoroutine(blueprint, count, callback));
+            ForgeEditorCoroutine.Start(GenerateFromBlueprintCoroutine(blueprint, count, callback));
         }
 
         private IEnumerator GenerateFromBlueprintCoroutine(
