@@ -47,8 +47,8 @@ namespace GameLabs.Forge.Editor
 
         private void OnEnable()
         {
-            // Initialize with default settings
-            // DO NOT load from config to avoid stale descriptions
+            // Load settings from EditorPrefs (user-specific)
+            settings = ForgeConfig.GetGeneratorSettings();
             if (settings == null)
             {
                 settings = new ForgeGeneratorSettings();

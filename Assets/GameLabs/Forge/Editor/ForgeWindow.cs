@@ -792,6 +792,14 @@ namespace GameLabs.Forge.Editor
                 Repaint();
 
                 var generator = ForgeTemplateGenerator.Instance;
+                if (generator == null)
+                {
+                    _isGenerating = false;
+                    _status = "Error: Failed to initialize generator.";
+                    _statusType = MessageType.Error;
+                    ForgeLogger.Error("ForgeTemplateGenerator.Instance returned null");
+                    return;
+                }
                 generator.GenerateFromBlueprint(_blueprint, _itemCount, OnGenerationComplete);
             }
             else if (_template != null)
@@ -804,6 +812,14 @@ namespace GameLabs.Forge.Editor
                 Repaint();
 
                 var generator = ForgeTemplateGenerator.Instance;
+                if (generator == null)
+                {
+                    _isGenerating = false;
+                    _status = "Error: Failed to initialize generator.";
+                    _statusType = MessageType.Error;
+                    ForgeLogger.Error("ForgeTemplateGenerator.Instance returned null");
+                    return;
+                }
                 generator.GenerateFromTemplate(_template, _itemCount, OnGenerationComplete, _windowInstructions);
             }
             else
