@@ -97,12 +97,14 @@
 If you have an existing project with the old version:
 
 1. **Your API key will be automatically migrated** from forge.config.json to EditorPrefs on first run
-2. **The API key remains in the config file** but will be ignored in favor of EditorPrefs
-3. **Going forward:** New saves from Setup Wizard or Settings will write empty string to the config file's `openaiApiKey` field
-4. **No action needed** - everything should work seamlessly
-5. **Bonus:** Your API key is now more secure and won't be shared accidentally
-
-**Note:** If you want to manually clean up, you can safely edit forge.config.json and set `"openaiApiKey": ""` - the system will use the EditorPrefs value.
+2. **The old API key in the config file is left as-is** for backwards compatibility:
+   - If you roll back to an older version, it will still work
+   - The key is still in .gitignore so it won't be committed
+   - Future saves will write empty string to this field
+3. **Optional cleanup:** You can manually edit forge.config.json and set `"openaiApiKey": ""` if you want, but it's not necessary
+4. **Security improvement:** Even if the old key remains in the file, it won't be used (EditorPrefs takes priority)
+5. **No action needed** - everything should work seamlessly
+6. **Bonus:** Your API key is now more secure and won't be shared accidentally in .unitypackage exports
 
 ## For Package Developers
 

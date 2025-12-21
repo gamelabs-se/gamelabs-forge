@@ -63,10 +63,9 @@ namespace GameLabs.Forge.Editor
             var config = LoadConfig(path);
             if (config != null && !string.IsNullOrWhiteSpace(config.openaiApiKey))
             {
-                // Migrate to EditorPrefs
-                var key = config.openaiApiKey.Trim();
-                SetOpenAIKey(key);
-                return key;
+                // Migrate to EditorPrefs (SetOpenAIKey will handle trimming)
+                SetOpenAIKey(config.openaiApiKey);
+                return config.openaiApiKey.Trim();
             }
 #endif
             return null;
