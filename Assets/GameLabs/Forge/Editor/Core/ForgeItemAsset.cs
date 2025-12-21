@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace GameLabs.Forge
+namespace GameLabs.Forge.Editor
 {
     /// <summary>
     /// Base ScriptableObject class for storing generated items as assets.

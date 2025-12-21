@@ -1,7 +1,7 @@
 using System.IO;
 using UnityEngine;
 
-namespace GameLabs.Forge
+namespace GameLabs.Forge.Editor
 {
     /// <summary>
     /// Lightweight configuration loader for Forge.

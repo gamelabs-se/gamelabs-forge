@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace GameLabs.Forge
+namespace GameLabs.Forge.Editor
 {
     /// <summary>
     /// Base class for all forgeable items. Inherit from this to create custom item types.

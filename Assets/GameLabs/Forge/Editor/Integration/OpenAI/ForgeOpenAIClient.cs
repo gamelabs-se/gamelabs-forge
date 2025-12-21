@@ -5,7 +5,7 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace GameLabs.Forge.Integration.OpenAI
+namespace GameLabs.Forge.Editor.Integration.OpenAI
 {
     /// <summary>Editor-safe OpenAI chat client for FORGE (no external deps).</summary>
     [ExecuteAlways]

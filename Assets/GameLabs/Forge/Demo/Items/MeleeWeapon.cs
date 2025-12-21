@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using GameLabs.Forge;
 
 namespace GameLabs.Forge.Demo
 {

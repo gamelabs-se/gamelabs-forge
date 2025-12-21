@@ -1,9 +1,7 @@
 {
     "name": "GameLabs.Forge.Demo",
     "rootNamespace": "GameLabs.Forge.Demo",
-    "references": [
-        "GUID:ba1d780fcdb574aac9e140dc5e5b298b"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

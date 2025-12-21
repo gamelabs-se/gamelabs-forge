@@ -3,9 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
-using GameLabs.Forge.Integration.OpenAI;
+using GameLabs.Forge.Editor.Integration.OpenAI;
 
-namespace GameLabs.Forge
+namespace GameLabs.Forge.Editor
 {
     /// <summary>
     /// Template-based item generator that uses ScriptableObject templates
