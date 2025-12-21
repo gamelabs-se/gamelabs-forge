@@ -251,7 +251,7 @@ namespace GameLabs.Forge.Editor
                 
                 var configData = new ForgeConfigDataDto
                 {
-                    openaiApiKey = ForgeConfig.GetOpenAIKey() ?? "",
+                    openaiApiKey = "", // Don't save API key to file, it's in EditorPrefs
                     model = (int)settings.model,
                     gameName = settings.gameName,
                     gameDescription = settings.gameDescription,

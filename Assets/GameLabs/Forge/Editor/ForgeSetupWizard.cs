@@ -68,11 +68,14 @@ namespace GameLabs.Forge.Editor
             {
                 try
                 {
+                    // Load API key from EditorPrefs (user-specific)
+                    apiKey = ForgeConfig.GetOpenAIKey() ?? "";
+                    
                     var json = File.ReadAllText(ConfigPath);
                     var config = JsonUtility.FromJson<ForgeConfigData>(json);
                     if (config != null)
                     {
-                        apiKey = config.openaiApiKey ?? "";
+                        // Skip apiKey from config file, already loaded from EditorPrefs
                         model = (ForgeAIModel)config.model;
                         gameName = config.gameName ?? "My Game";
                         gameDescription = config.gameDescription ?? "";
@@ -104,11 +107,15 @@ namespace GameLabs.Forge.Editor
         {
             try
             {
+                // Save API key to EditorPrefs (user-specific, won't be exported)
+                ForgeConfig.SetOpenAIKey(apiKey);
+                
                 Directory.CreateDirectory(Path.GetDirectoryName(ConfigPath));
                 
+                // Save other settings to config file (no API key)
                 var config = new ForgeConfigData
                 {
-                    openaiApiKey = apiKey,
+                    openaiApiKey = "", // Don't save API key to file
                     model = (int)model,
                     gameName = gameName,
                     gameDescription = gameDescription,
@@ -127,7 +134,7 @@ namespace GameLabs.Forge.Editor
                 File.WriteAllText(ConfigPath, json);
                 AssetDatabase.Refresh();
                 
-                ForgeLogger.Success("Configuration saved.");
+                ForgeLogger.Success("Configuration saved. API key stored securely in EditorPrefs.");
             }
             catch (Exception e)
             {

@@ -1,5 +1,8 @@
 using System.IO;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace GameLabs.Forge.Editor
 {
@@ -7,16 +10,22 @@ namespace GameLabs.Forge.Editor
     /// Lightweight configuration loader for Forge.
     /// Reads settings from a JSON configuration file and provides access to API keys,
     /// model settings, and generation preferences.
+    /// NOTE: API key is stored in EditorPrefs (user-specific) to prevent accidental sharing.
     /// </summary>
     public static class ForgeConfig
     {
         /// <summary>Default path to the configuration file.</summary>
         public const string DefaultPath = "Assets/GameLabs/Forge/Settings/forge.config.json";
+        
+        /// <summary>EditorPrefs key for storing the OpenAI API key.</summary>
+        private const string ApiKeyPrefKey = "GameLabs.Forge.OpenAIKey";
 
         /// <summary>Internal DTO for deserializing configuration from JSON.</summary>
         [System.Serializable]
         private class ForgeConfigDto
         {
+            // NOTE: openaiApiKey is kept for backwards compatibility but will be ignored
+            // in favor of EditorPrefs storage
             public string openaiApiKey;
             public int model; // ForgeAIModel enum value
             public string gameName;
@@ -35,13 +44,50 @@ namespace GameLabs.Forge.Editor
 
         private static ForgeConfigDto _cachedConfig;
         
-        /// <summary>Gets the OpenAI API key from the configuration file.</summary>
-        /// <param name="path">Path to the config file (defaults to DefaultPath).</param>
+        /// <summary>
+        /// Gets the OpenAI API key from EditorPrefs.
+        /// Falls back to config file for backwards compatibility.
+        /// </summary>
         /// <returns>The API key, or null if not found.</returns>
         public static string GetOpenAIKey(string path = DefaultPath)
         {
+#if UNITY_EDITOR
+            // Try EditorPrefs first (new preferred location)
+            var apiKey = EditorPrefs.GetString(ApiKeyPrefKey, null);
+            if (!string.IsNullOrWhiteSpace(apiKey))
+            {
+                return apiKey.Trim();
+            }
+            
+            // Fall back to config file for backwards compatibility
             var config = LoadConfig(path);
-            return string.IsNullOrWhiteSpace(config?.openaiApiKey) ? null : config.openaiApiKey.Trim();
+            if (config != null && !string.IsNullOrWhiteSpace(config.openaiApiKey))
+            {
+                // Migrate to EditorPrefs
+                var key = config.openaiApiKey.Trim();
+                SetOpenAIKey(key);
+                return key;
+            }
+#endif
+            return null;
+        }
+        
+        /// <summary>
+        /// Sets the OpenAI API key in EditorPrefs.
+        /// </summary>
+        /// <param name="apiKey">The API key to store.</param>
+        public static void SetOpenAIKey(string apiKey)
+        {
+#if UNITY_EDITOR
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                EditorPrefs.DeleteKey(ApiKeyPrefKey);
+            }
+            else
+            {
+                EditorPrefs.SetString(ApiKeyPrefKey, apiKey.Trim());
+            }
+#endif
         }
         
         /// <summary>Gets the AI model from the configuration.</summary>

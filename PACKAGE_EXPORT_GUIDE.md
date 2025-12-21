@@ -1,5 +1,18 @@
 # FORGE Unity Package Export Guide
 
+## ⚠️ Important: API Key Security
+
+**Good news!** As of the latest version, your OpenAI API key is stored in EditorPrefs (user-specific), NOT in any file. This means:
+
+- ✅ Your API key will **NEVER** be included in .unitypackage exports
+- ✅ Your API key will **NEVER** be committed to Git (it's not in any file)
+- ✅ Each user will use their own API key
+- ✅ No need to manually exclude files when exporting
+
+The `forge.config.json` file only contains non-sensitive settings like game name and model preferences.
+
+---
+
 ## Creating the .unitypackage
 
 ### Method 1: Unity Editor (Recommended)

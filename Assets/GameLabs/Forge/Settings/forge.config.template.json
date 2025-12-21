@@ -1,0 +1,16 @@
+{
+    "openaiApiKey": "",
+    "model": 3,
+    "gameName": "My Game",
+    "gameDescription": "A fantasy RPG with dark themes and challenging combat.",
+    "targetAudience": "General",
+    "defaultBatchSize": 5,
+    "maxBatchSize": 20,
+    "temperature": 0.8,
+    "additionalRules": "",
+    "existingAssetsSearchPath": "Assets",
+    "generatedAssetsBasePath": "Resources/Generated",
+    "autoLoadExistingAssets": true,
+    "intent": 0,
+    "debugMode": false
+}
