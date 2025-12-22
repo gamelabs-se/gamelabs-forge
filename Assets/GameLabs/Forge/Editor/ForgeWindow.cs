@@ -1090,9 +1090,7 @@ namespace GameLabs.Forge.Editor
 
             if (_foundCount == 0)
             {
-                EditorUtility.DisplayDialog("FORGE",
-                    $"No existing {itemType.Name} items found in '{searchPath}'.",
-                    "OK");
+                ForgeLogger.Warn($"No existing {itemType.Name} items found in '{searchPath}'.");
             }
             else
             {
