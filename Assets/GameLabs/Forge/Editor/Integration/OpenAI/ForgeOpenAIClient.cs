@@ -8,8 +8,7 @@ using UnityEngine.Networking;
 namespace GameLabs.Forge.Editor.Integration.OpenAI
 {
     /// <summary>Editor-safe OpenAI chat client for FORGE (no external deps).</summary>
-    [ExecuteAlways]
-    public class ForgeOpenAIClient : MonoBehaviour
+    public class ForgeOpenAIClient
     {
         private static ForgeOpenAIClient _instance;
         public static ForgeOpenAIClient Instance
@@ -18,23 +17,26 @@ namespace GameLabs.Forge.Editor.Integration.OpenAI
             {
                 if (_instance != null) return _instance;
 
-#if UNITY_EDITOR
-                var go = GameObject.Find("~ForgeOpenAIClient") ?? new GameObject("~ForgeOpenAIClient");
-                go.hideFlags = HideFlags.HideAndDontSave;
-                _instance = go.GetComponent<ForgeOpenAIClient>() ?? go.AddComponent<ForgeOpenAIClient>();
-#else
-                var go = new GameObject("ForgeOpenAIClient");
-                _instance = go.AddComponent<ForgeOpenAIClient>();
-                DontDestroyOnLoad(go);
-#endif
+                try
+                {
+                    ForgeLogger.DebugLog("Creating new ForgeOpenAIClient instance");
+                    _instance = new ForgeOpenAIClient();
+                    _instance.Initialize();
+                    ForgeLogger.DebugLog("ForgeOpenAIClient instance created successfully");
+                }
+                catch (System.Exception e)
+                {
+                    ForgeLogger.Error($"Exception creating ForgeOpenAIClient instance: {e.Message}\n{e.StackTrace}");
+                    return null;
+                }
+
                 return _instance;
             }
         }
 
-        [Header("OpenAI")]
-        [SerializeField] string apiUrl = "https://api.openai.com/v1/chat/completions";
-        [SerializeField] string model = "gpt-4o-mini"; // cheap+fast default
-        [Range(0f, 2f)][SerializeField] float temperature = 0.7f;
+        string apiUrl = "https://api.openai.com/v1/chat/completions";
+        string model = "gpt-4o-mini"; // cheap+fast default
+        float temperature = 0.7f;
 
         string apiKey;
         string systemRole = "You are a helpful API.";
@@ -85,7 +87,7 @@ namespace GameLabs.Forge.Editor.Integration.OpenAI
             public float temperature;
         }
 
-        void OnEnable()
+        void Initialize()
         {
             apiKey = ForgeConfig.GetOpenAIKey() ?? apiKey;
             if (string.IsNullOrEmpty(apiKey))
@@ -111,7 +113,7 @@ namespace GameLabs.Forge.Editor.Integration.OpenAI
             var req = new RequestData { model = model, messages = msgs, temperature = temperature };
             var json = JsonUtility.ToJson(req);
 
-            StartCoroutine(Post(apiUrl, json, cb));
+            ForgeEditorCoroutine.Start(Post(apiUrl, json, cb));
         }
 
         IEnumerator Post(string url, string json, Action<OpenAIResponse> cb)

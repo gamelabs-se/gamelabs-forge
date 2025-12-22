@@ -105,6 +105,13 @@ namespace GameLabs.Forge.Editor
             Action<ForgeTemplateGenerationResult> callback)
         {
             var client = ForgeOpenAIClient.Instance;
+            
+            if (client == null)
+            {
+                ForgeLogger.Error("Failed to get ForgeOpenAIClient instance");
+                callback?.Invoke(ForgeTemplateGenerationResult.Error("Failed to initialize OpenAI client"));
+                yield break;
+            }
 
             // Configure client
             string modelName = ForgeAIModelHelper.GetModelName(settings.model);
@@ -146,6 +153,13 @@ namespace GameLabs.Forge.Editor
             string additionalContext)
         {
             var client = ForgeOpenAIClient.Instance;
+            
+            if (client == null)
+            {
+                ForgeLogger.Error("Failed to get ForgeOpenAIClient instance");
+                callback?.Invoke(ForgeTemplateGenerationResult.Error("Failed to initialize OpenAI client"));
+                yield break;
+            }
 
             // Configure client
             string modelName = ForgeAIModelHelper.GetModelName(settings.model);
