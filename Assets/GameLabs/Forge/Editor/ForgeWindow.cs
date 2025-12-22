@@ -27,12 +27,10 @@ namespace GameLabs.Forge.Editor
         private ForgeDuplicateStrategy _blueprintStrategy = ForgeDuplicateStrategy.Ignore;
         private string _blueprintDiscoveryPath = "";
         private bool _blueprintDirty = false;
-        private bool _blueprintShowDiscoveryOverride = false;
         // Window-level settings (used when no blueprint selected)
         private string _windowInstructions = "";
         private ForgeDuplicateStrategy _windowStrategy = ForgeDuplicateStrategy.Ignore;
         private string _windowDiscoveryPath = "";
-        private bool _windowShowDiscoveryOverride = false;
 
         private int _foundCount = 0;
         private List<string> _foundJson = new();

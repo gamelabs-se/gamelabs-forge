@@ -11,7 +11,7 @@ namespace GameLabs.Forge.Demo
     public class Armor : ScriptableObject
 {
     [Tooltip("Name of the armor")]
-    public string name;
+    public new string name;
     [Tooltip("Equipment slot")]
     public ArmorSlot slot;
     

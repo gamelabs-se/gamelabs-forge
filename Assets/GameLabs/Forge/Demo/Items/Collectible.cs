@@ -11,7 +11,7 @@ namespace GameLabs.Forge.Demo
     public class Collectible : ScriptableObject
 {
     [Tooltip("Name of the collectible")]
-    public string name;
+    public new string name;
     [Tooltip("Category of collectible")]
     public CollectibleCategory category;
     

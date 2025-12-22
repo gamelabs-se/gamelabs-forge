@@ -11,7 +11,7 @@ namespace GameLabs.Forge.Demo
     public class Consumable : ScriptableObject
 {
     [Tooltip("Name of the consumable")]
-    public string name;
+    public new string name;
     [Tooltip("Effect type when consumed")]
     public ConsumableEffect effectType;
     
