@@ -11,11 +11,9 @@ namespace GameLabs.Forge.Editor
     /// Template-based item generator that uses ScriptableObject templates
     /// to generate new items. No reflection-based binding required.
     /// </summary>
-    [ExecuteAlways]
-    public class ForgeTemplateGenerator : MonoBehaviour
+    public class ForgeTemplateGenerator
     {
-        [Header("Generator Settings")]
-        [SerializeField] private ForgeGeneratorSettings settings = new ForgeGeneratorSettings();
+        private ForgeGeneratorSettings settings = new ForgeGeneratorSettings();
 
         /// <summary>Current settings for generation.</summary>
         public ForgeGeneratorSettings Settings => settings;
@@ -31,38 +29,17 @@ namespace GameLabs.Forge.Editor
 
                 try
                 {
-                    _instance = FindFirstObjectByType<ForgeTemplateGenerator>();
-                    if (_instance != null)
-                    {
-                        ForgeLogger.DebugLog("Found existing ForgeTemplateGenerator instance");
-                        return _instance;
-                    }
-
-#if UNITY_EDITOR
                     ForgeLogger.DebugLog("Creating new ForgeTemplateGenerator instance");
-                    var go = new GameObject("~ForgeTemplateGenerator");
-                    go.hideFlags = HideFlags.HideAndDontSave;
-                    _instance = go.AddComponent<ForgeTemplateGenerator>();
+                    _instance = new ForgeTemplateGenerator();
                     
-                    if (_instance == null)
-                    {
-                        ForgeLogger.Error("Failed to add ForgeTemplateGenerator component to GameObject");
-                        return null;
-                    }
-                    
-                    // Ensure settings are loaded
+                    // Load settings from EditorPrefs
+                    _instance.settings = ForgeConfig.GetGeneratorSettings();
                     if (_instance.settings == null)
                     {
                         _instance.settings = new ForgeGeneratorSettings();
-                        ForgeLogger.DebugLog("Initialized default settings");
                     }
                     
                     ForgeLogger.DebugLog("ForgeTemplateGenerator instance created successfully");
-#else
-                    var go = new GameObject("ForgeTemplateGenerator");
-                    _instance = go.AddComponent<ForgeTemplateGenerator>();
-                    DontDestroyOnLoad(go);
-#endif
                 }
                 catch (System.Exception e)
                 {
@@ -71,24 +48,6 @@ namespace GameLabs.Forge.Editor
                 }
                 
                 return _instance;
-            }
-        }
-
-        private void OnEnable()
-        {
-            try
-            {
-                // Load settings from EditorPrefs (user-specific)
-                settings = ForgeConfig.GetGeneratorSettings();
-                if (settings == null)
-                {
-                    settings = new ForgeGeneratorSettings();
-                }
-            }
-            catch (System.Exception e)
-            {
-                ForgeLogger.Error($"Failed to load settings in ForgeTemplateGenerator.OnEnable: {e.Message}");
-                settings = new ForgeGeneratorSettings();
             }
         }
 
