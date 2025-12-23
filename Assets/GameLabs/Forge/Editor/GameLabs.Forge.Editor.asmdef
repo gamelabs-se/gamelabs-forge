@@ -1,10 +1,7 @@
 {
     "name": "GameLabs.Forge.Editor",
     "rootNamespace": "GameLabs.Forge.Editor",
-    "references": [
-        "GUID:ba1d780fcdb574aac9e140dc5e5b298b",
-        "GUID:8bb2733a984746fa942405cfa20ad274"
-    ],
+    "references": [],
     "includePlatforms": [
         "Editor"
     ],

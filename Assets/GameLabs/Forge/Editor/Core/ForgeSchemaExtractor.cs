@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Text;
 using UnityEngine;
 
-namespace GameLabs.Forge
+namespace GameLabs.Forge.Editor
 {
     /// <summary>
     /// Extracts JSON schema from C# types using reflection.

@@ -1,5 +1,20 @@
 # FORGE Unity Package Export Guide
 
+## ⚠️ Important: User Settings Security
+
+**Great news!** As of the latest version, **ALL user settings** are stored in EditorPrefs (user-specific), NOT in any file. This means:
+
+- ✅ Your API key will **NEVER** be included in .unitypackage exports
+- ✅ Your game name and description will **NEVER** be included
+- ✅ All your generation preferences are user-specific
+- ✅ Settings are **NEVER** committed to Git (stored in EditorPrefs only)
+- ✅ Each user configures their own settings via Setup Wizard
+- ✅ No need to manually exclude files when exporting
+
+The `forge.config.json` file is now optional and can be used by developers for system defaults only.
+
+---
+
 ## Creating the .unitypackage
 
 ### Method 1: Unity Editor (Recommended)

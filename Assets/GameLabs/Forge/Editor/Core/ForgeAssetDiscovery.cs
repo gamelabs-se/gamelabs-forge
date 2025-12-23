@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
-namespace GameLabs.Forge
+namespace GameLabs.Forge.Editor
 {
     /// <summary>
     /// Utility for discovering existing assets in the project.

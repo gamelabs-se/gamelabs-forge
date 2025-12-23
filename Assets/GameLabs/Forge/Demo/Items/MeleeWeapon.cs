@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using GameLabs.Forge;
 
 namespace GameLabs.Forge.Demo
 {
@@ -12,7 +11,7 @@ namespace GameLabs.Forge.Demo
     public class MeleeWeapon : ScriptableObject
     {
         [Tooltip("Name of the weapon")]
-        public string name;
+        public new string name;
         [Tooltip("Base damage dealt by the weapon")]
         [Range(1, 100)]
         public int damage = 10;

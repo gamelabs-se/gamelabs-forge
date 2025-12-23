@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace GameLabs.Forge
+namespace GameLabs.Forge.Editor
 {
     /// <summary>
     /// Logging utility for Forge with debug mode support.

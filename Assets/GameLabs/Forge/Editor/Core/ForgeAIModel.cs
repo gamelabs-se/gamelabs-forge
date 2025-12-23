@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace GameLabs.Forge
+namespace GameLabs.Forge.Editor
 {
     /// <summary>
     /// Available AI models for FORGE item generation.

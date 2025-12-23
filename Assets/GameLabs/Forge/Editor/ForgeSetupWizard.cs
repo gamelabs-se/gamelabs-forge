@@ -63,40 +63,35 @@ namespace GameLabs.Forge.Editor
         
         private void LoadSavedSettings()
         {
-            // Load from config file if exists
-            if (File.Exists(ConfigPath))
+            try
             {
-                try
-                {
-                    var json = File.ReadAllText(ConfigPath);
-                    var config = JsonUtility.FromJson<ForgeConfigData>(json);
-                    if (config != null)
-                    {
-                        apiKey = config.openaiApiKey ?? "";
-                        model = (ForgeAIModel)config.model;
-                        gameName = config.gameName ?? "My Game";
-                        gameDescription = config.gameDescription ?? "";
-                        targetAudience = config.targetAudience ?? "General";
-                        defaultBatchSize = config.defaultBatchSize > 0 ? config.defaultBatchSize : 5;
-                        maxBatchSize = config.maxBatchSize > 0 ? config.maxBatchSize : 20;
-                        temperature = config.temperature;
-                        additionalRules = config.additionalRules ?? "";
-                        existingAssetsSearchPath = string.IsNullOrEmpty(config.existingAssetsSearchPath) ? "Assets" : config.existingAssetsSearchPath;
-                        generatedAssetsBasePath = string.IsNullOrEmpty(config.generatedAssetsBasePath) ? "Resources/Generated" : config.generatedAssetsBasePath;
-                        autoLoadExistingAssets = config.autoLoadExistingAssets;
-                        intent = (ExistingItemsIntent)config.intent;
-                        
-                        // Update indices
-                        selectedAudienceIndex = Array.IndexOf(audienceOptions, targetAudience);
-                        if (selectedAudienceIndex < 0) selectedAudienceIndex = 0;
-                        
-                        apiKeyValid = !string.IsNullOrEmpty(apiKey);
-                    }
-                }
-                catch (Exception e)
-                {
-                    Debug.LogWarning($"[Forge] Failed to load config: {e.Message}");
-                }
+                // Load API key from EditorPrefs
+                apiKey = ForgeConfig.GetOpenAIKey() ?? "";
+                apiKeyValid = !string.IsNullOrEmpty(apiKey);
+                
+                // Load all other settings from EditorPrefs
+                var settings = ForgeConfig.GetGeneratorSettings();
+                
+                model = settings.model;
+                gameName = settings.gameName ?? "My Game";
+                gameDescription = settings.gameDescription ?? "";
+                targetAudience = settings.targetAudience ?? "General";
+                defaultBatchSize = settings.defaultBatchSize;
+                maxBatchSize = settings.maxBatchSize;
+                temperature = settings.temperature;
+                additionalRules = settings.additionalRules ?? "";
+                existingAssetsSearchPath = settings.existingAssetsSearchPath ?? "Assets";
+                generatedAssetsBasePath = settings.generatedAssetsBasePath ?? "Resources/Generated";
+                autoLoadExistingAssets = settings.autoLoadExistingAssets;
+                intent = settings.intent;
+                
+                // Update indices
+                selectedAudienceIndex = Array.IndexOf(audienceOptions, targetAudience);
+                if (selectedAudienceIndex < 0) selectedAudienceIndex = 0;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[Forge] Failed to load settings: {e.Message}");
             }
         }
         
@@ -104,12 +99,13 @@ namespace GameLabs.Forge.Editor
         {
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(ConfigPath));
+                // Save API key to EditorPrefs (user-specific, won't be exported)
+                ForgeConfig.SetOpenAIKey(apiKey);
                 
-                var config = new ForgeConfigData
+                // Save all other settings to EditorPrefs
+                var settings = new ForgeGeneratorSettings
                 {
-                    openaiApiKey = apiKey,
-                    model = (int)model,
+                    model = model,
                     gameName = gameName,
                     gameDescription = gameDescription,
                     targetAudience = targetAudience,
@@ -120,14 +116,12 @@ namespace GameLabs.Forge.Editor
                     existingAssetsSearchPath = existingAssetsSearchPath,
                     generatedAssetsBasePath = generatedAssetsBasePath,
                     autoLoadExistingAssets = autoLoadExistingAssets,
-                    intent = (int)intent
+                    intent = intent
                 };
                 
-                var json = JsonUtility.ToJson(config, true);
-                File.WriteAllText(ConfigPath, json);
-                AssetDatabase.Refresh();
+                ForgeConfig.SaveGeneratorSettings(settings);
                 
-                ForgeLogger.Success("Configuration saved.");
+                ForgeLogger.Success("Configuration saved to EditorPrefs (user-specific, not shared).");
             }
             catch (Exception e)
             {

@@ -27,12 +27,10 @@ namespace GameLabs.Forge.Editor
         private ForgeDuplicateStrategy _blueprintStrategy = ForgeDuplicateStrategy.Ignore;
         private string _blueprintDiscoveryPath = "";
         private bool _blueprintDirty = false;
-        private bool _blueprintShowDiscoveryOverride = false;
         // Window-level settings (used when no blueprint selected)
         private string _windowInstructions = "";
         private ForgeDuplicateStrategy _windowStrategy = ForgeDuplicateStrategy.Ignore;
         private string _windowDiscoveryPath = "";
-        private bool _windowShowDiscoveryOverride = false;
 
         private int _foundCount = 0;
         private List<string> _foundJson = new();
@@ -792,6 +790,14 @@ namespace GameLabs.Forge.Editor
                 Repaint();
 
                 var generator = ForgeTemplateGenerator.Instance;
+                if (generator == null)
+                {
+                    _isGenerating = false;
+                    _status = "Error: Failed to initialize generator.";
+                    _statusType = MessageType.Error;
+                    ForgeLogger.Error("ForgeTemplateGenerator.Instance returned null");
+                    return;
+                }
                 generator.GenerateFromBlueprint(_blueprint, _itemCount, OnGenerationComplete);
             }
             else if (_template != null)
@@ -804,6 +810,14 @@ namespace GameLabs.Forge.Editor
                 Repaint();
 
                 var generator = ForgeTemplateGenerator.Instance;
+                if (generator == null)
+                {
+                    _isGenerating = false;
+                    _status = "Error: Failed to initialize generator.";
+                    _statusType = MessageType.Error;
+                    ForgeLogger.Error("ForgeTemplateGenerator.Instance returned null");
+                    return;
+                }
                 generator.GenerateFromTemplate(_template, _itemCount, OnGenerationComplete, _windowInstructions);
             }
             else
@@ -1076,9 +1090,7 @@ namespace GameLabs.Forge.Editor
 
             if (_foundCount == 0)
             {
-                EditorUtility.DisplayDialog("FORGE",
-                    $"No existing {itemType.Name} items found in '{searchPath}'.",
-                    "OK");
+                ForgeLogger.Warn($"No existing {itemType.Name} items found in '{searchPath}'.");
             }
             else
             {

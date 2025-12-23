@@ -3,19 +3,17 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
-using GameLabs.Forge.Integration.OpenAI;
+using GameLabs.Forge.Editor.Integration.OpenAI;
 
-namespace GameLabs.Forge
+namespace GameLabs.Forge.Editor
 {
     /// <summary>
     /// Template-based item generator that uses ScriptableObject templates
     /// to generate new items. No reflection-based binding required.
     /// </summary>
-    [ExecuteAlways]
-    public class ForgeTemplateGenerator : MonoBehaviour
+    public class ForgeTemplateGenerator
     {
-        [Header("Generator Settings")]
-        [SerializeField] private ForgeGeneratorSettings settings = new ForgeGeneratorSettings();
+        private ForgeGeneratorSettings settings = new ForgeGeneratorSettings();
 
         /// <summary>Current settings for generation.</summary>
         public ForgeGeneratorSettings Settings => settings;
@@ -29,29 +27,27 @@ namespace GameLabs.Forge
             {
                 if (_instance != null) return _instance;
 
-                _instance = FindFirstObjectByType<ForgeTemplateGenerator>();
-                if (_instance != null) return _instance;
-
-#if UNITY_EDITOR
-                var go = new GameObject("~ForgeTemplateGenerator");
-                go.hideFlags = HideFlags.HideAndDontSave;
-                _instance = go.AddComponent<ForgeTemplateGenerator>();
-#else
-                var go = new GameObject("ForgeTemplateGenerator");
-                _instance = go.AddComponent<ForgeTemplateGenerator>();
-                DontDestroyOnLoad(go);
-#endif
+                try
+                {
+                    ForgeLogger.DebugLog("Creating new ForgeTemplateGenerator instance");
+                    _instance = new ForgeTemplateGenerator();
+                    
+                    // Load settings from EditorPrefs
+                    _instance.settings = ForgeConfig.GetGeneratorSettings();
+                    if (_instance.settings == null)
+                    {
+                        _instance.settings = new ForgeGeneratorSettings();
+                    }
+                    
+                    ForgeLogger.DebugLog("ForgeTemplateGenerator instance created successfully");
+                }
+                catch (System.Exception e)
+                {
+                    ForgeLogger.Error($"Exception creating ForgeTemplateGenerator instance: {e.Message}\n{e.StackTrace}");
+                    return null;
+                }
+                
                 return _instance;
-            }
-        }
-
-        private void OnEnable()
-        {
-            // Initialize with default settings
-            // DO NOT load from config to avoid stale descriptions
-            if (settings == null)
-            {
-                settings = new ForgeGeneratorSettings();
             }
         }
 
@@ -74,7 +70,7 @@ namespace GameLabs.Forge
                 return;
             }
 
-            StartCoroutine(GenerateFromTemplateCoroutine(template, count, callback, additionalContext));
+            ForgeEditorCoroutine.Start(GenerateFromTemplateCoroutine(template, count, callback, additionalContext));
         }
 
         /// <summary>
@@ -100,7 +96,7 @@ namespace GameLabs.Forge
                 return;
             }
 
-            StartCoroutine(GenerateFromBlueprintCoroutine(blueprint, count, callback));
+            ForgeEditorCoroutine.Start(GenerateFromBlueprintCoroutine(blueprint, count, callback));
         }
 
         private IEnumerator GenerateFromBlueprintCoroutine(
@@ -109,6 +105,13 @@ namespace GameLabs.Forge
             Action<ForgeTemplateGenerationResult> callback)
         {
             var client = ForgeOpenAIClient.Instance;
+            
+            if (client == null)
+            {
+                ForgeLogger.Error("Failed to get ForgeOpenAIClient instance");
+                callback?.Invoke(ForgeTemplateGenerationResult.Error("Failed to initialize OpenAI client"));
+                yield break;
+            }
 
             // Configure client
             string modelName = ForgeAIModelHelper.GetModelName(settings.model);
@@ -150,6 +153,13 @@ namespace GameLabs.Forge
             string additionalContext)
         {
             var client = ForgeOpenAIClient.Instance;
+            
+            if (client == null)
+            {
+                ForgeLogger.Error("Failed to get ForgeOpenAIClient instance");
+                callback?.Invoke(ForgeTemplateGenerationResult.Error("Failed to initialize OpenAI client"));
+                yield break;
+            }
 
             // Configure client
             string modelName = ForgeAIModelHelper.GetModelName(settings.model);
