@@ -215,21 +215,29 @@ CRITICAL RULES:
         /// </summary>
         private void AppendGameContext(StringBuilder sb)
         {
-            // Game context - critical for flavor and style
-            sb.AppendLine("=== GAME CONTEXT ===");
-            if (!string.IsNullOrEmpty(settings.gameName))
+            // Check if we have any game context to add
+            bool hasGameContext = !string.IsNullOrEmpty(settings.gameName) ||
+                                  !string.IsNullOrEmpty(settings.gameDescription) ||
+                                  !string.IsNullOrEmpty(settings.targetAudience);
+
+            if (hasGameContext)
             {
-                sb.AppendLine($"Game: {settings.gameName}");
+                // Game context - critical for flavor and style
+                sb.AppendLine("=== GAME CONTEXT ===");
+                if (!string.IsNullOrEmpty(settings.gameName))
+                {
+                    sb.AppendLine($"Game: {settings.gameName}");
+                }
+                if (!string.IsNullOrEmpty(settings.gameDescription))
+                {
+                    sb.AppendLine($"Description: {settings.gameDescription}");
+                }
+                if (!string.IsNullOrEmpty(settings.targetAudience))
+                {
+                    sb.AppendLine($"Target Audience: {settings.targetAudience}");
+                }
+                sb.AppendLine();
             }
-            if (!string.IsNullOrEmpty(settings.gameDescription))
-            {
-                sb.AppendLine($"Description: {settings.gameDescription}");
-            }
-            if (!string.IsNullOrEmpty(settings.targetAudience))
-            {
-                sb.AppendLine($"Target Audience: {settings.targetAudience}");
-            }
-            sb.AppendLine();
 
             // Additional rules from settings
             if (!string.IsNullOrEmpty(settings.additionalRules))
