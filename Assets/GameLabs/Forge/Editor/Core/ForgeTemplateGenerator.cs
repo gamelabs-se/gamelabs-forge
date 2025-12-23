@@ -209,12 +209,54 @@ CRITICAL RULES:
 8. Respect all value ranges and enum constraints provided.";
         }
 
+        /// <summary>
+        /// Appends game context information (game name, description, target audience, additional rules) 
+        /// to the provided StringBuilder. This ensures all user settings are included in AI prompts.
+        /// </summary>
+        private void AppendGameContext(StringBuilder sb)
+        {
+            // Check if we have any game context to add
+            bool hasGameContext = !string.IsNullOrEmpty(settings.gameName) ||
+                                  !string.IsNullOrEmpty(settings.gameDescription) ||
+                                  !string.IsNullOrEmpty(settings.targetAudience);
+
+            if (hasGameContext)
+            {
+                // Game context - critical for flavor and style
+                sb.AppendLine("=== GAME CONTEXT ===");
+                if (!string.IsNullOrEmpty(settings.gameName))
+                {
+                    sb.AppendLine($"Game: {settings.gameName}");
+                }
+                if (!string.IsNullOrEmpty(settings.gameDescription))
+                {
+                    sb.AppendLine($"Description: {settings.gameDescription}");
+                }
+                if (!string.IsNullOrEmpty(settings.targetAudience))
+                {
+                    sb.AppendLine($"Target Audience: {settings.targetAudience}");
+                }
+                sb.AppendLine();
+            }
+
+            // Additional rules from settings
+            if (!string.IsNullOrEmpty(settings.additionalRules))
+            {
+                sb.AppendLine("=== ADDITIONAL RULES ===");
+                sb.AppendLine(settings.additionalRules);
+                sb.AppendLine();
+            }
+        }
+
         private string BuildUserPrompt(ForgeSchemaExtractor.TypeSchema schema, int count, string additionalContext)
         {
             var template = ForgeSchemaExtractor.GenerateJsonTemplate(schema);
             var schemaDesc = ForgeSchemaExtractor.GenerateSchemaDescription(schema);
 
             var sb = new StringBuilder();
+
+            // Add game context and rules
+            AppendGameContext(sb);
 
             // Item schema - this is the most important part
             sb.AppendLine("=== ITEM SCHEMA ===");
@@ -276,6 +318,9 @@ CRITICAL RULES:
             var schemaDesc = ForgeSchemaExtractor.GenerateSchemaDescription(schema);
 
             var sb = new StringBuilder();
+
+            // Add game context and rules
+            AppendGameContext(sb);
 
             // Item schema
             sb.AppendLine("=== ITEM SCHEMA ===");
