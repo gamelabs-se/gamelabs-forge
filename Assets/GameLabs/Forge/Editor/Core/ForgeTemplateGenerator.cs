@@ -216,6 +216,30 @@ CRITICAL RULES:
 
             var sb = new StringBuilder();
 
+            // Game context - critical for flavor and style
+            sb.AppendLine("=== GAME CONTEXT ===");
+            if (!string.IsNullOrEmpty(settings.gameName))
+            {
+                sb.AppendLine($"Game: {settings.gameName}");
+            }
+            if (!string.IsNullOrEmpty(settings.gameDescription))
+            {
+                sb.AppendLine($"Description: {settings.gameDescription}");
+            }
+            if (!string.IsNullOrEmpty(settings.targetAudience))
+            {
+                sb.AppendLine($"Target Audience: {settings.targetAudience}");
+            }
+            sb.AppendLine();
+
+            // Additional rules from settings
+            if (!string.IsNullOrEmpty(settings.additionalRules))
+            {
+                sb.AppendLine("=== ADDITIONAL RULES ===");
+                sb.AppendLine(settings.additionalRules);
+                sb.AppendLine();
+            }
+
             // Item schema - this is the most important part
             sb.AppendLine("=== ITEM SCHEMA ===");
             sb.AppendLine(schemaDesc);
@@ -276,6 +300,30 @@ CRITICAL RULES:
             var schemaDesc = ForgeSchemaExtractor.GenerateSchemaDescription(schema);
 
             var sb = new StringBuilder();
+
+            // Game context - critical for flavor and style
+            sb.AppendLine("=== GAME CONTEXT ===");
+            if (!string.IsNullOrEmpty(settings.gameName))
+            {
+                sb.AppendLine($"Game: {settings.gameName}");
+            }
+            if (!string.IsNullOrEmpty(settings.gameDescription))
+            {
+                sb.AppendLine($"Description: {settings.gameDescription}");
+            }
+            if (!string.IsNullOrEmpty(settings.targetAudience))
+            {
+                sb.AppendLine($"Target Audience: {settings.targetAudience}");
+            }
+            sb.AppendLine();
+
+            // Additional rules from settings
+            if (!string.IsNullOrEmpty(settings.additionalRules))
+            {
+                sb.AppendLine("=== ADDITIONAL RULES ===");
+                sb.AppendLine(settings.additionalRules);
+                sb.AppendLine();
+            }
 
             // Item schema
             sb.AppendLine("=== ITEM SCHEMA ===");
