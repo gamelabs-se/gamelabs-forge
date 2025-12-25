@@ -8,6 +8,7 @@
 !/GameData/
 !/Docs/
 !.gitignore
+!README.md
 !*.txt
 !*.keystore
 !*.odt
