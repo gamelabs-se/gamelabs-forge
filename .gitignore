@@ -7,6 +7,7 @@
 !/ProjectSettings/
 !/GameData/
 !/Docs/
+!/Packages/
 !.gitignore
 !README.md
 !*.txt
@@ -17,6 +18,10 @@ Logs/
 Logs/*
 level.txt
 Assets/GameLabs/Forge/Settings/forge.config.json
+
+# UPM Package - ignore config files in package too
+Packages/com.gamelabs.forge/Settings/forge.config.json
+Packages/com.gamelabs.forge/Settings/forge.stats.json
 
 # Generated items - keep folder structure but ignore all contents
 Assets/Resources/Generated/
