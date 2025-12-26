@@ -1,3 +1,21 @@
-© 2025 GameLabs AB. All rights reserved.
-This software is proprietary and confidential.
-Unauthorized copying, distribution, or modification is strictly prohibited.
+GameLabs FORGE License
+
+Copyright © 2025 GameLabs AB
+
+Permission is granted to use, modify, and run this software for the purpose of
+developing games and interactive applications, including commercial products.
+
+You may use this software as part of your internal development workflow and may
+ship, sell, or distribute games and other content created using this software
+without restriction.
+
+You may NOT:
+
+- Redistribute, sublicense, or publish this software itself, in source or binary form
+- Host this software in a public or private repository intended for redistribution
+- Sell, license, or provide this software as a standalone product or service
+
+This license applies only to the software itself and does not restrict the
+distribution of any games or content produced using it.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.

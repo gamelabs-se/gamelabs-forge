@@ -3,13 +3,20 @@
   "displayName": "GameLabs FORGE",
   "version": "0.1.5",
   "unity": "2021.3",
-  "description": "AI-powered ScriptableObject generator for Unity. Drop in any ScriptableObject, generate unlimited variations using OpenAI. Zero configuration, plug and play.",
-  "keywords": ["unity", "editor", "scriptableobject", "ai", "openai", "generator", "content", "tooling"],
+  "description": "Unity editor tool for generating ScriptableObject assets from existing templates using Unity metadata.",
+  "keywords": [
+    "unity",
+    "editor",
+    "scriptableobject",
+    "tooling",
+    "content-generation",
+    "game-development"
+  ],
   "author": {
     "name": "GameLabs AB",
     "email": "william@gamelabs.se",
     "url": "https://gamelabs.se"
   },
-  "license": "Proprietary",
+  "license": "GameLabs-FORGE-Developer-License",
   "type": "tool"
 }

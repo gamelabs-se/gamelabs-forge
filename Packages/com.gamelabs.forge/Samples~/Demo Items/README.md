@@ -15,9 +15,10 @@ Example ScriptableObject templates for GameLabs FORGE.
 1. Open **GameLabs → Forge → FORGE**
 2. Drag any `.asset` file into the **Template** field
 3. Set the number of items to generate
-4. Click **🔥 Generate Items**
+4. Click **Generate Items**
 
 Example templates included:
+
 - `Iron Sword.asset` - Simple melee weapon
 - `Armor Template.asset` - Defense equipment
 - `Peacekeeper.asset` - Complex spaceship
