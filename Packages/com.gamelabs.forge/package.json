@@ -18,5 +18,12 @@
     "url": "https://gamelabs.se"
   },
   "license": "GameLabs-FORGE-Developer-License",
-  "type": "tool"
+  "type": "tool",
+  "samples": [
+    {
+      "displayName": "Demo Items",
+      "description": "Example ScriptableObject templates (MeleeWeapon, Armor, Spaceship, etc.) with sample assets to use as FORGE templates.",
+      "path": "Samples~/Demo Items"
+    }
+  ]
 }
