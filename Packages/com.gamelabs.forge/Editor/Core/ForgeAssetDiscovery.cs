@@ -25,7 +25,15 @@ namespace GameLabs.Forge.Editor
             
 #if UNITY_EDITOR
             // In editor, use AssetDatabase for searching
-            string fullPath = NormalizePath(Path.Combine("Assets", searchPath));
+            string fullPath = searchPath;
+            if (!fullPath.StartsWith("Assets"))
+            {
+                fullPath = NormalizePath(Path.Combine("Assets", searchPath));
+            }
+            else
+            {
+                fullPath = NormalizePath(searchPath);
+            }
             
             if (!Directory.Exists(fullPath))
             {
@@ -104,7 +112,15 @@ namespace GameLabs.Forge.Editor
             var assets = new List<ForgeGeneratedItemAsset>();
             
 #if UNITY_EDITOR
-            string fullPath = NormalizePath(Path.Combine("Assets", searchPath));
+            string fullPath = searchPath;
+            if (!fullPath.StartsWith("Assets"))
+            {
+                fullPath = NormalizePath(Path.Combine("Assets", searchPath));
+            }
+            else
+            {
+                fullPath = NormalizePath(searchPath);
+            }
             
             if (!Directory.Exists(fullPath))
             {
