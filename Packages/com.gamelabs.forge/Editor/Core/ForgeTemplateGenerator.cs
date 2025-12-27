@@ -319,8 +319,18 @@ CRITICAL RULES:
 
             var sb = new StringBuilder();
 
-            // Add game context and rules
-            AppendGameContext(sb);
+            // Blueprint-specific instructions come FIRST (highest priority)
+            if (!string.IsNullOrEmpty(blueprint.Instructions))
+            {
+                sb.AppendLine("=== GENERATION INSTRUCTIONS ===");
+                sb.AppendLine(blueprint.Instructions);
+                sb.AppendLine();
+            }
+            else
+            {
+                // Only use global game context if blueprint has no instructions
+                AppendGameContext(sb);
+            }
 
             // Item schema
             sb.AppendLine("=== ITEM SCHEMA ===");
@@ -376,14 +386,6 @@ CRITICAL RULES:
                     sb.AppendLine("IMPORTANT: Do NOT create items that match the above items in structure or values.");
                     sb.AppendLine();
                 }
-            }
-
-            // Blueprint-specific instructions
-            if (!string.IsNullOrEmpty(blueprint.Instructions))
-            {
-                sb.AppendLine("=== CUSTOM INSTRUCTIONS ===");
-                sb.AppendLine(blueprint.Instructions);
-                sb.AppendLine();
             }
 
             // Generation request

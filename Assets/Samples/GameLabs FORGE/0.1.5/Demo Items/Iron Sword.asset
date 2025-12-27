@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f6e458b1a9f8b42f7a3851fabcdafb4e, type: 3}
   m_Name: Iron Sword
   m_EditorClassIdentifier: GameLabs.Forge.Demo::GameLabs.Forge.Demo.MeleeWeapon
-  name: 
+  name: Iron Sword
   damage: 10
-  weight: 1
-  value: 50
-  attackSpeed: 1
+  weight: 8
+  value: 150
+  attackSpeed: 2
   durability: 100
   weaponType: 0
   rarity: 0
