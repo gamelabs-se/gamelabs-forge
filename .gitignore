@@ -1,18 +1,11 @@
-# Ignore everything
+# Ignore everything at root except what we need
 /*
-/*/
-
-# Inverse ignore some stuff
 !/Assets/
 !/ProjectSettings/
-!/GameData/
-!/Docs/
 !/Packages/
 !.gitignore
 !README.md
-!*.txt
-!*.keystore
-!*.odt
+!LICENSE.txt
 
 Logs/
 Logs/*
