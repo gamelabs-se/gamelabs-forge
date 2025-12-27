@@ -33,12 +33,17 @@ namespace GameLabs.Forge.Editor
                 return assets;
             }
             
-            // Find all assets of type T in the search path
-            string[] guids = UnityEditor.AssetDatabase.FindAssets($"t:{typeof(T).Name}", new[] { fullPath });
+            // Find all assets of type T recursively
+            string[] guids = UnityEditor.AssetDatabase.FindAssets($"t:{typeof(T).Name}");
             
             foreach (string guid in guids)
             {
                 string assetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                
+                // Filter by search path
+                if (!assetPath.StartsWith(fullPath))
+                    continue;
+                
                 T asset = UnityEditor.AssetDatabase.LoadAssetAtPath<T>(assetPath);
                 
                 if (asset != null)
@@ -107,12 +112,17 @@ namespace GameLabs.Forge.Editor
                 return assets;
             }
             
-            // Find all ForgeGeneratedItemAsset files
-            string[] guids = UnityEditor.AssetDatabase.FindAssets("t:ForgeGeneratedItemAsset", new[] { fullPath });
+            // Find all ForgeGeneratedItemAsset files recursively
+            string[] guids = UnityEditor.AssetDatabase.FindAssets("t:ForgeGeneratedItemAsset");
             
             foreach (string guid in guids)
             {
                 string assetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                
+                // Filter by search path
+                if (!assetPath.StartsWith(fullPath))
+                    continue;
+                
                 ForgeGeneratedItemAsset asset = UnityEditor.AssetDatabase.LoadAssetAtPath<ForgeGeneratedItemAsset>(assetPath);
                 
                 if (asset != null && asset.ItemTypeName == typeName)

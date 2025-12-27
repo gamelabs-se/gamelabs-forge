@@ -328,6 +328,22 @@ namespace GameLabs.Forge.Editor
                         _blueprintDirty = true;
                     }
                     EditorGUILayout.EndHorizontal();
+                    
+                    // Refresh and discovery info right below path
+                    EditorGUILayout.Space(2);
+                    EditorGUILayout.BeginHorizontal();
+                    if (GUILayout.Button(new GUIContent(UI.Refresh, "Refresh discovery"), GUILayout.Width(32), GUILayout.Height(22)))
+                        FindExistingItems();
+                    GUILayout.Space(8);
+                    string countText = _foundCount > 0 ? $"Discovered: {_foundCount}" : "No items found";
+                    EditorGUILayout.LabelField(countText, UI.Header);
+                    GUILayout.FlexibleSpace();
+                    if (_foundCount > 0 && GUILayout.Button("View", GUILayout.Width(60), GUILayout.Height(22)))
+                        ShowFoundPopup();
+                    EditorGUILayout.EndHorizontal();
+                    var s = ForgeConfig.GetGeneratorSettings();
+                    string effectivePath = _blueprint.GetEffectiveDiscoveryPath();
+                    GUILayout.Label($"Search path: {effectivePath}", UI.Hint);
 
                     EditorGUILayout.Space(6);
                     
@@ -399,6 +415,22 @@ namespace GameLabs.Forge.Editor
                         _windowDiscoveryPath = "";
                     }
                     EditorGUILayout.EndHorizontal();
+                    
+                    // Refresh and discovery info right below path
+                    EditorGUILayout.Space(2);
+                    EditorGUILayout.BeginHorizontal();
+                    if (GUILayout.Button(new GUIContent(UI.Refresh, "Refresh discovery"), GUILayout.Width(32), GUILayout.Height(22)))
+                        FindExistingItems();
+                    GUILayout.Space(8);
+                    string countText = _foundCount > 0 ? $"Discovered: {_foundCount}" : "No items found";
+                    EditorGUILayout.LabelField(countText, UI.Header);
+                    GUILayout.FlexibleSpace();
+                    if (_foundCount > 0 && GUILayout.Button("View", GUILayout.Width(60), GUILayout.Height(22)))
+                        ShowFoundPopup();
+                    EditorGUILayout.EndHorizontal();
+                    var settings = ForgeConfig.GetGeneratorSettings();
+                    string effectivePath = string.IsNullOrEmpty(_windowDiscoveryPath) ? (settings?.existingAssetsSearchPath ?? "Assets") : _windowDiscoveryPath;
+                    GUILayout.Label($"Search path: {effectivePath}", UI.Hint);
                 }
 
                 EditorGUIUtility.labelWidth = old;
@@ -532,35 +564,6 @@ namespace GameLabs.Forge.Editor
                 _foundCount = 0;
                 _foundJson.Clear();
                 FindExistingItems();
-            }
-
-            DrawSectionHeader("Existing Items");
-
-            using (new EditorGUILayout.VerticalScope(UI.Card))
-            {
-                EditorGUILayout.BeginHorizontal();
-                
-                // Refresh button
-                if (GUILayout.Button(new GUIContent(UI.Refresh, "Refresh discovery"), GUILayout.Width(32), GUILayout.Height(22)))
-                    FindExistingItems();
-
-                GUILayout.Space(8);
-
-                // Count display (always shown, aligned consistently)
-                string countText = _foundCount > 0 ? $"Discovered: {_foundCount}" : "No items found";
-                EditorGUILayout.LabelField(countText, UI.Header);
-
-                GUILayout.FlexibleSpace();
-
-                // View button (only if items found)
-                if (_foundCount > 0 && GUILayout.Button("View", GUILayout.Width(60), GUILayout.Height(22)))
-                    ShowFoundPopup();
-                
-                EditorGUILayout.EndHorizontal();
-
-                var s = ForgeConfig.GetGeneratorSettings();
-                GUILayout.Space(3);
-                GUILayout.Label($"Search path: {s?.existingAssetsSearchPath ?? "Assets"}", UI.Hint);
             }
         }
 
