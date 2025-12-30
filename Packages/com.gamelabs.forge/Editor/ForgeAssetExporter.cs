@@ -276,6 +276,15 @@ namespace GameLabs.Forge.Editor
         }
         
         /// <summary>
+        /// Gets the save path for a specific type.
+        /// </summary>
+        public static string GetSavePathFor(Type type, string customFolder = null)
+        {
+            string typeFolderName = customFolder ?? type.Name;
+            return Path.Combine(GetGeneratedBasePath(), typeFolderName);
+        }
+        
+        /// <summary>
         /// Ensures a directory exists, creating it if necessary.
         /// </summary>
         private static void EnsureDirectoryExists(string path)
