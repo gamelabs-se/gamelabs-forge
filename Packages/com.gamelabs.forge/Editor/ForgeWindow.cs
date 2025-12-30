@@ -21,6 +21,7 @@ namespace GameLabs.Forge.Editor
         private string _customFolderName = "";
         private bool _useCustomFolder = false;
         private bool _autoSaveAsAsset = true;
+        private bool _showAdvanced = false; // Collapse advanced options by default
 
         // ========= Blueprint & Window-Level Settings =========
         private string _blueprintInstructions = "";
@@ -55,6 +56,11 @@ namespace GameLabs.Forge.Editor
             w.titleContent = new GUIContent("FORGE", EditorGUIUtility.IconContent("d_PlayButton On").image);
             w.minSize = new Vector2(560, 660);
             w.maxSize = new Vector2(1200, 1400);
+        }
+
+        private void OnEnable()
+        {
+            _showAdvanced = EditorPrefs.GetBool("GameLabs.Forge.ShowAdvanced", false);
         }
 
         // ========= Styles =========
@@ -142,12 +148,11 @@ namespace GameLabs.Forge.Editor
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
 
-            DrawBlueprintSection();
-            DrawTemplateSection();
-            DrawExistingSection();
-            DrawGenerateOptions();
-            DrawSaveOptions();
-            DrawPrimaryButton();
+            DrawTemplateSection();      // #1 - Template first
+            DrawGenerateOptions();      // #2 - How many to generate
+            DrawSaveOptions();          // #3 - Where to save
+            DrawAdvancedSection();      // #4 - Collapsed advanced options
+            DrawPrimaryButton();        // #5 - Big generate button
             DrawStatus();
             DrawResults();
 
@@ -466,7 +471,7 @@ namespace GameLabs.Forge.Editor
 
         private void DrawTemplateSection()
         {
-            DrawSectionHeader("Template");
+            DrawSectionHeader("1. Select Template");
 
             using (new EditorGUILayout.VerticalScope(UI.Card))
             {
@@ -475,7 +480,7 @@ namespace GameLabs.Forge.Editor
 
                 var oldTemplate = _template;
                 _template = (ScriptableObject)EditorGUILayout.ObjectField(
-                    new GUIContent("Template", "ScriptableObject defining the item structure"),
+                    new GUIContent("Template", "Any existing ScriptableObject can be used as a template"),
                     _template,
                     typeof(ScriptableObject),
                     false);
@@ -510,28 +515,11 @@ namespace GameLabs.Forge.Editor
 
                     GUILayout.Space(2);
                     GUILayout.Label(schema.description, UI.Hint);
-                    
-                    // "Save as Blueprint" button if not already using a blueprint
-                    if (_blueprint == null)
-                    {
-                        GUILayout.Space(4);
-                        if (GUILayout.Button(new GUIContent(UI.Save, "Save as Blueprint"), GUILayout.Height(24)))
-                        {
-                            if (_template != null)
-                            {
-                                CreateNewBlueprint();
-                            }
-                            else
-                            {
-                                EditorUtility.DisplayDialog("Error", "Please select a template first.", "OK");
-                            }
-                        }
-                    }
                 }
                 else
                 {
                     EditorGUILayout.HelpBox(
-                        "Select a template to define the item structure.",
+                        "Any existing ScriptableObject can be used as a template.",
                         MessageType.Info);
                 }
 
@@ -569,7 +557,7 @@ namespace GameLabs.Forge.Editor
 
         private void DrawGenerateOptions()
         {
-            DrawSectionHeader("Generation Options");
+            DrawSectionHeader("2. Generation Options");
 
             using (new EditorGUILayout.VerticalScope(UI.Card))
             {
@@ -596,7 +584,7 @@ namespace GameLabs.Forge.Editor
 
         private void DrawSaveOptions()
         {
-            DrawSectionHeader("Save Options");
+            DrawSectionHeader("3. Save Options");
 
             using (new EditorGUILayout.VerticalScope(UI.Card))
             {
@@ -613,7 +601,7 @@ namespace GameLabs.Forge.Editor
                     }
                     else if (_template != null)
                     {
-                        GUILayout.Label($"Save to: Generated/{_template.GetType().Name}/", UI.Hint);
+                        GUILayout.Label($"Will save to: Generated/{_template.GetType().Name}/", UI.Hint);
                     }
 
                     GUILayout.Space(4);
@@ -630,31 +618,266 @@ namespace GameLabs.Forge.Editor
             }
         }
 
+        private void DrawAdvancedSection()
+        {
+            // Collapsible header
+            EditorGUILayout.BeginHorizontal();
+            string arrow = _showAdvanced ? "▼" : "▸";
+            if (GUILayout.Button($"{arrow} Advanced Options (optional)", EditorStyles.boldLabel, GUILayout.Height(20)))
+            {
+                _showAdvanced = !_showAdvanced;
+                EditorPrefs.SetBool("GameLabs.Forge.ShowAdvanced", _showAdvanced);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            if (!_showAdvanced) return;
+
+            // Blueprint section
+            using (new EditorGUILayout.VerticalScope(UI.Card))
+            {
+                GUILayout.Label("Blueprints", EditorStyles.boldLabel);
+                GUILayout.Label("Blueprints let you reuse generation settings across sessions.", UI.Hint);
+                GUILayout.Space(4);
+                
+                var old = EditorGUIUtility.labelWidth;
+                EditorGUIUtility.labelWidth = LABEL_W;
+
+                EditorGUILayout.BeginHorizontal();
+                
+                var oldBlueprint = _blueprint;
+                _blueprint = (ForgeBlueprint)EditorGUILayout.ObjectField(
+                    new GUIContent("Blueprint", "Saves template, instructions, and duplicate strategy"),
+                    _blueprint,
+                    typeof(ForgeBlueprint),
+                    false);
+
+                // Trigger refresh if blueprint changed
+                if (_blueprint != oldBlueprint)
+                {
+                    if (oldBlueprint == null || oldBlueprint.Template != (_blueprint?.Template))
+                    {
+                        _foundCount = 0;
+                        _foundJson.Clear();
+                    }
+                    if (_blueprint != null)
+                    {
+                        _blueprintInstructions = _blueprint.Instructions;
+                        _blueprintStrategy = _blueprint.DuplicateStrategy;
+                        _blueprintDiscoveryPath = _blueprint.DiscoveryPathOverride;
+                        _blueprintDirty = false;
+                    }
+                }
+
+                if (GUILayout.Button("Create Blueprint", GUILayout.Width(120), GUILayout.Height(18)))
+                {
+                    CreateNewBlueprint();
+                }
+
+                EditorGUILayout.EndHorizontal();
+
+                if (_blueprint != null)
+                {
+                    EditorGUILayout.Space(6);
+                    
+                    EditorGUILayout.LabelField("Template", _blueprint.Template?.name ?? "None", UI.Hint);
+                    
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField("Generation Strategy");
+                    _blueprintStrategy = (ForgeDuplicateStrategy)EditorGUILayout.EnumPopup(_blueprintStrategy);
+                    if (_blueprintStrategy != _blueprint.DuplicateStrategy)
+                        _blueprintDirty = true;
+
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField("Additional Instructions (optional)");
+                    var newInstructions = EditorGUILayout.TextArea(_blueprintInstructions, UI.Code, GUILayout.MinHeight(50));
+                    if (newInstructions != _blueprintInstructions)
+                    {
+                        _blueprintInstructions = newInstructions;
+                        _blueprintDirty = true;
+                    }
+
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.BeginHorizontal();
+                    EditorGUILayout.LabelField("Search Existing Assets In", GUILayout.Width(LABEL_W), GUILayout.Height(18));
+                    EditorGUI.BeginDisabledGroup(true);
+                    EditorGUILayout.TextField(string.IsNullOrEmpty(_blueprintDiscoveryPath) ? "Assets (default)" : _blueprintDiscoveryPath, GUILayout.Height(18));
+                    EditorGUI.EndDisabledGroup();
+                    if (GUILayout.Button(new GUIContent(UI.Folder, "Browse for folder"), GUILayout.Width(32), GUILayout.Height(18)))
+                    {
+                        string initialPath = string.IsNullOrEmpty(_blueprintDiscoveryPath) ? "Assets" : _blueprintDiscoveryPath;
+                        string selected = EditorUtility.OpenFolderPanel("Select Discovery Path", initialPath, "");
+                        if (!string.IsNullOrEmpty(selected))
+                        {
+                            if (selected.StartsWith(Application.dataPath))
+                            {
+                                _blueprintDiscoveryPath = "Assets" + selected.Substring(Application.dataPath.Length);
+                            }
+                            else
+                            {
+                                _blueprintDiscoveryPath = selected;
+                            }
+                            _blueprintDirty = true;
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(_blueprintDiscoveryPath) && GUILayout.Button(new GUIContent("✕", "Clear override"), GUILayout.Width(24), GUILayout.Height(18)))
+                    {
+                        _blueprintDiscoveryPath = "";
+                        _blueprintDirty = true;
+                    }
+                    EditorGUILayout.EndHorizontal();
+                    
+                    EditorGUILayout.Space(2);
+                    EditorGUILayout.BeginHorizontal();
+                    if (GUILayout.Button(new GUIContent(UI.Refresh, "Refresh discovery"), GUILayout.Width(32), GUILayout.Height(22)))
+                        FindExistingItems();
+                    GUILayout.Space(8);
+                    string countText = _foundCount > 0 ? $"Discovered: {_foundCount} existing items" : "Used to scan existing assets to reduce duplicates. Can be ignored.";
+                    EditorGUILayout.LabelField(countText, UI.Hint);
+                    GUILayout.FlexibleSpace();
+                    if (_foundCount > 0 && GUILayout.Button("View", GUILayout.Width(60), GUILayout.Height(22)))
+                        ShowFoundPopup();
+                    EditorGUILayout.EndHorizontal();
+                    var s = ForgeConfig.GetGeneratorSettings();
+                    string effectivePath = _blueprint.GetEffectiveDiscoveryPath();
+                    GUILayout.Label($"Search path: {effectivePath}", UI.Hint);
+
+                    EditorGUILayout.Space(6);
+                    
+                    EditorGUILayout.BeginHorizontal();
+                    
+                    using (new EditorGUI.DisabledScope(!_blueprintDirty))
+                    {
+                        if (GUILayout.Button(new GUIContent(UI.Save, "Save changes to blueprint"), GUILayout.Height(24)))
+                        {
+                            _blueprint.Instructions = _blueprintInstructions;
+                            _blueprint.DuplicateStrategy = _blueprintStrategy;
+                            _blueprint.DiscoveryPathOverride = _blueprintDiscoveryPath;
+                            EditorUtility.SetDirty(_blueprint);
+                            AssetDatabase.SaveAssets();
+                            _blueprintDirty = false;
+                            ForgeLogger.DebugLog($"Blueprint '{_blueprint.DisplayName}' saved.");
+                        }
+                    }
+                    
+                    if (GUILayout.Button("Discard", GUILayout.Height(24)))
+                    {
+                        _blueprintInstructions = _blueprint.Instructions;
+                        _blueprintStrategy = _blueprint.DuplicateStrategy;
+                        _blueprintDiscoveryPath = _blueprint.DiscoveryPathOverride;
+                        _blueprintDirty = false;
+                    }
+                    
+                    EditorGUILayout.EndHorizontal();
+                }
+                else
+                {
+                    EditorGUILayout.Space(6);
+                    EditorGUILayout.LabelField("Generation Strategy");
+                    _windowStrategy = (ForgeDuplicateStrategy)EditorGUILayout.EnumPopup(_windowStrategy);
+                    
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField("Additional Instructions (optional)");
+                    _windowInstructions = EditorGUILayout.TextArea(_windowInstructions, UI.Code, GUILayout.MinHeight(50));
+                    
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.BeginHorizontal();
+                    EditorGUILayout.LabelField("Search Existing Assets In", GUILayout.Width(LABEL_W), GUILayout.Height(18));
+                    EditorGUI.BeginDisabledGroup(true);
+                    EditorGUILayout.TextField(string.IsNullOrEmpty(_windowDiscoveryPath) ? "Assets (default)" : _windowDiscoveryPath, GUILayout.Height(18));
+                    EditorGUI.EndDisabledGroup();
+                    if (GUILayout.Button(new GUIContent(UI.Folder, "Browse for folder"), GUILayout.Width(32), GUILayout.Height(18)))
+                    {
+                        string initialPath = string.IsNullOrEmpty(_windowDiscoveryPath) ? "Assets" : _windowDiscoveryPath;
+                        string selected = EditorUtility.OpenFolderPanel("Select Discovery Path", initialPath, "");
+                        if (!string.IsNullOrEmpty(selected))
+                        {
+                            if (selected.StartsWith(Application.dataPath))
+                            {
+                                _windowDiscoveryPath = "Assets" + selected.Substring(Application.dataPath.Length);
+                            }
+                            else
+                            {
+                                _windowDiscoveryPath = selected;
+                            }
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(_windowDiscoveryPath) && GUILayout.Button(new GUIContent("✕", "Clear override"), GUILayout.Width(24), GUILayout.Height(18)))
+                    {
+                        _windowDiscoveryPath = "";
+                    }
+                    EditorGUILayout.EndHorizontal();
+                    
+                    EditorGUILayout.Space(2);
+                    EditorGUILayout.BeginHorizontal();
+                    if (GUILayout.Button(new GUIContent(UI.Refresh, "Refresh discovery"), GUILayout.Width(32), GUILayout.Height(22)))
+                        FindExistingItems();
+                    GUILayout.Space(8);
+                    string countText = _foundCount > 0 ? $"Discovered: {_foundCount} existing items" : "Used to scan existing assets to reduce duplicates. Can be ignored.";
+                    EditorGUILayout.LabelField(countText, UI.Hint);
+                    GUILayout.FlexibleSpace();
+                    if (_foundCount > 0 && GUILayout.Button("View", GUILayout.Width(60), GUILayout.Height(22)))
+                        ShowFoundPopup();
+                    EditorGUILayout.EndHorizontal();
+                    var s = ForgeConfig.GetGeneratorSettings();
+                    string effectivePath = string.IsNullOrEmpty(_windowDiscoveryPath) ? 
+                        (s?.existingAssetsSearchPath ?? "Assets") : _windowDiscoveryPath;
+                    GUILayout.Label($"Search path: {effectivePath}", UI.Hint);
+                }
+
+                EditorGUIUtility.labelWidth = old;
+            }
+            
+            // Auto-trigger discovery
+            DrawExistingSection();
+        }
+
         // ========= Primary Generate Button =========
         private void DrawPrimaryButton()
         {
             bool hasTemplateOrBlueprint = _template != null || (_blueprint != null && _blueprint.Template != null);
+            
+            GUILayout.Space(8);
+            
             EditorGUI.BeginDisabledGroup(_isGenerating || !hasTemplateOrBlueprint);
 
-            var r = GUILayoutUtility.GetRect(0, 44, GUILayout.ExpandWidth(true));
+            var r = GUILayoutUtility.GetRect(0, 50, GUILayout.ExpandWidth(true));
 
-            // background
-            EditorGUI.DrawRect(r, new Color(0, 0, 0, 0.08f));
+            // background with stronger visual weight
+            EditorGUI.DrawRect(r, hasTemplateOrBlueprint ? UI.Accent : new Color(0, 0, 0, 0.08f));
+            
             // hover tint
             if (r.Contains(Event.current.mousePosition) && !_isGenerating && hasTemplateOrBlueprint)
-                EditorGUI.DrawRect(r, UI.AccentDim);
+                EditorGUI.DrawRect(r, new Color(1, 1, 1, 0.1f));
 
             // click area
             if (GUI.Button(r, GUIContent.none))
                 GenerateItems();
 
             // icon
-            var iconRect = new Rect(r.x + 12, r.y + (r.height - 20) / 2f, 20, 20);
+            var iconRect = new Rect(r.x + 16, r.y + (r.height - 24) / 2f, 24, 24);
             GUI.DrawTexture(iconRect, UI.Play, ScaleMode.ScaleToFit, true);
 
-            // label (centered)
-            string text = _isGenerating ? "Generating..." : $"Generate {_itemCount} Items";
-            EditorGUI.LabelField(r, text, UI.PrimaryBtnText);
+            // label (centered) with better messaging
+            string text;
+            if (!hasTemplateOrBlueprint)
+            {
+                text = "Select a template to generate items";
+            }
+            else if (_isGenerating)
+            {
+                text = "Generating...";
+            }
+            else
+            {
+                text = $"Generate {_itemCount} Items";
+            }
+            
+            var textStyle = new GUIStyle(UI.PrimaryBtnText);
+            if (hasTemplateOrBlueprint)
+            {
+                textStyle.normal.textColor = Color.white;
+            }
+            EditorGUI.LabelField(r, text, textStyle);
 
             EditorGUI.EndDisabledGroup();
         }
@@ -671,7 +894,26 @@ namespace GameLabs.Forge.Editor
         {
             if (_lastGenerated.Count == 0) return;
 
-            DrawSectionHeader("Last Generated Items");
+            // Success banner at top
+            int savedCount = _lastGenerated.Count(x => x != null && _itemSavedState.ContainsKey(x) && _itemSavedState[x]);
+            if (savedCount > 0)
+            {
+                GUILayout.Space(6);
+                var successRect = EditorGUILayout.GetControlRect(GUILayout.Height(32));
+                EditorGUI.DrawRect(successRect, new Color(0.2f, 0.75f, 0.35f, 0.2f));
+                
+                var labelRect = new Rect(successRect.x + 12, successRect.y, successRect.width - 140, successRect.height);
+                string savePath = _template != null ? ForgeAssetExporter.GetSavePathFor(_template.GetType(), _useCustomFolder ? _customFolderName : null) : "";
+                EditorGUI.LabelField(labelRect, $"✓ Generated {savedCount} assets in {savePath}", EditorStyles.boldLabel);
+                
+                var btnRect = new Rect(successRect.xMax - 125, successRect.y + 4, 120, 24);
+                if (GUI.Button(btnRect, new GUIContent("Reveal in Project", UI.Folder)))
+                {
+                    OpenGeneratedFolder();
+                }
+            }
+
+            DrawSectionHeader("Generated Items");
             using (new EditorGUILayout.VerticalScope(UI.Card))
             {
                 // Draw each generated item with action buttons
