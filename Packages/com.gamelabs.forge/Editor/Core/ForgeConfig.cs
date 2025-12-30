@@ -57,7 +57,6 @@ namespace GameLabs.Forge.Editor
         
         /// <summary>
         /// Gets the OpenAI API key from EditorPrefs.
-        /// Falls back to config file for backwards compatibility.
         /// </summary>
         /// <returns>The API key, or null if not found.</returns>
         public static string GetOpenAIKey(string path = DefaultPath)
@@ -67,14 +66,6 @@ namespace GameLabs.Forge.Editor
             if (!string.IsNullOrWhiteSpace(apiKey))
             {
                 return apiKey.Trim();
-            }
-            
-            // Fall back to config file for backwards compatibility
-            var config = LoadConfig(path);
-            if (config != null && !string.IsNullOrWhiteSpace(config.openaiApiKey))
-            {
-                SetOpenAIKey(config.openaiApiKey);
-                return config.openaiApiKey.Trim();
             }
 #endif
             return null;
@@ -95,21 +86,10 @@ namespace GameLabs.Forge.Editor
         public static ForgeAIModel GetModel(string path = DefaultPath)
         {
 #if UNITY_EDITOR
-            if (EditorPrefs.HasKey(ModelPrefKey))
-            {
-                return (ForgeAIModel)EditorPrefs.GetInt(ModelPrefKey, (int)ForgeAIModel.GPT4o);
-            }
-            
-            // Fall back to config file for backwards compatibility
-            var config = LoadConfig(path);
-            if (config != null)
-            {
-                var model = (ForgeAIModel)config.model;
-                SetModel(model);
-                return model;
-            }
-#endif
+            return (ForgeAIModel)EditorPrefs.GetInt(ModelPrefKey, (int)ForgeAIModel.GPT4o);
+#else
             return ForgeAIModel.GPT4o;
+#endif
         }
         
         /// <summary>Sets the AI model in EditorPrefs.</summary>
@@ -124,20 +104,10 @@ namespace GameLabs.Forge.Editor
         public static float GetTemperature(string path = DefaultPath)
         {
 #if UNITY_EDITOR
-            if (EditorPrefs.HasKey(TemperaturePrefKey))
-            {
-                return EditorPrefs.GetFloat(TemperaturePrefKey, 0.8f);
-            }
-            
-            // Fall back to config file for backwards compatibility
-            var config = LoadConfig(path);
-            if (config != null)
-            {
-                SetTemperature(config.temperature);
-                return config.temperature;
-            }
-#endif
+            return EditorPrefs.GetFloat(TemperaturePrefKey, 0.8f);
+#else
             return 0.8f;
+#endif
         }
         
         /// <summary>Sets the AI temperature in EditorPrefs.</summary>
@@ -152,20 +122,10 @@ namespace GameLabs.Forge.Editor
         public static bool GetDebugMode(string path = DefaultPath)
         {
 #if UNITY_EDITOR
-            if (EditorPrefs.HasKey(DebugModePrefKey))
-            {
-                return EditorPrefs.GetBool(DebugModePrefKey, false);
-            }
-            
-            // Fall back to config file for backwards compatibility
-            var config = LoadConfig(path);
-            if (config != null)
-            {
-                SetDebugMode(config.debugMode);
-                return config.debugMode;
-            }
-#endif
+            return EditorPrefs.GetBool(DebugModePrefKey, false);
+#else
             return false;
+#endif
         }
         
         /// <summary>Sets the debug mode in EditorPrefs.</summary>
@@ -178,24 +138,10 @@ namespace GameLabs.Forge.Editor
         
         /// <summary>
         /// Gets the complete generator settings from EditorPrefs.
-        /// Falls back to config file for backwards compatibility.
         /// </summary>
         public static ForgeGeneratorSettings GetGeneratorSettings(string path = DefaultPath)
         {
 #if UNITY_EDITOR
-            // Check if we have any settings in EditorPrefs
-            bool hasPrefs = EditorPrefs.HasKey(GameNamePrefKey);
-            
-            if (!hasPrefs)
-            {
-                // Migrate from config file if it exists
-                var config = LoadConfig(path);
-                if (config != null)
-                {
-                    MigrateFromConfigFile(config);
-                }
-            }
-            
             // Load all settings from EditorPrefs
             var settings = new ForgeGeneratorSettings
             {
