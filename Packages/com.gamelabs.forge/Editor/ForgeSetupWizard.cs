@@ -121,7 +121,7 @@ namespace GameLabs.Forge.Editor
                 
                 ForgeConfig.SaveGeneratorSettings(settings);
                 
-                ForgeLogger.Success("Configuration saved to EditorPrefs (user-specific, not shared).");
+                ForgeLogger.Success("Configuration saved to UserSettings/ForgeConfig.json (project-specific).");
             }
             catch (Exception e)
             {
