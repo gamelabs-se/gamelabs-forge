@@ -138,7 +138,7 @@ namespace GameLabs.Forge.Editor
             }
             
             EditorGUILayout.Space(5);
-            DrawHelpText("Costs vary by model: GPT-4o ($2.50/$10 per 1M tokens), o1 ($15/$60 per 1M tokens)");
+            DrawHelpText("Costs vary by model: GPT-5-mini ($0.25/$2 per 1M), GPT-4o ($2.50/$10 per 1M), o1 ($15/$60 per 1M)");
             
             EditorGUILayout.EndVertical();
         }

@@ -153,14 +153,6 @@ namespace GameLabs.Forge.Editor
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
 
-            // Dim configuration when results are showing (signals phase change)
-            bool hasResults = _lastGenerated.Count > 0;
-            if (hasResults)
-            {
-                GUI.enabled = false;
-                GUI.color = new Color(1, 1, 1, 0.6f);
-            }
-
             DrawTemplateSection();      // #1 - Template first
             GUILayout.Space(4);          // Reduced spacing between sections
             DrawGenerateOptions();      // #2 - How many to generate
@@ -168,12 +160,6 @@ namespace GameLabs.Forge.Editor
             DrawSaveOptions();          // #3 - Where to save
             GUILayout.Space(4);
             DrawAdvancedSection();      // #4 - Collapsed advanced options
-            
-            if (hasResults)
-            {
-                GUI.enabled = true;
-                GUI.color = Color.white;
-            }
             
             GUILayout.Space(8);          // Space before primary action
             DrawPrimaryButton();        // #5 - Big generate button
@@ -1115,6 +1101,15 @@ namespace GameLabs.Forge.Editor
             _lastGenerated.Clear();
             _itemSavedState.Clear();
             _lastGenerated.AddRange(result.items);
+            
+            // Record statistics
+            ForgeStatistics.Instance.RecordGeneration(
+                _itemCount, 
+                result.items.Count, 
+                result.promptTokens, 
+                result.completionTokens, 
+                result.estimatedCost
+            );
             
             // Mark all as unsaved initially
             foreach (var item in result.items)
