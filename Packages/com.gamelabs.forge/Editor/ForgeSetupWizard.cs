@@ -20,7 +20,7 @@ namespace GameLabs.Forge.Editor
         
         // Step 1: API Configuration (REQUIRED)
         private string apiKey = "";
-        private ForgeAIModel model = ForgeAIModel.GPT4o;
+        private ForgeAIModel model = ForgeAIModel.GPT5Mini;
         
         // Step 2: Game Context (DEFAULTS ONLY)
         private string gameName = "My Game";

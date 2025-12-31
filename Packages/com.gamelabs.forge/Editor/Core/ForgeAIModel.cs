@@ -9,10 +9,13 @@ namespace GameLabs.Forge.Editor
     [Serializable]
     public enum ForgeAIModel
     {
-        [Tooltip("GPT-4o - Recommended. Fast, cost-effective, and high quality.")]
+        [Tooltip("GPT-5-mini - Latest fast model. Best cost/performance ratio.")]
+        GPT5Mini,
+        
+        [Tooltip("GPT-4o - Reliable and powerful. Good for complex items.")]
         GPT4o,
         
-        [Tooltip("o1 - Premium reasoning model. More expensive but handles complex logic better.")]
+        [Tooltip("o1 - Premium reasoning model. Most expensive but handles complex logic best.")]
         O1
     }
     
@@ -28,9 +31,10 @@ namespace GameLabs.Forge.Editor
         {
             return model switch
             {
+                ForgeAIModel.GPT5Mini => "gpt-5-mini",
                 ForgeAIModel.GPT4o => "gpt-4o",
                 ForgeAIModel.O1 => "o1-preview",
-                _ => "gpt-4o"
+                _ => "gpt-5-mini"
             };
         }
         
@@ -41,23 +45,26 @@ namespace GameLabs.Forge.Editor
         {
             return model switch
             {
-                ForgeAIModel.GPT4o => "GPT-4o (Recommended)",
+                ForgeAIModel.GPT5Mini => "GPT-5-mini (Recommended)",
+                ForgeAIModel.GPT4o => "GPT-4o",
                 ForgeAIModel.O1 => "o1 (Premium Reasoning)",
-                _ => "GPT-4o"
+                _ => "GPT-5-mini"
             };
         }
         
         /// <summary>
         /// Gets the pricing information for the model.
         /// Input cost per 1M tokens, Output cost per 1M tokens.
+        /// Updated: December 2025
         /// </summary>
         public static (float inputCost, float outputCost) GetPricing(ForgeAIModel model)
         {
             return model switch
             {
-                ForgeAIModel.GPT4o => (2.50f, 10.00f), // $2.50/1M input, $10/1M output
-                ForgeAIModel.O1 => (15.00f, 60.00f),   // $15/1M input, $60/1M output (o1-preview pricing)
-                _ => (2.50f, 10.00f)
+                ForgeAIModel.GPT5Mini => (0.25f, 2.00f),  // $0.25/1M input, $2.00/1M output
+                ForgeAIModel.GPT4o => (2.50f, 10.00f),    // $2.50/1M input, $10.00/1M output
+                ForgeAIModel.O1 => (15.00f, 60.00f),      // $15/1M input, $60/1M output
+                _ => (0.25f, 2.00f)
             };
         }
         
@@ -79,6 +86,7 @@ namespace GameLabs.Forge.Editor
         {
             return model switch
             {
+                ForgeAIModel.GPT5Mini => 0.8f,
                 ForgeAIModel.GPT4o => 0.8f,
                 ForgeAIModel.O1 => 1.0f, // o1 models work better with temperature = 1
                 _ => 0.8f
@@ -92,15 +100,20 @@ namespace GameLabs.Forge.Editor
         {
             return model switch
             {
+                ForgeAIModel.GPT5Mini => 
+                    "Latest fast model with excellent cost/performance.\n" +
+                    "Best for most use cases. ~10x cheaper than GPT-4o.\n" +
+                    "Fast response times and high quality output.",
+                    
                 ForgeAIModel.GPT4o => 
-                    "Fast and cost-effective. Best for most use cases.\n" +
-                    "Good balance of quality, speed, and cost.\n" +
+                    "Powerful and reliable for complex items.\n" +
+                    "Better reasoning than GPT-5-mini.\n" +
                     "~4x cheaper than o1.",
                     
                 ForgeAIModel.O1 => 
                     "Premium reasoning model. Best for complex items.\n" +
-                    "Better at understanding intricate relationships.\n" +
-                    "May return different response structure - uses extended reasoning.",
+                    "Superior at understanding intricate relationships.\n" +
+                    "Most expensive but highest quality reasoning.",
                     
                 _ => "Standard model."
             };

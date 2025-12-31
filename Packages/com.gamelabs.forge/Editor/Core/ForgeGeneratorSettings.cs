@@ -36,7 +36,7 @@ namespace GameLabs.Forge.Editor
         public float temperature = 0.8f;
         
         [Tooltip("AI model to use.")]
-        public ForgeAIModel model = ForgeAIModel.GPT4o;
+        public ForgeAIModel model = ForgeAIModel.GPT5Mini;
         
         [Header("Item Context")]
         [Tooltip("Additional context or rules for item generation.")]
@@ -250,8 +250,8 @@ namespace GameLabs.Forge.Editor
         
         private static float CalculateCost(int prompt, int completion)
         {
-            // Use GPT-4o pricing as default (will be recalculated with correct model in result)
-            return ForgeAIModelHelper.CalculateCost(ForgeAIModel.GPT4o, prompt, completion);
+            // Use GPT-5-mini pricing as default (will be recalculated with correct model in result)
+            return ForgeAIModelHelper.CalculateCost(ForgeAIModel.GPT5Mini, prompt, completion);
         }
     }
 }
