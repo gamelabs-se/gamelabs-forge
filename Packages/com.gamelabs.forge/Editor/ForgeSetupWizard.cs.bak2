@@ -448,6 +448,7 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.Space(5);
         }
         
+        [Serializable]
     }
 }
 #endif

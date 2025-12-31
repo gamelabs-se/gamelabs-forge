@@ -448,6 +448,23 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.Space(5);
         }
         
+        [Serializable]
+        private class ForgeConfigData
+        {
+            public string openaiApiKey;
+            public int model; // ForgeAIModel enum value
+            public string gameName;
+            public string gameDescription;
+            public string targetAudience;
+            public int defaultBatchSize;
+            public int maxBatchSize;
+            public float temperature;
+            public string additionalRules;
+            public string existingAssetsSearchPath;
+            public string generatedAssetsBasePath;
+            public bool autoLoadExistingAssets;
+            public int intent; // ExistingItemsIntent enum value
+        }
     }
 }
 #endif
