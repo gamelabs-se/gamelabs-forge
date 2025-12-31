@@ -54,7 +54,9 @@ namespace GameLabs.Forge.Editor
         public static void OpenWindow()
         {
             var w = GetWindow<ForgeWindow>();
-            w.titleContent = new GUIContent("GameLabs | FORGE");
+            // Use hammer/tool icon for the tab
+            var icon = EditorGUIUtility.IconContent("d_SceneViewTools").image;
+            w.titleContent = new GUIContent("GameLabs | FORGE", icon);
             w.minSize = new Vector2(560, 660);
             w.maxSize = new Vector2(1200, 1400);
         }
@@ -903,15 +905,36 @@ namespace GameLabs.Forge.Editor
                 var successRect = EditorGUILayout.GetControlRect(GUILayout.Height(32));
                 EditorGUI.DrawRect(successRect, new Color(0.2f, 0.75f, 0.35f, 0.2f));
                 
-                var labelRect = new Rect(successRect.x + 12, successRect.y, successRect.width - 140, successRect.height);
+                var labelRect = new Rect(successRect.x + 12, successRect.y, successRect.width - 12, successRect.height);
                 string savePath = _template != null ? ForgeAssetExporter.GetSavePathFor(_template.GetType(), _useCustomFolder ? _customFolderName : null) : "";
                 EditorGUI.LabelField(labelRect, $"✓ Generated {savedCount} assets in {savePath}", EditorStyles.boldLabel);
+            }
+            
+            // Action buttons below success banner
+            if (savedCount > 0)
+            {
+                GUILayout.Space(4);
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
                 
-                var btnRect = new Rect(successRect.xMax - 125, successRect.y + 4, 120, 24);
-                if (GUI.Button(btnRect, new GUIContent("Reveal in Project", UI.Folder)))
+                if (GUILayout.Button(new GUIContent(" Clear Results", UI.Trash), GUILayout.Height(24), GUILayout.Width(120)))
                 {
-                    OpenGeneratedFolder();
+                    _lastGenerated.Clear();
+                    _itemSavedState.Clear();
+                    _status = "";
+                    _statusType = MessageType.None;
                 }
+                
+                GUILayout.Space(4);
+                
+                using (new EditorGUI.DisabledScope(!(_template != null)))
+                {
+                    if (GUILayout.Button(new GUIContent(" Open Folder", UI.Folder), GUILayout.Height(24), GUILayout.Width(120)))
+                        OpenGeneratedFolder();
+                }
+                
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.EndHorizontal();
             }
 
             DrawSectionHeader("Generated Items");
@@ -988,22 +1011,6 @@ namespace GameLabs.Forge.Editor
                 }
                 GUI.backgroundColor = Color.white;
                 
-                EditorGUILayout.EndHorizontal();
-                
-                GUILayout.Space(6);
-                EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button(new GUIContent(" Clear Results", UI.Trash), GUILayout.Height(24)))
-                {
-                    _lastGenerated.Clear();
-                    _itemSavedState.Clear();
-                    _status = "";
-                    _statusType = MessageType.None;
-                }
-                using (new EditorGUI.DisabledScope(!(_template != null)))
-                {
-                    if (GUILayout.Button(new GUIContent(" Open Folder", UI.Folder), GUILayout.Height(24)))
-                        OpenGeneratedFolder();
-                }
                 EditorGUILayout.EndHorizontal();
             }
         }
@@ -1103,12 +1110,15 @@ namespace GameLabs.Forge.Editor
             _lastGenerated.AddRange(result.items);
             
             // Record statistics
+            var settings = ForgeConfig.GetGeneratorSettings();
+            var model = settings?.model ?? ForgeAIModel.GPT5Mini;
             ForgeStatistics.Instance.RecordGeneration(
                 _itemCount, 
                 result.items.Count, 
                 result.promptTokens, 
                 result.completionTokens, 
-                result.estimatedCost
+                result.estimatedCost,
+                model
             );
             
             // Mark all as unsaved initially

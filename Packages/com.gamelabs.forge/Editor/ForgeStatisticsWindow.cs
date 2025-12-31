@@ -101,13 +101,46 @@ namespace GameLabs.Forge.Editor
         
         private void DrawTokenStats()
         {
-            EditorGUILayout.LabelField("Token Usage", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Token Usage (Per Model)", EditorStyles.boldLabel);
             
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             
-            DrawStatRow("Total Tokens:", stats.GetTotalTokens().ToString("N0"));
-            DrawStatRow("Prompt Tokens:", stats.totalPromptTokens.ToString("N0"));
-            DrawStatRow("Completion Tokens:", stats.totalCompletionTokens.ToString("N0"));
+            // GPT-5-mini
+            long gpt5Total = stats.gpt5MiniPromptTokens + stats.gpt5MiniCompletionTokens;
+            if (gpt5Total > 0)
+            {
+                EditorGUILayout.LabelField("GPT-5-mini:", EditorStyles.miniBoldLabel);
+                DrawStatRow("  Tokens:", $"{gpt5Total:N0} ({stats.gpt5MiniPromptTokens:N0} + {stats.gpt5MiniCompletionTokens:N0})");
+                DrawStatRow("  Cost:", $"${stats.gpt5MiniCostUSD:F4}", new Color(0.5f, 1f, 0.5f));
+                EditorGUILayout.Space(3);
+            }
+            
+            // GPT-4o
+            long gpt4oTotal = stats.gpt4oPromptTokens + stats.gpt4oCompletionTokens;
+            if (gpt4oTotal > 0)
+            {
+                EditorGUILayout.LabelField("GPT-4o:", EditorStyles.miniBoldLabel);
+                DrawStatRow("  Tokens:", $"{gpt4oTotal:N0} ({stats.gpt4oPromptTokens:N0} + {stats.gpt4oCompletionTokens:N0})");
+                DrawStatRow("  Cost:", $"${stats.gpt4oCostUSD:F4}", new Color(0.5f, 1f, 0.5f));
+                EditorGUILayout.Space(3);
+            }
+            
+            // o1
+            long o1Total = stats.o1PromptTokens + stats.o1CompletionTokens;
+            if (o1Total > 0)
+            {
+                EditorGUILayout.LabelField("o1:", EditorStyles.miniBoldLabel);
+                DrawStatRow("  Tokens:", $"{o1Total:N0} ({stats.o1PromptTokens:N0} + {stats.o1CompletionTokens:N0})");
+                DrawStatRow("  Cost:", $"${stats.o1CostUSD:F4}", new Color(0.5f, 1f, 0.5f));
+                EditorGUILayout.Space(3);
+            }
+            
+            // Combined totals
+            EditorGUILayout.Space(5);
+            DrawSeparator();
+            EditorGUILayout.Space(5);
+            DrawStatRow("Combined Total:", stats.GetTotalTokens().ToString("N0"), new Color(0.3f, 0.9f, 0.9f));
+            DrawStatRow("Total Cost:", $"${stats.totalCostUSD:F4}", new Color(0.3f, 0.9f, 0.3f));
             
             if (stats.totalGenerations > 0)
             {
@@ -126,19 +159,6 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             
             DrawStatRow("Total Cost:", $"${stats.totalCostUSD:F4}", new Color(0.3f, 0.9f, 0.3f));
-            
-            if (stats.totalGenerations > 0)
-            {
-                DrawStatRow("Avg Cost/Generation:", $"${stats.GetAverageCostPerGeneration():F6}");
-            }
-            
-            if (stats.totalItemsGenerated > 0)
-            {
-                DrawStatRow("Avg Cost/Item:", $"${stats.GetAverageCostPerItem():F6}");
-            }
-            
-            EditorGUILayout.Space(5);
-            DrawHelpText("Costs vary by model: GPT-5-mini ($0.25/$2 per 1M), GPT-4o ($2.50/$10 per 1M), o1 ($15/$60 per 1M)");
             
             EditorGUILayout.EndVertical();
         }

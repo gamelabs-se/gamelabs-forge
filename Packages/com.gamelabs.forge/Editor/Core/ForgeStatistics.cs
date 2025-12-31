@@ -19,11 +19,22 @@ namespace GameLabs.Forge.Editor
         public int totalItemsGenerated = 0;
         public int totalFailures = 0;
         
-        [Header("Token Usage")]
+        [Header("Token Usage - Per Model")]
+        public long gpt5MiniPromptTokens = 0;
+        public long gpt5MiniCompletionTokens = 0;
+        public float gpt5MiniCostUSD = 0f;
+        
+        public long gpt4oPromptTokens = 0;
+        public long gpt4oCompletionTokens = 0;
+        public float gpt4oCostUSD = 0f;
+        
+        public long o1PromptTokens = 0;
+        public long o1CompletionTokens = 0;
+        public float o1CostUSD = 0f;
+        
+        [Header("Legacy Total Tracking (Deprecated)")]
         public long totalPromptTokens = 0;
         public long totalCompletionTokens = 0;
-        
-        [Header("Cost Tracking")]
         public float totalCostUSD = 0f;
         
         [Header("Session Info")]
@@ -54,7 +65,7 @@ namespace GameLabs.Forge.Editor
         /// <summary>
         /// Records a successful generation.
         /// </summary>
-        public void RecordGeneration(int itemsRequested, int itemsGenerated, int promptTokens, int completionTokens, float cost)
+        public void RecordGeneration(int itemsRequested, int itemsGenerated, int promptTokens, int completionTokens, float cost, ForgeAIModel model)
         {
             totalGenerations++;
             sessionGenerations++;
@@ -63,6 +74,27 @@ namespace GameLabs.Forge.Editor
             totalItemsGenerated += itemsGenerated;
             sessionItemsGenerated += itemsGenerated;
             
+            // Track per-model
+            switch (model)
+            {
+                case ForgeAIModel.GPT5Mini:
+                    gpt5MiniPromptTokens += promptTokens;
+                    gpt5MiniCompletionTokens += completionTokens;
+                    gpt5MiniCostUSD += cost;
+                    break;
+                case ForgeAIModel.GPT4o:
+                    gpt4oPromptTokens += promptTokens;
+                    gpt4oCompletionTokens += completionTokens;
+                    gpt4oCostUSD += cost;
+                    break;
+                case ForgeAIModel.O1:
+                    o1PromptTokens += promptTokens;
+                    o1CompletionTokens += completionTokens;
+                    o1CostUSD += cost;
+                    break;
+            }
+            
+            // Also update legacy totals for backwards compatibility
             totalPromptTokens += promptTokens;
             totalCompletionTokens += completionTokens;
             totalCostUSD += cost;
