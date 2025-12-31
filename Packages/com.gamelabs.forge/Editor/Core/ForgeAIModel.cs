@@ -86,10 +86,10 @@ namespace GameLabs.Forge.Editor
         {
             return model switch
             {
-                ForgeAIModel.GPT5Mini => 0.8f,
+                ForgeAIModel.GPT5Mini => 1.0f, // GPT-5 only supports temperature=1
                 ForgeAIModel.GPT4o => 0.8f,
                 ForgeAIModel.O1 => 1.0f, // o1 models work better with temperature = 1
-                _ => 0.8f
+                _ => 1.0f
             };
         }
         
@@ -103,7 +103,7 @@ namespace GameLabs.Forge.Editor
                 ForgeAIModel.GPT5Mini => 
                     "Latest fast model with excellent cost/performance.\n" +
                     "Best for most use cases. ~10x cheaper than GPT-4o.\n" +
-                    "Fast response times and high quality output.",
+                    "Note: Only supports temperature=1 (no creativity adjustment).",
                     
                 ForgeAIModel.GPT4o => 
                     "Powerful and reliable for complex items.\n" +

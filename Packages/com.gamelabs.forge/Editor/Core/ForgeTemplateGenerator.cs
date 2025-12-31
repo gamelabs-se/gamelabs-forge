@@ -454,8 +454,13 @@ CRITICAL RULES:
 
                 int promptTokens = response.usage?.prompt_tokens ?? 0;
                 int completionTokens = response.usage?.completion_tokens ?? 0;
+                int totalTokens = promptTokens + completionTokens;
+                
+                var settings = ForgeConfig.GetGeneratorSettings();
+                var model = settings?.model ?? ForgeAIModel.GPT5Mini;
+                float cost = ForgeAIModelHelper.CalculateCost(model, promptTokens, completionTokens);
 
-                ForgeLogger.Success($"Generated {items.Count} item(s). Tokens: {promptTokens} prompt, {completionTokens} completion.");
+                ForgeLogger.Success($"Generated {items.Count} item(s) | Tokens: {totalTokens:N0} ({promptTokens:N0} prompt + {completionTokens:N0} completion) | Cost: ${cost:F6}");
 
                 return ForgeTemplateGenerationResult.Success(items, templateType, promptTokens, completionTokens);
             }
@@ -801,8 +806,10 @@ CRITICAL RULES:
 
         private static float CalculateCost(int prompt, int completion)
         {
-            // GPT-4o-mini pricing (as of late 2024): $0.15/1M input, $0.60/1M output
-            return (prompt * 0.00000015f) + (completion * 0.0000006f);
+            // Use actual model pricing from settings
+            var settings = ForgeConfig.GetGeneratorSettings();
+            var model = settings?.model ?? ForgeAIModel.GPT5Mini;
+            return ForgeAIModelHelper.CalculateCost(model, prompt, completion);
         }
     }
 }

@@ -84,7 +84,11 @@ namespace GameLabs.Forge.Editor.Integration.OpenAI
         {
             public string model;
             public List<Message> messages;
-            public float temperature;
+            
+            // Temperature is optional - GPT-5 models don't support it
+            // We'll conditionally include it in JSON manually
+            [NonSerialized]
+            public float? temperature;
         }
 
         void Initialize()
@@ -110,10 +114,55 @@ namespace GameLabs.Forge.Editor.Integration.OpenAI
                 new Message{ role="user",   content= string.IsNullOrEmpty(behavior) ? userPrompt : behavior + "\n\n" + userPrompt }
             };
 
-            var req = new RequestData { model = model, messages = msgs, temperature = temperature };
-            var json = JsonUtility.ToJson(req);
+            var req = new RequestData { model = model, messages = msgs };
+            
+            // GPT-5 models don't support temperature parameter - they only accept temperature=1
+            // So we conditionally add it for other models
+            bool isGPT5 = model.StartsWith("gpt-5");
+            if (!isGPT5)
+            {
+                req.temperature = temperature;
+            }
+            
+            // Build JSON manually to handle optional temperature
+            string json = BuildRequestJson(req, isGPT5);
 
             ForgeEditorCoroutine.Start(Post(apiUrl, json, cb));
+        }
+        
+        private string BuildRequestJson(RequestData req, bool skipTemperature)
+        {
+            var sb = new StringBuilder();
+            sb.Append("{");
+            sb.Append($"\"model\":\"{req.model}\",");
+            
+            // Messages array
+            sb.Append("\"messages\":[");
+            for (int i = 0; i < req.messages.Count; i++)
+            {
+                if (i > 0) sb.Append(",");
+                sb.Append("{");
+                sb.Append($"\"role\":\"{req.messages[i].role}\",");
+                // Escape content for JSON
+                string escapedContent = req.messages[i].content
+                    .Replace("\\", "\\\\")
+                    .Replace("\"", "\\\"")
+                    .Replace("\n", "\\n")
+                    .Replace("\r", "\\r")
+                    .Replace("\t", "\\t");
+                sb.Append($"\"content\":\"{escapedContent}\"");
+                sb.Append("}");
+            }
+            sb.Append("]");
+            
+            // Add temperature only for non-GPT-5 models
+            if (!skipTemperature && req.temperature.HasValue)
+            {
+                sb.Append($",\"temperature\":{req.temperature.Value:F1}");
+            }
+            
+            sb.Append("}");
+            return sb.ToString();
         }
 
         IEnumerator Post(string url, string json, Action<OpenAIResponse> cb)

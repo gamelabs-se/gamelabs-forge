@@ -30,7 +30,7 @@ namespace GameLabs.Forge.Editor
         private int selectedAudienceIndex = 0;
         
         // Simplified - only essential defaults
-        private float temperature = 0.8f;
+        private float temperature = 1.0f;  // GPT-5-mini only supports 1.0
         private int defaultBatchSize = 5;
         
         // Validation
