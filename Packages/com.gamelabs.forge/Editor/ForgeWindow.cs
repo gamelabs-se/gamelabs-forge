@@ -95,7 +95,11 @@ namespace GameLabs.Forge.Editor
             {
                 if (Title != null) return;
 
-                Title = new GUIStyle(EditorStyles.boldLabel) { fontSize = 16, alignment = TextAnchor.MiddleLeft, fixedHeight = 24, contentOffset = Vector2.zero };
+                Title = new GUIStyle(EditorStyles.boldLabel) 
+                { 
+                    fontSize = 14, 
+                    alignment = TextAnchor.MiddleLeft
+                };
 
                 ToolbarBtn = new GUIStyle(EditorStyles.toolbarButton) { fixedHeight = 22 };
 
@@ -109,8 +113,8 @@ namespace GameLabs.Forge.Editor
 
                 Card = new GUIStyle("HelpBox")
                 {
-                    padding = new RectOffset(16, 16, 10, 10),  // Normalized horizontal padding
-                    margin = new RectOffset(0, 0, 0, 0)         // No margin - controlled at layout level
+                    padding = new RectOffset(12, 12, 8, 8),     // Standard Unity padding
+                    margin = new RectOffset(0, 0, 0, 0)
                 };
 
                 Pill = new GUIStyle(EditorStyles.miniBoldLabel)
@@ -144,26 +148,10 @@ namespace GameLabs.Forge.Editor
         {
             UI.Init();
 
-            // Top spacing to separate from Unity chrome
-            GUILayout.Space(8);
-            
-            // Subtle top divider
-            var dividerRect = EditorGUILayout.GetControlRect(false, 1);
-            EditorGUI.DrawRect(dividerRect, UI.Line);
-
             DrawTopBar();
             DrawToolbar();
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
-
-            // Constrain content width for better readability
-            float maxContentWidth = 800f;
-            float currentWidth = position.width;
-            float horizontalPadding = Mathf.Max(CONTENT_PADDING, (currentWidth - maxContentWidth) / 2f);
-            
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(horizontalPadding);
-            GUILayout.BeginVertical();
 
             // Dim configuration when results are showing (signals phase change)
             bool hasResults = _lastGenerated.Count > 0;
@@ -192,10 +180,6 @@ namespace GameLabs.Forge.Editor
             DrawStatus();
             DrawResults();
 
-            GUILayout.EndVertical();
-            GUILayout.Space(horizontalPadding);
-            GUILayout.EndHorizontal();
-
             EditorGUILayout.EndScrollView();
 
             DrawFooter();
@@ -204,35 +188,42 @@ namespace GameLabs.Forge.Editor
         // ========= Bars =========
         private void DrawTopBar()
         {
-            // Clean, neutral top bar without blue background
-            EditorGUILayout.BeginHorizontal(GUILayout.Height(40));
-            GUILayout.Space(CONTENT_PADDING);
+            // Top divider
+            GUILayout.Space(4);
+            var topDivider = EditorGUILayout.GetControlRect(false, 1);
+            EditorGUI.DrawRect(topDivider, UI.Line);
             
-            // FORGE title (no icon - clean text only)
-            GUILayout.Label("GameLabs | FORGE", UI.Title, GUILayout.Height(24));
+            // Title and buttons - vertically centered between dividers
+            GUILayout.Space(8);
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(12);
+            
+            // FORGE title
+            GUILayout.Label("GameLabs | FORGE", UI.Title);
             
             GUILayout.FlexibleSpace();
             
-            // Settings button (gear icon only, proper semantic)
-            if (GUILayout.Button(new GUIContent(UI.Gear, "Settings"), GUILayout.Width(28), GUILayout.Height(28)))
+            // Settings button
+            if (GUILayout.Button(new GUIContent(UI.Gear, "Settings"), GUILayout.Width(24), GUILayout.Height(24)))
             {
                 ForgeSettingsWindow.Open();
             }
             
             GUILayout.Space(4);
             
-            // Statistics button (chart icon)
-            if (GUILayout.Button(new GUIContent("📊", "Statistics"), GUILayout.Width(28), GUILayout.Height(28)))
+            // Statistics button
+            if (GUILayout.Button(new GUIContent("📊", "Statistics"), GUILayout.Width(24), GUILayout.Height(24)))
             {
                 ForgeStatisticsWindow.Open();
             }
             
-            GUILayout.Space(CONTENT_PADDING);
+            GUILayout.Space(12);
             EditorGUILayout.EndHorizontal();
+            GUILayout.Space(8);
             
             // Bottom divider
-            var dividerRect = EditorGUILayout.GetControlRect(false, 1);
-            EditorGUI.DrawRect(dividerRect, UI.Line);
+            var bottomDivider = EditorGUILayout.GetControlRect(false, 1);
+            EditorGUI.DrawRect(bottomDivider, UI.Line);
         }
 
         private void DrawToolbar()
@@ -1033,19 +1024,19 @@ namespace GameLabs.Forge.Editor
 
         private void DrawFooter()
         {
-            GUILayout.Space(12);
+            GUILayout.Space(8);
             var r = EditorGUILayout.GetControlRect(false, 1);
             EditorGUI.DrawRect(r, UI.Line);
-            GUILayout.Space(8);
+            GUILayout.Space(6);
             
             EditorGUILayout.BeginHorizontal();
-            GUILayout.Space(CONTENT_PADDING);
+            GUILayout.Space(12);
             GUILayout.Label("GameLabs | FORGE", UI.Hint);
             GUILayout.FlexibleSpace();
-            GUILayout.Space(CONTENT_PADDING);
+            GUILayout.Space(12);
             EditorGUILayout.EndHorizontal();
             
-            GUILayout.Space(8);
+            GUILayout.Space(6);
         }
 
         // ========= Section header helper =========
