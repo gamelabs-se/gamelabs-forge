@@ -6,50 +6,61 @@ using System;
 
 namespace GameLabs.Forge.Editor
 {
+    /// <summary>
+    /// First-run onboarding wizard. After completion, Settings becomes the single source of truth.
+    /// </summary>
+    [InitializeOnLoad]
     public class ForgeSetupWizard : EditorWindow
     {
-        private const string ConfigPath = "Assets/GameLabs/Forge/Settings/forge.config.json";
-        private const string SettingsKey = "ForgeWizardSettings";
+        private const string HasCompletedWizardKey = "GameLabs.Forge.HasCompletedWizard";
         
         // Wizard state
         private int currentStep = 0;
         private Vector2 scrollPos;
         
-        // Step 1: API Configuration
+        // Step 1: API Configuration (REQUIRED)
         private string apiKey = "";
         private ForgeAIModel model = ForgeAIModel.GPT4o;
         
-        // Step 2: Game Context
+        // Step 2: Game Context (DEFAULTS ONLY)
         private string gameName = "My Game";
-        private string gameDescription = "A fantasy RPG with dark themes and challenging combat.";
+        private string gameDescription = "";
         private string targetAudience = "General";
         private readonly string[] audienceOptions = { "General", "Casual", "Hardcore", "Kids", "Mature" };
         private int selectedAudienceIndex = 0;
         
-        // Step 3: Generation Settings
-        private int defaultBatchSize = 5;
-        private int maxBatchSize = 20;
+        // Simplified - only essential defaults
         private float temperature = 0.8f;
-        private string additionalRules = "";
-        
-        // Step 4: Asset Path Settings
-        private string existingAssetsSearchPath = "Assets";
-        private string generatedAssetsBasePath = "Resources/Generated";
-        private bool autoLoadExistingAssets = true;
-        private ExistingItemsIntent intent = ExistingItemsIntent.PreventDuplicatesAndRefineNaming;
+        private int defaultBatchSize = 5;
         
         // Validation
         private bool apiKeyValid = false;
         
+        // Auto-open on first run
+        static ForgeSetupWizard()
+        {
+            EditorApplication.update += CheckFirstRun;
+        }
+        
+        private static void CheckFirstRun()
+        {
+            EditorApplication.update -= CheckFirstRun;
+            
+            if (!EditorPrefs.HasKey(HasCompletedWizardKey))
+            {
+                EditorApplication.delayCall += () => Open();
+            }
+        }
+        
         [MenuItem("GameLabs/Forge/ ", priority = 10)]
         private static void AddSeparator() { }
 
-        [MenuItem("GameLabs/Forge/Setup Wizard", priority = 11)]
+        [MenuItem("GameLabs/Forge/Re-run Setup Wizard", priority = 11)]
         public static void Open()
         {
             var window = GetWindow<ForgeSetupWizard>("Setup Wizard");
-            window.minSize = new Vector2(550, 650);
-            window.maxSize = new Vector2(700, 900);
+            window.minSize = new Vector2(500, 550);
+            window.maxSize = new Vector2(600, 700);
             window.LoadSavedSettings();
         }
         
@@ -65,27 +76,18 @@ namespace GameLabs.Forge.Editor
         {
             try
             {
-                // Load API key from EditorPrefs
+                // Load from Settings (single source of truth)
                 apiKey = ForgeConfig.GetOpenAIKey() ?? "";
                 apiKeyValid = !string.IsNullOrEmpty(apiKey);
                 
-                // Load all other settings from EditorPrefs
                 var settings = ForgeConfig.GetGeneratorSettings();
-                
                 model = settings.model;
                 gameName = settings.gameName ?? "My Game";
                 gameDescription = settings.gameDescription ?? "";
                 targetAudience = settings.targetAudience ?? "General";
-                defaultBatchSize = settings.defaultBatchSize;
-                maxBatchSize = settings.maxBatchSize;
                 temperature = settings.temperature;
-                additionalRules = settings.additionalRules ?? "";
-                existingAssetsSearchPath = settings.existingAssetsSearchPath ?? "Assets";
-                generatedAssetsBasePath = settings.generatedAssetsBasePath ?? "Resources/Generated";
-                autoLoadExistingAssets = settings.autoLoadExistingAssets;
-                intent = settings.intent;
+                defaultBatchSize = settings.defaultBatchSize;
                 
-                // Update indices
                 selectedAudienceIndex = Array.IndexOf(audienceOptions, targetAudience);
                 if (selectedAudienceIndex < 0) selectedAudienceIndex = 0;
             }
@@ -99,29 +101,33 @@ namespace GameLabs.Forge.Editor
         {
             try
             {
-                // Save API key to EditorPrefs (user-specific, won't be exported)
+                // Write initial values to Settings (which becomes the source of truth)
                 ForgeConfig.SetOpenAIKey(apiKey);
+                ForgeConfig.SetModel(model);
+                ForgeConfig.SetTemperature(temperature);
                 
-                // Save all other settings to EditorPrefs
                 var settings = new ForgeGeneratorSettings
                 {
                     model = model,
                     gameName = gameName,
                     gameDescription = gameDescription,
                     targetAudience = targetAudience,
-                    defaultBatchSize = defaultBatchSize,
-                    maxBatchSize = maxBatchSize,
                     temperature = temperature,
-                    additionalRules = additionalRules,
-                    existingAssetsSearchPath = existingAssetsSearchPath,
-                    generatedAssetsBasePath = generatedAssetsBasePath,
-                    autoLoadExistingAssets = autoLoadExistingAssets,
-                    intent = intent
+                    defaultBatchSize = defaultBatchSize,
+                    maxBatchSize = 20,  // Default
+                    additionalRules = "",
+                    existingAssetsSearchPath = "Assets",
+                    generatedAssetsBasePath = "Resources/Generated",
+                    autoLoadExistingAssets = true,
+                    intent = ExistingItemsIntent.PreventDuplicatesAndRefineNaming
                 };
                 
                 ForgeConfig.SaveGeneratorSettings(settings);
                 
-                ForgeLogger.Success("Configuration saved to UserSettings/ForgeConfig.json (project-specific).");
+                // Mark wizard as completed
+                EditorPrefs.SetBool(HasCompletedWizardKey, true);
+                
+                ForgeLogger.Success("Initial configuration saved. Use Settings to make changes.");
             }
             catch (Exception e)
             {
@@ -147,9 +153,6 @@ namespace GameLabs.Forge.Editor
                     DrawGameContextStep();
                     break;
                 case 2:
-                    DrawGenerationSettingsStep();
-                    break;
-                case 3:
                     DrawCompletionStep();
                     break;
             }
