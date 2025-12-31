@@ -143,18 +143,59 @@ namespace GameLabs.Forge.Editor
         {
             UI.Init();
 
-            DrawTopBar();        // no extra vertical padding
+            // Top spacing to separate from Unity chrome
+            GUILayout.Space(8);
+            
+            // Subtle top divider
+            var dividerRect = EditorGUILayout.GetControlRect(false, 1);
+            EditorGUI.DrawRect(dividerRect, UI.Line);
+
+            DrawTopBar();
             DrawToolbar();
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
+
+            // Constrain content width for better readability
+            float maxContentWidth = 800f;
+            float currentWidth = position.width;
+            float horizontalPadding = Mathf.Max(0, (currentWidth - maxContentWidth) / 2f);
+            
+            if (horizontalPadding > 0)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Space(horizontalPadding);
+                GUILayout.BeginVertical();
+            }
+
+            // Dim configuration when results are showing (signals phase change)
+            bool hasResults = _lastGenerated.Count > 0;
+            if (hasResults)
+            {
+                GUI.enabled = false;
+                GUI.color = new Color(1, 1, 1, 0.6f);
+            }
 
             DrawTemplateSection();      // #1 - Template first
             DrawGenerateOptions();      // #2 - How many to generate
             DrawSaveOptions();          // #3 - Where to save
             DrawAdvancedSection();      // #4 - Collapsed advanced options
+            
+            if (hasResults)
+            {
+                GUI.enabled = true;
+                GUI.color = Color.white;
+            }
+            
             DrawPrimaryButton();        // #5 - Big generate button
             DrawStatus();
             DrawResults();
+
+            if (horizontalPadding > 0)
+            {
+                GUILayout.EndVertical();
+                GUILayout.Space(horizontalPadding);
+                GUILayout.EndHorizontal();
+            }
 
             EditorGUILayout.EndScrollView();
 
@@ -164,75 +205,41 @@ namespace GameLabs.Forge.Editor
         // ========= Bars =========
         private void DrawTopBar()
         {
-            // Create icon button style for consistent sizing and appearance
-            var iconBtnStyle = new GUIStyle(EditorStyles.iconButton)
-            {
-                fixedWidth = 32,
-                fixedHeight = 32,
-                margin = new RectOffset(2, 2, 6, 6),
-                padding = new RectOffset(4, 4, 4, 4)
-            };
-
-            // Draw background bar
-            var rect = EditorGUILayout.GetControlRect(GUILayout.Height(36));
-            EditorGUI.DrawRect(new Rect(0, rect.y, position.width, 36), UI.AccentDim);
-            
-            // Content: icon + title on left, buttons on right
-            EditorGUILayout.BeginHorizontal(GUILayout.Height(36));
+            // Clean, neutral top bar without blue background
+            EditorGUILayout.BeginHorizontal(GUILayout.Height(40));
             GUILayout.Space(12);
             
-            GUILayout.Label(UI.Play, GUILayout.Width(20), GUILayout.Height(20));
-            GUILayout.Space(8);
+            // FORGE title (no icon - clean text only)
             GUILayout.Label("FORGE", UI.Title, GUILayout.Height(24));
             
             GUILayout.FlexibleSpace();
             
-            // Settings button
-            if (GUILayout.Button(new GUIContent(UI.Gear, "Settings"), iconBtnStyle))
+            // Settings button (gear icon only, proper semantic)
+            if (GUILayout.Button(new GUIContent(UI.Gear, "Settings"), GUILayout.Width(28), GUILayout.Height(28)))
             {
                 ForgeSettingsWindow.Open();
             }
             
-            // Statistics button
-            if (GUILayout.Button(new GUIContent(UI.BarChart, "Statistics"), iconBtnStyle))
+            GUILayout.Space(4);
+            
+            // Statistics button (chart icon)
+            if (GUILayout.Button(new GUIContent("📊", "Statistics"), GUILayout.Width(28), GUILayout.Height(28)))
             {
                 ForgeStatisticsWindow.Open();
             }
             
             GUILayout.Space(8);
             EditorGUILayout.EndHorizontal();
+            
+            // Bottom divider
+            var dividerRect = EditorGUILayout.GetControlRect(false, 1);
+            EditorGUI.DrawRect(dividerRect, UI.Line);
         }
 
         private void DrawToolbar()
         {
-            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-            GUILayout.Label("Actions", GUILayout.Width(60));
-
-            using (new EditorGUI.DisabledScope(_template == null))
-            {
-                if (GUILayout.Button(new GUIContent(" Find Items", UI.Search), UI.ToolbarBtn))
-                    FindExistingItems();
-
-                if (GUILayout.Button(new GUIContent(" Open Folder", UI.Folder), UI.ToolbarBtn))
-                    OpenGeneratedFolder();
-            }
-
-            if (GUILayout.Button(new GUIContent(" Clear", UI.Trash), UI.ToolbarBtn))
-            {
-                _lastGenerated.Clear();
-                _status = "";
-                _statusType = MessageType.None;
-            }
-
-            GUILayout.FlexibleSpace();
-
-            if (_foundCount > 0)
-            {
-                GUILayout.Label($"Discovered: {_foundCount}", UI.Header);
-                if (GUILayout.Button("View", UI.ToolbarBtn, GUILayout.Width(60)))
-                    ShowFoundPopup();
-            }
-            EditorGUILayout.EndHorizontal();
+            // Removed - tabs don't represent real navigation modes
+            // Actions moved to context-appropriate locations (results section, etc.)
         }
 
         // ========= Sections =========
@@ -473,8 +480,20 @@ namespace GameLabs.Forge.Editor
         {
             DrawSectionHeader("1. Select Template");
 
+            bool hasTemplate = _template != null;
+            
             using (new EditorGUILayout.VerticalScope(UI.Card))
             {
+                // Ready indicator when template is set
+                if (hasTemplate)
+                {
+                    var readyRect = EditorGUILayout.GetControlRect(GUILayout.Height(24));
+                    EditorGUI.DrawRect(readyRect, new Color(0.2f, 0.75f, 0.35f, 0.15f));
+                    var labelStyle = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter };
+                    EditorGUI.LabelField(readyRect, "✓ Template Detected", labelStyle);
+                    GUILayout.Space(4);
+                }
+                
                 var old = EditorGUIUtility.labelWidth;
                 EditorGUIUtility.labelWidth = LABEL_W;
 
@@ -506,7 +525,7 @@ namespace GameLabs.Forge.Editor
                     EditorGUI.DrawRect(pillRect, new Color(0.2f, 0.75f, 0.35f, 0.18f));
                     GUI.Label(pillRect, $"Fields: {schema.fields.Count}", UI.Pill);
                     GUILayout.FlexibleSpace();
-                    if (GUILayout.Button(new GUIContent(UI.Eye, "Preview schema"), GUILayout.Height(22), GUILayout.Width(140)))
+                    if (GUILayout.Button(new GUIContent("Preview Schema", "View field structure"), GUILayout.Height(22), GUILayout.Width(120)))
                     {
                         var desc = ForgeSchemaExtractor.GenerateSchemaDescription(schema);
                         EditorUtility.DisplayDialog("Schema Preview", desc, "OK");
@@ -629,6 +648,9 @@ namespace GameLabs.Forge.Editor
                 EditorPrefs.SetBool("GameLabs.Forge.ShowAdvanced", _showAdvanced);
             }
             EditorGUILayout.EndHorizontal();
+            
+            // Subtitle
+            GUILayout.Label("Rarely needed for basic generation", UI.Hint);
 
             if (!_showAdvanced) return;
 
@@ -836,28 +858,32 @@ namespace GameLabs.Forge.Editor
         {
             bool hasTemplateOrBlueprint = _template != null || (_blueprint != null && _blueprint.Template != null);
             
-            GUILayout.Space(8);
+            GUILayout.Space(12);
             
             EditorGUI.BeginDisabledGroup(_isGenerating || !hasTemplateOrBlueprint);
 
-            var r = GUILayoutUtility.GetRect(0, 50, GUILayout.ExpandWidth(true));
+            var r = GUILayoutUtility.GetRect(0, 52, GUILayout.ExpandWidth(true));
 
-            // background with stronger visual weight
-            EditorGUI.DrawRect(r, hasTemplateOrBlueprint ? UI.Accent : new Color(0, 0, 0, 0.08f));
+            // Clean background with proper corners (no 1px gaps)
+            var bgRect = new Rect(r.x, r.y, r.width, r.height);
+            if (hasTemplateOrBlueprint)
+            {
+                EditorGUI.DrawRect(bgRect, UI.Accent);
+            }
+            else
+            {
+                EditorGUI.DrawRect(bgRect, new Color(0, 0, 0, 0.12f));
+            }
             
-            // hover tint
+            // Hover effect
             if (r.Contains(Event.current.mousePosition) && !_isGenerating && hasTemplateOrBlueprint)
-                EditorGUI.DrawRect(r, new Color(1, 1, 1, 0.1f));
+                EditorGUI.DrawRect(bgRect, new Color(1, 1, 1, 0.08f));
 
-            // click area
-            if (GUI.Button(r, GUIContent.none))
+            // Click area
+            if (GUI.Button(r, GUIContent.none, GUIStyle.none))
                 GenerateItems();
 
-            // icon
-            var iconRect = new Rect(r.x + 16, r.y + (r.height - 24) / 2f, 24, 24);
-            GUI.DrawTexture(iconRect, UI.Play, ScaleMode.ScaleToFit, true);
-
-            // label (centered) with better messaging
+            // Text only (no icon - clean and clear)
             string text;
             if (!hasTemplateOrBlueprint)
             {
@@ -873,13 +899,14 @@ namespace GameLabs.Forge.Editor
             }
             
             var textStyle = new GUIStyle(UI.PrimaryBtnText);
-            if (hasTemplateOrBlueprint)
-            {
-                textStyle.normal.textColor = Color.white;
-            }
+            textStyle.normal.textColor = hasTemplateOrBlueprint ? Color.white : 
+                (EditorGUIUtility.isProSkin ? new Color(1, 1, 1, 0.5f) : new Color(0, 0, 0, 0.5f));
+            
             EditorGUI.LabelField(r, text, textStyle);
 
             EditorGUI.EndDisabledGroup();
+            
+            GUILayout.Space(8);
         }
 
         // ========= Status & Results =========
@@ -942,9 +969,9 @@ namespace GameLabs.Forge.Editor
                         SaveSingleItem(item, i);
                     }
                     
-                    // Red discard button
-                    GUI.backgroundColor = new Color(1f, 0.4f, 0.4f); // red
-                    if (GUILayout.Button("Discard", GUILayout.Width(60)))
+                    // Softer "Remove" instead of "Discard"
+                    GUI.backgroundColor = new Color(1f, 0.5f, 0.5f);
+                    if (GUILayout.Button("Remove", GUILayout.Width(60)))
                     {
                         _lastGenerated.RemoveAt(i);
                         _itemSavedState.Remove(item);
@@ -971,14 +998,19 @@ namespace GameLabs.Forge.Editor
                     }
                 }
                 
-                // Discard All button (red)
-                GUI.backgroundColor = new Color(1f, 0.4f, 0.4f); // red
-                if (GUILayout.Button(new GUIContent(" Discard All", UI.Trash), GUILayout.Height(24)))
+                // Remove All button with confirmation
+                GUI.backgroundColor = new Color(1f, 0.5f, 0.5f);
+                if (GUILayout.Button(new GUIContent(" Remove All", UI.Trash), GUILayout.Height(24)))
                 {
-                    _lastGenerated.Clear();
-                    _itemSavedState.Clear();
-                    _status = "";
-                    _statusType = MessageType.None;
+                    if (EditorUtility.DisplayDialog("Remove All Items?", 
+                        "This will remove all generated items. Saved assets will not be deleted.", 
+                        "Remove All", "Cancel"))
+                    {
+                        _lastGenerated.Clear();
+                        _itemSavedState.Clear();
+                        _status = "";
+                        _statusType = MessageType.None;
+                    }
                 }
                 GUI.backgroundColor = Color.white;
                 
