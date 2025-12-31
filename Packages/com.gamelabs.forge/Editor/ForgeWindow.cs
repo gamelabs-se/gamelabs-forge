@@ -48,12 +48,13 @@ namespace GameLabs.Forge.Editor
         private readonly Dictionary<ScriptableObject, bool> _itemSavedState = new(); // track saved/unsaved
 
         private const float LABEL_W = 120f; // unified label width
+        private const float CONTENT_PADDING = 16f; // canonical horizontal padding everywhere
 
         [MenuItem("GameLabs/Forge/FORGE", priority = 0)]
         public static void OpenWindow()
         {
             var w = GetWindow<ForgeWindow>();
-            w.titleContent = new GUIContent("FORGE", EditorGUIUtility.IconContent("d_PlayButton On").image);
+            w.titleContent = new GUIContent("GameLabs | FORGE");
             w.minSize = new Vector2(560, 660);
             w.maxSize = new Vector2(1200, 1400);
         }
@@ -108,8 +109,8 @@ namespace GameLabs.Forge.Editor
 
                 Card = new GUIStyle("HelpBox")
                 {
-                    padding = new RectOffset(10, 10, 10, 10),
-                    margin = new RectOffset(0, 0, 6, 6)
+                    padding = new RectOffset(16, 16, 10, 10),  // Normalized horizontal padding
+                    margin = new RectOffset(0, 0, 0, 0)         // No margin - controlled at layout level
                 };
 
                 Pill = new GUIStyle(EditorStyles.miniBoldLabel)
@@ -158,14 +159,11 @@ namespace GameLabs.Forge.Editor
             // Constrain content width for better readability
             float maxContentWidth = 800f;
             float currentWidth = position.width;
-            float horizontalPadding = Mathf.Max(0, (currentWidth - maxContentWidth) / 2f);
+            float horizontalPadding = Mathf.Max(CONTENT_PADDING, (currentWidth - maxContentWidth) / 2f);
             
-            if (horizontalPadding > 0)
-            {
-                GUILayout.BeginHorizontal();
-                GUILayout.Space(horizontalPadding);
-                GUILayout.BeginVertical();
-            }
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(horizontalPadding);
+            GUILayout.BeginVertical();
 
             // Dim configuration when results are showing (signals phase change)
             bool hasResults = _lastGenerated.Count > 0;
@@ -176,8 +174,11 @@ namespace GameLabs.Forge.Editor
             }
 
             DrawTemplateSection();      // #1 - Template first
+            GUILayout.Space(4);          // Reduced spacing between sections
             DrawGenerateOptions();      // #2 - How many to generate
+            GUILayout.Space(4);
             DrawSaveOptions();          // #3 - Where to save
+            GUILayout.Space(4);
             DrawAdvancedSection();      // #4 - Collapsed advanced options
             
             if (hasResults)
@@ -186,16 +187,14 @@ namespace GameLabs.Forge.Editor
                 GUI.color = Color.white;
             }
             
+            GUILayout.Space(8);          // Space before primary action
             DrawPrimaryButton();        // #5 - Big generate button
             DrawStatus();
             DrawResults();
 
-            if (horizontalPadding > 0)
-            {
-                GUILayout.EndVertical();
-                GUILayout.Space(horizontalPadding);
-                GUILayout.EndHorizontal();
-            }
+            GUILayout.EndVertical();
+            GUILayout.Space(horizontalPadding);
+            GUILayout.EndHorizontal();
 
             EditorGUILayout.EndScrollView();
 
@@ -207,10 +206,10 @@ namespace GameLabs.Forge.Editor
         {
             // Clean, neutral top bar without blue background
             EditorGUILayout.BeginHorizontal(GUILayout.Height(40));
-            GUILayout.Space(12);
+            GUILayout.Space(CONTENT_PADDING);
             
             // FORGE title (no icon - clean text only)
-            GUILayout.Label("FORGE", UI.Title, GUILayout.Height(24));
+            GUILayout.Label("GameLabs | FORGE", UI.Title, GUILayout.Height(24));
             
             GUILayout.FlexibleSpace();
             
@@ -228,7 +227,7 @@ namespace GameLabs.Forge.Editor
                 ForgeStatisticsWindow.Open();
             }
             
-            GUILayout.Space(8);
+            GUILayout.Space(CONTENT_PADDING);
             EditorGUILayout.EndHorizontal();
             
             // Bottom divider
@@ -484,14 +483,18 @@ namespace GameLabs.Forge.Editor
             
             using (new EditorGUILayout.VerticalScope(UI.Card))
             {
-                // Ready indicator when template is set
+                // Ready indicator when template is set (compact badge)
                 if (hasTemplate)
                 {
-                    var readyRect = EditorGUILayout.GetControlRect(GUILayout.Height(24));
+                    var readyRect = EditorGUILayout.GetControlRect(GUILayout.Height(20));
                     EditorGUI.DrawRect(readyRect, new Color(0.2f, 0.75f, 0.35f, 0.15f));
-                    var labelStyle = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter };
+                    var labelStyle = new GUIStyle(EditorStyles.miniLabel) 
+                    { 
+                        alignment = TextAnchor.MiddleCenter,
+                        fontSize = 10
+                    };
                     EditorGUI.LabelField(readyRect, "✓ Template Detected", labelStyle);
-                    GUILayout.Space(4);
+                    GUILayout.Space(6);
                 }
                 
                 var old = EditorGUIUtility.labelWidth;
@@ -648,9 +651,6 @@ namespace GameLabs.Forge.Editor
                 EditorPrefs.SetBool("GameLabs.Forge.ShowAdvanced", _showAdvanced);
             }
             EditorGUILayout.EndHorizontal();
-            
-            // Subtitle
-            GUILayout.Label("Rarely needed for basic generation", UI.Hint);
 
             if (!_showAdvanced) return;
 
@@ -858,10 +858,9 @@ namespace GameLabs.Forge.Editor
         {
             bool hasTemplateOrBlueprint = _template != null || (_blueprint != null && _blueprint.Template != null);
             
-            GUILayout.Space(12);
-            
             EditorGUI.BeginDisabledGroup(_isGenerating || !hasTemplateOrBlueprint);
 
+            // Aligned to content bounds, not full width
             var r = GUILayoutUtility.GetRect(0, 52, GUILayout.ExpandWidth(true));
 
             // Clean background with proper corners (no 1px gaps)
@@ -905,8 +904,6 @@ namespace GameLabs.Forge.Editor
             EditorGUI.LabelField(r, text, textStyle);
 
             EditorGUI.EndDisabledGroup();
-            
-            GUILayout.Space(8);
         }
 
         // ========= Status & Results =========
@@ -1036,21 +1033,30 @@ namespace GameLabs.Forge.Editor
 
         private void DrawFooter()
         {
-            var r = EditorGUILayout.GetControlRect(false, 22);
-            EditorGUI.DrawRect(new Rect(r.x, r.y, r.width, 1), UI.Line);
-            GUILayout.Space(2);
-            GUILayout.Label("FORGE • GameLabs", UI.Hint);
-            GUILayout.Space(2);
+            GUILayout.Space(12);
+            var r = EditorGUILayout.GetControlRect(false, 1);
+            EditorGUI.DrawRect(r, UI.Line);
+            GUILayout.Space(8);
+            
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(CONTENT_PADDING);
+            GUILayout.Label("GameLabs | FORGE", UI.Hint);
+            GUILayout.FlexibleSpace();
+            GUILayout.Space(CONTENT_PADDING);
+            EditorGUILayout.EndHorizontal();
+            
+            GUILayout.Space(8);
         }
 
         // ========= Section header helper =========
         private void DrawSectionHeader(string title)
         {
-            GUILayout.Space(6);
-            var rect = EditorGUILayout.GetControlRect(false, 22);
-            var line = new Rect(rect.x, rect.y + rect.height - 3, rect.width, 2);
+            GUILayout.Space(8);
+            var rect = EditorGUILayout.GetControlRect(false, 20);
+            var line = new Rect(rect.x, rect.y + rect.height - 2, rect.width, 1);
             EditorGUI.DrawRect(line, UI.Line);
             EditorGUI.LabelField(rect, title, UI.Section);
+            GUILayout.Space(4);
         }
 
         // ========= Logic =========
