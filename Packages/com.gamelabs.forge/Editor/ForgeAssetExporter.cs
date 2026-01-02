@@ -90,11 +90,29 @@ namespace GameLabs.Forge.Editor
                     return null;
                 }
                 
-                // Generate unique filename
+                // Generate unique filename from item data
                 string assetName = asset.name;
                 if (string.IsNullOrEmpty(assetName))
                 {
-                    assetName = $"{typeof(T).Name}_{DateTime.Now:yyyyMMdd_HHmmss}";
+                    // Try to extract name from the item's properties (e.g., name, displayName, itemName)
+                    var nameProperty = typeof(T).GetProperty("name") 
+                        ?? typeof(T).GetProperty("displayName") 
+                        ?? typeof(T).GetProperty("itemName");
+                    
+                    if (nameProperty != null)
+                    {
+                        var nameValue = nameProperty.GetValue(item);
+                        if (nameValue != null && !string.IsNullOrEmpty(nameValue.ToString()))
+                        {
+                            assetName = nameValue.ToString();
+                        }
+                    }
+                    
+                    // Final fallback: just use the type name
+                    if (string.IsNullOrEmpty(assetName))
+                    {
+                        assetName = typeof(T).Name;
+                    }
                 }
                 
                 string fileName = GetUniqueFileName(folderPath, assetName);
