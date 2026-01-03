@@ -31,11 +31,12 @@ namespace GameLabs.Forge.Editor
         [SerializeField]
         private string _instructions = "";
 
+        [HideInInspector]
         [SerializeField]
-        private ForgeDuplicateStrategy _duplicateStrategy = ForgeDuplicateStrategy.Ignore;
+        private bool _overrideDuplicateStrategy = false;
 
         [SerializeField]
-        private List<ScriptableObject> _existingItems = new List<ScriptableObject>();
+        private ForgeDuplicateStrategy _duplicateStrategy = ForgeDuplicateStrategy.Ignore;
 
         [SerializeField]
         private string _discoveryPathOverride = ""; // Empty = use global default
@@ -59,7 +60,17 @@ namespace GameLabs.Forge.Editor
         }
 
         /// <summary>
+        /// Whether this blueprint overrides the global duplicate strategy.
+        /// </summary>
+        public bool OverrideDuplicateStrategy
+        {
+            get => _overrideDuplicateStrategy;
+            set => _overrideDuplicateStrategy = value;
+        }
+
+        /// <summary>
         /// Strategy for handling duplicate prevention in generation requests.
+        /// Only used if OverrideDuplicateStrategy is true.
         /// </summary>
         public ForgeDuplicateStrategy DuplicateStrategy
         {
@@ -68,11 +79,13 @@ namespace GameLabs.Forge.Editor
         }
 
         /// <summary>
-        /// List of existing items to check/avoid during generation.
+        /// Gets the effective duplicate strategy (override if set, otherwise global default).
         /// </summary>
-        public List<ScriptableObject> ExistingItems
+        public ForgeDuplicateStrategy GetEffectiveDuplicateStrategy()
         {
-            get => _existingItems;
+            var result = _overrideDuplicateStrategy ? _duplicateStrategy : (ForgeConfig.GetGeneratorSettings()?.duplicateStrategy ?? ForgeDuplicateStrategy.Ignore);
+            ForgeLogger.DebugLog($"GetEffectiveDuplicateStrategy: override={_overrideDuplicateStrategy}, blueprintStrat={_duplicateStrategy}, effective={result}");
+            return result;
         }
 
         /// <summary>
@@ -94,25 +107,6 @@ namespace GameLabs.Forge.Editor
 
             var config = ForgeConfig.GetGeneratorSettings();
             return config?.existingAssetsSearchPath ?? "Assets";
-        }
-
-        /// <summary>
-        /// Adds an item to the existing items list (used after successful generation).
-        /// </summary>
-        public void RegisterExistingItem(ScriptableObject item)
-        {
-            if (item != null && !_existingItems.Contains(item))
-            {
-                _existingItems.Add(item);
-            }
-        }
-
-        /// <summary>
-        /// Clears the existing items list for fresh generation.
-        /// </summary>
-        public void ClearExistingItems()
-        {
-            _existingItems.Clear();
         }
 
         /// <summary>

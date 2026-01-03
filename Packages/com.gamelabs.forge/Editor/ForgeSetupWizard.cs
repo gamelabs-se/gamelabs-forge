@@ -118,8 +118,7 @@ namespace GameLabs.Forge.Editor
                     additionalRules = "",
                     existingAssetsSearchPath = "Assets",
                     generatedAssetsBasePath = "Resources/Generated",
-                    autoLoadExistingAssets = true,
-                    intent = ExistingItemsIntent.PreventDuplicatesAndRefineNaming
+                    duplicateStrategy = ForgeDuplicateStrategy.Ignore
                 };
                 
                 ForgeConfig.SaveGeneratorSettings(settings);

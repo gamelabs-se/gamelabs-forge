@@ -25,20 +25,12 @@ namespace GameLabs.Forge.Editor
 
         // ========= Blueprint & Window-Level Settings =========
         private string _blueprintInstructions = "";
+        private bool _blueprintOverrideStrategy = false;
         private ForgeDuplicateStrategy _blueprintStrategy = ForgeDuplicateStrategy.Ignore;
         private string _blueprintDiscoveryPath = "";
         private bool _blueprintDirty = false;
         // Window-level settings (used when no blueprint selected)
         private string _windowInstructions = "";
-        private ForgeDuplicateStrategy _windowStrategy = ForgeDuplicateStrategy.Ignore;
-        private string _windowDiscoveryPath = "";
-
-        private int _foundCount = 0;
-        private List<string> _foundJson = new();
-        
-        // ========= Discovery State =========
-        private string _lastDiscoveredTemplateName = "";
-        private string _lastDiscoveredPath = "";
 
         private bool _isGenerating = false;
         private string _status = "";
@@ -50,13 +42,14 @@ namespace GameLabs.Forge.Editor
         private const float LABEL_W = 120f; // unified label width
         private const float CONTENT_PADDING = 16f; // canonical horizontal padding everywhere
 
-        [MenuItem("GameLabs/Forge/FORGE", priority = 0)]
+        [MenuItem("GameLabs/Forge/Forge Window", priority = 0)]
         public static void OpenWindow()
         {
             var w = GetWindow<ForgeWindow>();
-            // Use hammer/tool icon for the tab
-            var icon = EditorGUIUtility.IconContent("d_SceneViewTools").image;
-            w.titleContent = new GUIContent("GameLabs | FORGE", icon);
+            // Use a more reliable icon
+            var icon = EditorGUIUtility.IconContent("_Popup").image;
+            if (icon == null) icon = EditorGUIUtility.IconContent("Settings").image;
+            w.titleContent = new GUIContent("Forge", icon);
             w.minSize = new Vector2(560, 660);
             w.maxSize = new Vector2(1200, 1400);
         }
@@ -97,9 +90,9 @@ namespace GameLabs.Forge.Editor
             {
                 if (Title != null) return;
 
-                Title = new GUIStyle(EditorStyles.boldLabel) 
-                { 
-                    fontSize = 14, 
+                Title = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    fontSize = 14,
                     alignment = TextAnchor.MiddleLeft
                 };
 
@@ -162,7 +155,7 @@ namespace GameLabs.Forge.Editor
             DrawSaveOptions();          // #3 - Where to save
             GUILayout.Space(4);
             DrawAdvancedSection();      // #4 - Collapsed advanced options
-            
+
             GUILayout.Space(8);          // Space before primary action
             DrawPrimaryButton();        // #5 - Big generate button
             DrawStatus();
@@ -180,35 +173,35 @@ namespace GameLabs.Forge.Editor
             GUILayout.Space(4);
             var topDivider = EditorGUILayout.GetControlRect(false, 1);
             EditorGUI.DrawRect(topDivider, UI.Line);
-            
+
             // Title and buttons - vertically centered between dividers
             GUILayout.Space(8);
             EditorGUILayout.BeginHorizontal();
             GUILayout.Space(12);
-            
+
             // FORGE title
             GUILayout.Label("GameLabs | FORGE", UI.Title);
-            
+
             GUILayout.FlexibleSpace();
-            
+
             // Settings button
             if (GUILayout.Button(new GUIContent(UI.Gear, "Settings"), GUILayout.Width(24), GUILayout.Height(24)))
             {
                 ForgeSettingsWindow.Open();
             }
-            
+
             GUILayout.Space(4);
-            
+
             // Statistics button
             if (GUILayout.Button(new GUIContent("📊", "Statistics"), GUILayout.Width(24), GUILayout.Height(24)))
             {
                 ForgeStatisticsWindow.Open();
             }
-            
+
             GUILayout.Space(12);
             EditorGUILayout.EndHorizontal();
             GUILayout.Space(8);
-            
+
             // Bottom divider
             var bottomDivider = EditorGUILayout.GetControlRect(false, 1);
             EditorGUI.DrawRect(bottomDivider, UI.Line);
@@ -231,7 +224,7 @@ namespace GameLabs.Forge.Editor
                 EditorGUIUtility.labelWidth = LABEL_W;
 
                 EditorGUILayout.BeginHorizontal();
-                
+
                 var oldBlueprint = _blueprint;
                 _blueprint = (ForgeBlueprint)EditorGUILayout.ObjectField(
                     new GUIContent("Blueprint", "Saves template, instructions, and duplicate strategy"),
@@ -242,19 +235,25 @@ namespace GameLabs.Forge.Editor
                 // Trigger refresh if blueprint changed
                 if (_blueprint != oldBlueprint)
                 {
-                    // Clear count to trigger auto-find in next frame, but preserve if we haven't changed actual template
-                    if (oldBlueprint == null || oldBlueprint.Template != (_blueprint?.Template))
+                    ForgeLogger.DebugLog($"Blueprint changed from {oldBlueprint?.name} to {_blueprint?.name}");
+                    
+                    // ALWAYS load blueprint's template - even if null
+                    if (_blueprint != null)
                     {
-                        _foundCount = 0;
-                        _foundJson.Clear();
+                        _template = _blueprint.Template;
+                        ForgeLogger.DebugLog($"Loaded template from blueprint: {(_template != null ? _template.name : "NULL")}");
                     }
+
                     // Load blueprint values into editor fields
                     if (_blueprint != null)
                     {
                         _blueprintInstructions = _blueprint.Instructions;
+                        _blueprintOverrideStrategy = _blueprint.OverrideDuplicateStrategy;
                         _blueprintStrategy = _blueprint.DuplicateStrategy;
                         _blueprintDiscoveryPath = _blueprint.DiscoveryPathOverride;
                         _blueprintDirty = false;
+                        
+                        ForgeLogger.DebugLog($"Loaded blueprint settings: override={_blueprintOverrideStrategy}, strategy={_blueprintStrategy}");
                     }
                     // NOTE: Window settings are preserved even if blueprint is removed
                 }
@@ -269,15 +268,33 @@ namespace GameLabs.Forge.Editor
                 if (_blueprint != null)
                 {
                     EditorGUILayout.Space(6);
-                    
+
                     // Editable blueprint settings
-                    EditorGUILayout.LabelField("Template", _blueprint.Template?.name ?? "None", UI.Hint);
-                    
-                    EditorGUILayout.Space(4);
-                    EditorGUILayout.LabelField("Strategy");
-                    _blueprintStrategy = (ForgeDuplicateStrategy)EditorGUILayout.EnumPopup(_blueprintStrategy);
-                    if (_blueprintStrategy != _blueprint.DuplicateStrategy)
-                        _blueprintDirty = true;
+                    EditorGUILayout.LabelField("Duplicate Strategy");
+                    var newStrategy = (ForgeDuplicateStrategy)EditorGUILayout.EnumPopup(_blueprintStrategy);
+                    if (newStrategy != _blueprintStrategy)
+                    {
+                        _blueprintStrategy = newStrategy;
+                        _blueprint.DuplicateStrategy = newStrategy;
+                        _blueprint.OverrideDuplicateStrategy = true;
+                        _blueprintOverrideStrategy = true;
+                        EditorUtility.SetDirty(_blueprint);
+                        AssetDatabase.SaveAssets(); // FORCE SAVE IMMEDIATELY
+                        _blueprintDirty = false;
+                        ForgeLogger.DebugLog($"Strategy changed to {newStrategy}, override=true, SAVED TO DISK");
+                    }
+
+                    var globalSettings = ForgeConfig.GetGeneratorSettings();
+                    var globalStrategy = globalSettings?.duplicateStrategy ?? ForgeDuplicateStrategy.Ignore;
+
+                    if (_blueprintStrategy == globalStrategy)
+                    {
+                        EditorGUILayout.LabelField("(Same as global - no override)", UI.Hint);
+                    }
+                    else
+                    {
+                        EditorGUILayout.LabelField($"(Overriding global: {globalStrategy})", UI.Hint);
+                    }
 
                     EditorGUILayout.Space(4);
                     EditorGUILayout.LabelField("Instructions (Optional)");
@@ -285,6 +302,8 @@ namespace GameLabs.Forge.Editor
                     if (newInstructions != _blueprintInstructions)
                     {
                         _blueprintInstructions = newInstructions;
+                        _blueprint.Instructions = newInstructions;
+                        EditorUtility.SetDirty(_blueprint);
                         _blueprintDirty = true;
                     }
 
@@ -318,109 +337,56 @@ namespace GameLabs.Forge.Editor
                         _blueprintDirty = true;
                     }
                     EditorGUILayout.EndHorizontal();
-                    
-                    // Refresh and discovery info right below path
-                    EditorGUILayout.Space(2);
-                    EditorGUILayout.BeginHorizontal();
-                    if (GUILayout.Button(new GUIContent(UI.Refresh, "Refresh discovery"), GUILayout.Width(32), GUILayout.Height(22)))
-                        FindExistingItems();
-                    GUILayout.Space(8);
-                    string countText = _foundCount > 0 ? $"Discovered: {_foundCount}" : "No items found";
-                    EditorGUILayout.LabelField(countText, UI.Header);
-                    GUILayout.FlexibleSpace();
-                    if (_foundCount > 0 && GUILayout.Button("View", GUILayout.Width(60), GUILayout.Height(22)))
-                        ShowFoundPopup();
-                    EditorGUILayout.EndHorizontal();
-                    var s = ForgeConfig.GetGeneratorSettings();
+
                     string effectivePath = _blueprint.GetEffectiveDiscoveryPath();
-                    GUILayout.Label($"Search path: {effectivePath}", UI.Hint);
+                    GUILayout.Label($"Discovery path: {effectivePath} (auto-discovery on generate)", UI.Hint);
 
                     EditorGUILayout.Space(6);
-                    
+
+                    EditorGUILayout.LabelField("Changes are applied immediately. Save persists to disk.", UI.Hint);
+
                     // Save/Discard buttons
                     EditorGUILayout.BeginHorizontal();
-                    
+
                     using (new EditorGUI.DisabledScope(!_blueprintDirty))
                     {
-                        if (GUILayout.Button(new GUIContent(UI.Save, "Save changes to blueprint"), GUILayout.Height(24)))
+                        if (GUILayout.Button(new GUIContent(UI.Save, "Save changes to disk"), GUILayout.Height(24)))
                         {
-                            _blueprint.Instructions = _blueprintInstructions;
-                            _blueprint.DuplicateStrategy = _blueprintStrategy;
-                            _blueprint.DiscoveryPathOverride = _blueprintDiscoveryPath;
-                            EditorUtility.SetDirty(_blueprint);
                             AssetDatabase.SaveAssets();
                             _blueprintDirty = false;
-                            ForgeLogger.DebugLog($"Blueprint '{_blueprint.DisplayName}' saved.");
+                            ForgeLogger.DebugLog($"Blueprint '{_blueprint.DisplayName}' saved to disk.");
                         }
                     }
-                    
-                    if (GUILayout.Button("Discard", GUILayout.Height(24)))
+
+                    if (GUILayout.Button("Revert", GUILayout.Height(24)))
                     {
+                        AssetDatabase.Refresh();
                         _blueprintInstructions = _blueprint.Instructions;
+                        _blueprintOverrideStrategy = _blueprint.OverrideDuplicateStrategy;
                         _blueprintStrategy = _blueprint.DuplicateStrategy;
                         _blueprintDiscoveryPath = _blueprint.DiscoveryPathOverride;
                         _blueprintDirty = false;
                     }
-                    
+
                     EditorGUILayout.EndHorizontal();
                 }
                 else
                 {
-                    EditorGUILayout.HelpBox(
-                        "Select or create a Blueprint to save generation settings.",
-                        MessageType.Info);
                     EditorGUILayout.Space(6);
-                    EditorGUILayout.LabelField("Strategy");
-                    _windowStrategy = (ForgeDuplicateStrategy)EditorGUILayout.EnumPopup(_windowStrategy);
-                    
+
+                    var globalSettings = ForgeConfig.GetGeneratorSettings();
+                    var globalStrategy = globalSettings?.duplicateStrategy ?? ForgeDuplicateStrategy.Ignore;
+                    EditorGUILayout.LabelField("Duplicate Strategy", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField($"Using global setting: {globalStrategy}", UI.Hint);
+                    EditorGUILayout.HelpBox("Change in Settings window or create a Blueprint to override.", MessageType.Info);
+
                     EditorGUILayout.Space(4);
                     EditorGUILayout.LabelField("Instructions (Optional)");
                     _windowInstructions = EditorGUILayout.TextArea(_windowInstructions, UI.Code, GUILayout.MinHeight(50));
-                    
-                    EditorGUILayout.Space(4);
-                    EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField("Discovery Path", GUILayout.Width(LABEL_W), GUILayout.Height(18));
-                    EditorGUI.BeginDisabledGroup(true);
-                    EditorGUILayout.TextField(string.IsNullOrEmpty(_windowDiscoveryPath) ? "Assets (default)" : _windowDiscoveryPath, GUILayout.Height(18));
-                    EditorGUI.EndDisabledGroup();
-                    if (GUILayout.Button(new GUIContent(UI.Folder, "Browse for folder"), GUILayout.Width(32), GUILayout.Height(18)))
-                    {
-                        string initialPath = string.IsNullOrEmpty(_windowDiscoveryPath) ? "Assets" : _windowDiscoveryPath;
-                        string selected = EditorUtility.OpenFolderPanel("Select Discovery Path", initialPath, "");
-                        if (!string.IsNullOrEmpty(selected))
-                        {
-                            // Convert absolute path to relative if it's within project
-                            if (selected.StartsWith(Application.dataPath))
-                            {
-                                _windowDiscoveryPath = "Assets" + selected.Substring(Application.dataPath.Length);
-                            }
-                            else
-                            {
-                                _windowDiscoveryPath = selected;
-                            }
-                        }
-                    }
-                    if (!string.IsNullOrEmpty(_windowDiscoveryPath) && GUILayout.Button(new GUIContent("✕", "Clear override"), GUILayout.Width(24), GUILayout.Height(18)))
-                    {
-                        _windowDiscoveryPath = "";
-                    }
-                    EditorGUILayout.EndHorizontal();
-                    
-                    // Refresh and discovery info right below path
-                    EditorGUILayout.Space(2);
-                    EditorGUILayout.BeginHorizontal();
-                    if (GUILayout.Button(new GUIContent(UI.Refresh, "Refresh discovery"), GUILayout.Width(32), GUILayout.Height(22)))
-                        FindExistingItems();
-                    GUILayout.Space(8);
-                    string countText = _foundCount > 0 ? $"Discovered: {_foundCount}" : "No items found";
-                    EditorGUILayout.LabelField(countText, UI.Header);
-                    GUILayout.FlexibleSpace();
-                    if (_foundCount > 0 && GUILayout.Button("View", GUILayout.Width(60), GUILayout.Height(22)))
-                        ShowFoundPopup();
-                    EditorGUILayout.EndHorizontal();
+
                     var settings = ForgeConfig.GetGeneratorSettings();
-                    string effectivePath = string.IsNullOrEmpty(_windowDiscoveryPath) ? (settings?.existingAssetsSearchPath ?? "Assets") : _windowDiscoveryPath;
-                    GUILayout.Label($"Search path: {effectivePath}", UI.Hint);
+                    string effectivePath = settings?.existingAssetsSearchPath ?? "Assets";
+                    GUILayout.Label($"Discovery path: {effectivePath} (auto-discovery on generate)", UI.Hint);
                 }
 
                 EditorGUIUtility.labelWidth = old;
@@ -435,22 +401,23 @@ namespace GameLabs.Forge.Editor
 
             var blueprint = ScriptableObject.CreateInstance<ForgeBlueprint>();
             blueprint.name = System.IO.Path.GetFileNameWithoutExtension(path);
-            
+
             // Initialize with current template if available
             if (_template != null)
             {
                 blueprint.Template = _template;
             }
-            
+
             AssetDatabase.CreateAsset(blueprint, path);
             AssetDatabase.SaveAssets();
 
             _blueprint = blueprint;
             _blueprintInstructions = blueprint.Instructions;
+            _blueprintOverrideStrategy = blueprint.OverrideDuplicateStrategy;
             _blueprintStrategy = blueprint.DuplicateStrategy;
             _blueprintDiscoveryPath = blueprint.DiscoveryPathOverride;
             _blueprintDirty = false;
-            
+
             ForgeLogger.DebugLog($"Created new blueprint: {blueprint.DisplayName}");
         }
 
@@ -459,7 +426,7 @@ namespace GameLabs.Forge.Editor
             DrawSectionHeader("1. Select Template");
 
             bool hasTemplate = _template != null;
-            
+
             using (new EditorGUILayout.VerticalScope(UI.Card))
             {
                 // Ready indicator when template is set (compact badge)
@@ -467,15 +434,15 @@ namespace GameLabs.Forge.Editor
                 {
                     var readyRect = EditorGUILayout.GetControlRect(GUILayout.Height(20));
                     EditorGUI.DrawRect(readyRect, new Color(0.2f, 0.75f, 0.35f, 0.15f));
-                    var labelStyle = new GUIStyle(EditorStyles.miniLabel) 
-                    { 
+                    var labelStyle = new GUIStyle(EditorStyles.miniLabel)
+                    {
                         alignment = TextAnchor.MiddleCenter,
                         fontSize = 10
                     };
                     EditorGUI.LabelField(readyRect, "✓ Template Detected", labelStyle);
                     GUILayout.Space(6);
                 }
-                
+
                 var old = EditorGUIUtility.labelWidth;
                 EditorGUIUtility.labelWidth = LABEL_W;
 
@@ -489,8 +456,12 @@ namespace GameLabs.Forge.Editor
                 // Trigger refresh if template changed
                 if (_template != oldTemplate)
                 {
-                    _foundCount = 0;
-                    _foundJson.Clear();
+                    // Template changed - sync to blueprint if one is selected
+                    if (_blueprint != null)
+                    {
+                        _blueprint.Template = _template;
+                        EditorUtility.SetDirty(_blueprint);
+                    }
                 }
 
                 if (_template != null)
@@ -525,34 +496,6 @@ namespace GameLabs.Forge.Editor
                 }
 
                 EditorGUIUtility.labelWidth = old;
-            }
-        }
-
-        private void DrawExistingSection()
-        {
-            // Auto-find when template or discovery path changes
-            var currentTemplate = _blueprint != null ? _blueprint.Template : _template;
-            string currentPath = "Assets";
-            if (_blueprint != null)
-            {
-                currentPath = _blueprint.GetEffectiveDiscoveryPath();
-            }
-            else
-            {
-                var settings = ForgeConfig.GetGeneratorSettings();
-                currentPath = settings?.existingAssetsSearchPath ?? "Assets";
-            }
-
-            string currentTemplateName = currentTemplate?.GetType().Name ?? "";
-            
-            // Check if template or path changed
-            bool templateOrPathChanged = (currentTemplateName != _lastDiscoveredTemplateName) || (currentPath != _lastDiscoveredPath);
-            
-            if (!string.IsNullOrEmpty(currentTemplateName) && templateOrPathChanged)
-            {
-                _foundCount = 0;
-                _foundJson.Clear();
-                FindExistingItems();
             }
         }
 
@@ -639,12 +582,12 @@ namespace GameLabs.Forge.Editor
                 GUILayout.Label("Blueprints", EditorStyles.boldLabel);
                 GUILayout.Label("Blueprints let you reuse generation settings across sessions.", UI.Hint);
                 GUILayout.Space(4);
-                
+
                 var old = EditorGUIUtility.labelWidth;
                 EditorGUIUtility.labelWidth = LABEL_W;
 
                 EditorGUILayout.BeginHorizontal();
-                
+
                 var oldBlueprint = _blueprint;
                 _blueprint = (ForgeBlueprint)EditorGUILayout.ObjectField(
                     new GUIContent("Blueprint", "Saves template, instructions, and duplicate strategy"),
@@ -655,17 +598,21 @@ namespace GameLabs.Forge.Editor
                 // Trigger refresh if blueprint changed
                 if (_blueprint != oldBlueprint)
                 {
-                    if (oldBlueprint == null || oldBlueprint.Template != (_blueprint?.Template))
-                    {
-                        _foundCount = 0;
-                        _foundJson.Clear();
-                    }
+                    ForgeLogger.DebugLog($"Blueprint changed (advanced) from {oldBlueprint?.name} to {_blueprint?.name}");
+                    
+                    // ALWAYS load blueprint's template
                     if (_blueprint != null)
                     {
+                        _template = _blueprint.Template;
+                        ForgeLogger.DebugLog($"Loaded template from blueprint (advanced): {(_template != null ? _template.name : "NULL")}");
+                        
                         _blueprintInstructions = _blueprint.Instructions;
+                        _blueprintOverrideStrategy = _blueprint.OverrideDuplicateStrategy;
                         _blueprintStrategy = _blueprint.DuplicateStrategy;
                         _blueprintDiscoveryPath = _blueprint.DiscoveryPathOverride;
                         _blueprintDirty = false;
+                        
+                        ForgeLogger.DebugLog($"Loaded blueprint settings (advanced): override={_blueprintOverrideStrategy}, strategy={_blueprintStrategy}");
                     }
                 }
 
@@ -679,14 +626,31 @@ namespace GameLabs.Forge.Editor
                 if (_blueprint != null)
                 {
                     EditorGUILayout.Space(6);
-                    
-                    EditorGUILayout.LabelField("Template", _blueprint.Template?.name ?? "None", UI.Hint);
-                    
-                    EditorGUILayout.Space(4);
-                    EditorGUILayout.LabelField("Generation Strategy");
-                    _blueprintStrategy = (ForgeDuplicateStrategy)EditorGUILayout.EnumPopup(_blueprintStrategy);
-                    if (_blueprintStrategy != _blueprint.DuplicateStrategy)
-                        _blueprintDirty = true;
+
+                    EditorGUILayout.LabelField("Duplicate Strategy");
+                    var newStrat = (ForgeDuplicateStrategy)EditorGUILayout.EnumPopup(_blueprintStrategy);
+                    if (newStrat != _blueprintStrategy)
+                    {
+                        _blueprintStrategy = newStrat;
+                        _blueprint.DuplicateStrategy = newStrat;
+                        _blueprint.OverrideDuplicateStrategy = true;
+                        _blueprintOverrideStrategy = true;
+                        EditorUtility.SetDirty(_blueprint);
+                        AssetDatabase.SaveAssets(); // FORCE SAVE IMMEDIATELY
+                        _blueprintDirty = false;
+                        ForgeLogger.DebugLog($"Strategy changed to {newStrat}, override=true, SAVED TO DISK");
+                    }
+
+                    var globalSettings = ForgeConfig.GetGeneratorSettings();
+                    var globalStrategy = globalSettings?.duplicateStrategy ?? ForgeDuplicateStrategy.Ignore;
+                    if (_blueprintStrategy == globalStrategy)
+                    {
+                        EditorGUILayout.LabelField("(Same as global - no override)", UI.Hint);
+                    }
+                    else
+                    {
+                        EditorGUILayout.LabelField($"(Overriding global: {globalStrategy})", UI.Hint);
+                    }
 
                     EditorGUILayout.Space(4);
                     EditorGUILayout.LabelField("Additional Instructions (optional)");
@@ -694,6 +658,8 @@ namespace GameLabs.Forge.Editor
                     if (newInstructions != _blueprintInstructions)
                     {
                         _blueprintInstructions = newInstructions;
+                        _blueprint.Instructions = newInstructions;
+                        EditorUtility.SetDirty(_blueprint);
                         _blueprintDirty = true;
                     }
 
@@ -726,117 +692,62 @@ namespace GameLabs.Forge.Editor
                         _blueprintDirty = true;
                     }
                     EditorGUILayout.EndHorizontal();
-                    
-                    EditorGUILayout.Space(2);
-                    EditorGUILayout.BeginHorizontal();
-                    if (GUILayout.Button(new GUIContent(UI.Refresh, "Refresh discovery"), GUILayout.Width(32), GUILayout.Height(22)))
-                        FindExistingItems();
-                    GUILayout.Space(8);
-                    string countText = _foundCount > 0 ? $"Discovered: {_foundCount} existing items" : "Used to scan existing assets to reduce duplicates. Can be ignored.";
-                    EditorGUILayout.LabelField(countText, UI.Hint);
-                    GUILayout.FlexibleSpace();
-                    if (_foundCount > 0 && GUILayout.Button("View", GUILayout.Width(60), GUILayout.Height(22)))
-                        ShowFoundPopup();
-                    EditorGUILayout.EndHorizontal();
-                    var s = ForgeConfig.GetGeneratorSettings();
+
                     string effectivePath = _blueprint.GetEffectiveDiscoveryPath();
-                    GUILayout.Label($"Search path: {effectivePath}", UI.Hint);
+                    GUILayout.Label($"Discovery path: {effectivePath} (auto-discovery on generate)", UI.Hint);
 
                     EditorGUILayout.Space(6);
-                    
+
+                    EditorGUILayout.LabelField("Changes are applied immediately. Save persists to disk.", UI.Hint);
+
                     EditorGUILayout.BeginHorizontal();
-                    
+
                     using (new EditorGUI.DisabledScope(!_blueprintDirty))
                     {
-                        if (GUILayout.Button(new GUIContent(UI.Save, "Save changes to blueprint"), GUILayout.Height(24)))
+                        if (GUILayout.Button(new GUIContent(UI.Save, "Save changes to disk"), GUILayout.Height(24)))
                         {
-                            _blueprint.Instructions = _blueprintInstructions;
-                            _blueprint.DuplicateStrategy = _blueprintStrategy;
-                            _blueprint.DiscoveryPathOverride = _blueprintDiscoveryPath;
-                            EditorUtility.SetDirty(_blueprint);
                             AssetDatabase.SaveAssets();
                             _blueprintDirty = false;
-                            ForgeLogger.DebugLog($"Blueprint '{_blueprint.DisplayName}' saved.");
+                            ForgeLogger.DebugLog($"Blueprint '{_blueprint.DisplayName}' saved to disk.");
                         }
                     }
-                    
-                    if (GUILayout.Button("Discard", GUILayout.Height(24)))
+
+                    if (GUILayout.Button("Revert", GUILayout.Height(24)))
                     {
+                        AssetDatabase.Refresh();
                         _blueprintInstructions = _blueprint.Instructions;
+                        _blueprintOverrideStrategy = _blueprint.OverrideDuplicateStrategy;
                         _blueprintStrategy = _blueprint.DuplicateStrategy;
                         _blueprintDiscoveryPath = _blueprint.DiscoveryPathOverride;
                         _blueprintDirty = false;
                     }
-                    
+
                     EditorGUILayout.EndHorizontal();
                 }
                 else
                 {
                     EditorGUILayout.Space(6);
-                    EditorGUILayout.LabelField("Generation Strategy");
-                    _windowStrategy = (ForgeDuplicateStrategy)EditorGUILayout.EnumPopup(_windowStrategy);
-                    
+
+                    var globalSettings = ForgeConfig.GetGeneratorSettings();
+                    var globalStrategy = globalSettings?.duplicateStrategy ?? ForgeDuplicateStrategy.Ignore;
+                    EditorGUILayout.LabelField("Duplicate Strategy", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField($"Using global setting: {globalStrategy}", UI.Hint);
+                    EditorGUILayout.HelpBox("Change in Settings window or create a Blueprint to override.", MessageType.Info);
+
                     EditorGUILayout.Space(4);
                     EditorGUILayout.LabelField("Additional Instructions (optional)");
                     _windowInstructions = EditorGUILayout.TextArea(_windowInstructions, UI.Code, GUILayout.MinHeight(50));
-                    
-                    EditorGUILayout.Space(4);
-                    EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField("Search Existing Assets In", GUILayout.Width(LABEL_W), GUILayout.Height(18));
-                    EditorGUI.BeginDisabledGroup(true);
-                    EditorGUILayout.TextField(string.IsNullOrEmpty(_windowDiscoveryPath) ? "Assets (default)" : _windowDiscoveryPath, GUILayout.Height(18));
-                    EditorGUI.EndDisabledGroup();
-                    if (GUILayout.Button(new GUIContent(UI.Folder, "Browse for folder"), GUILayout.Width(32), GUILayout.Height(18)))
-                    {
-                        string initialPath = string.IsNullOrEmpty(_windowDiscoveryPath) ? "Assets" : _windowDiscoveryPath;
-                        string selected = EditorUtility.OpenFolderPanel("Select Discovery Path", initialPath, "");
-                        if (!string.IsNullOrEmpty(selected))
-                        {
-                            if (selected.StartsWith(Application.dataPath))
-                            {
-                                _windowDiscoveryPath = "Assets" + selected.Substring(Application.dataPath.Length);
-                            }
-                            else
-                            {
-                                _windowDiscoveryPath = selected;
-                            }
-                        }
-                    }
-                    if (!string.IsNullOrEmpty(_windowDiscoveryPath) && GUILayout.Button(new GUIContent("✕", "Clear override"), GUILayout.Width(24), GUILayout.Height(18)))
-                    {
-                        _windowDiscoveryPath = "";
-                    }
-                    EditorGUILayout.EndHorizontal();
-                    
-                    EditorGUILayout.Space(2);
-                    EditorGUILayout.BeginHorizontal();
-                    if (GUILayout.Button(new GUIContent(UI.Refresh, "Refresh discovery"), GUILayout.Width(32), GUILayout.Height(22)))
-                        FindExistingItems();
-                    GUILayout.Space(8);
-                    string countText = _foundCount > 0 ? $"Discovered: {_foundCount} existing items" : "Used to scan existing assets to reduce duplicates. Can be ignored.";
-                    EditorGUILayout.LabelField(countText, UI.Hint);
-                    GUILayout.FlexibleSpace();
-                    if (_foundCount > 0 && GUILayout.Button("View", GUILayout.Width(60), GUILayout.Height(22)))
-                        ShowFoundPopup();
-                    EditorGUILayout.EndHorizontal();
-                    var s = ForgeConfig.GetGeneratorSettings();
-                    string effectivePath = string.IsNullOrEmpty(_windowDiscoveryPath) ? 
-                        (s?.existingAssetsSearchPath ?? "Assets") : _windowDiscoveryPath;
-                    GUILayout.Label($"Search path: {effectivePath}", UI.Hint);
                 }
 
                 EditorGUIUtility.labelWidth = old;
             }
-            
-            // Auto-trigger discovery
-            DrawExistingSection();
         }
 
         // ========= Primary Generate Button =========
         private void DrawPrimaryButton()
         {
             bool hasTemplateOrBlueprint = _template != null || (_blueprint != null && _blueprint.Template != null);
-            
+
             EditorGUI.BeginDisabledGroup(_isGenerating || !hasTemplateOrBlueprint);
 
             // Aligned to content bounds, not full width
@@ -852,7 +763,7 @@ namespace GameLabs.Forge.Editor
             {
                 EditorGUI.DrawRect(bgRect, new Color(0, 0, 0, 0.12f));
             }
-            
+
             // Hover effect
             if (r.Contains(Event.current.mousePosition) && !_isGenerating && hasTemplateOrBlueprint)
                 EditorGUI.DrawRect(bgRect, new Color(1, 1, 1, 0.08f));
@@ -875,11 +786,11 @@ namespace GameLabs.Forge.Editor
             {
                 text = $"Generate {_itemCount} Items";
             }
-            
+
             var textStyle = new GUIStyle(UI.PrimaryBtnText);
-            textStyle.normal.textColor = hasTemplateOrBlueprint ? Color.white : 
+            textStyle.normal.textColor = hasTemplateOrBlueprint ? Color.white :
                 (EditorGUIUtility.isProSkin ? new Color(1, 1, 1, 0.5f) : new Color(0, 0, 0, 0.5f));
-            
+
             EditorGUI.LabelField(r, text, textStyle);
 
             EditorGUI.EndDisabledGroup();
@@ -904,19 +815,19 @@ namespace GameLabs.Forge.Editor
                 GUILayout.Space(6);
                 var successRect = EditorGUILayout.GetControlRect(GUILayout.Height(32));
                 EditorGUI.DrawRect(successRect, new Color(0.2f, 0.75f, 0.35f, 0.2f));
-                
+
                 var labelRect = new Rect(successRect.x + 12, successRect.y, successRect.width - 12, successRect.height);
                 string savePath = _template != null ? ForgeAssetExporter.GetSavePathFor(_template.GetType(), _useCustomFolder ? _customFolderName : null) : "";
                 EditorGUI.LabelField(labelRect, $"✓ Generated {savedCount} assets in {savePath}", EditorStyles.boldLabel);
             }
-            
+
             // Action buttons below success banner
             if (savedCount > 0)
             {
                 GUILayout.Space(4);
                 EditorGUILayout.BeginHorizontal();
                 GUILayout.FlexibleSpace();
-                
+
                 if (GUILayout.Button(new GUIContent(" Clear Results", UI.Trash), GUILayout.Height(24), GUILayout.Width(120)))
                 {
                     _lastGenerated.Clear();
@@ -924,15 +835,15 @@ namespace GameLabs.Forge.Editor
                     _status = "";
                     _statusType = MessageType.None;
                 }
-                
+
                 GUILayout.Space(4);
-                
+
                 using (new EditorGUI.DisabledScope(!(_template != null)))
                 {
                     if (GUILayout.Button(new GUIContent(" Open Folder", UI.Folder), GUILayout.Height(24), GUILayout.Width(120)))
                         OpenGeneratedFolder();
                 }
-                
+
                 GUILayout.FlexibleSpace();
                 EditorGUILayout.EndHorizontal();
             }
@@ -947,25 +858,25 @@ namespace GameLabs.Forge.Editor
                     if (item == null) continue;
 
                     bool isSaved = _itemSavedState.ContainsKey(item) && _itemSavedState[item];
-                    
+
                     EditorGUILayout.BeginHorizontal();
-                    
+
                     // Item name with saved/unsaved indicator
                     string indicator = isSaved ? "✓ " : "○ ";
                     EditorGUILayout.LabelField(indicator + item.name, GUILayout.ExpandWidth(true));
-                    
+
                     // Action buttons
                     if (GUILayout.Button("View", GUILayout.Width(50)))
                     {
                         EditorGUIUtility.PingObject(item);
                         Selection.activeObject = item;
                     }
-                    
+
                     if (!isSaved && GUILayout.Button("Save", GUILayout.Width(50)))
                     {
                         SaveSingleItem(item, i);
                     }
-                    
+
                     // Softer "Remove" instead of "Discard"
                     GUI.backgroundColor = new Color(1f, 0.5f, 0.5f);
                     if (GUILayout.Button("Remove", GUILayout.Width(60)))
@@ -976,15 +887,15 @@ namespace GameLabs.Forge.Editor
                         i--;
                     }
                     GUI.backgroundColor = Color.white;
-                    
+
                     EditorGUILayout.EndHorizontal();
                 }
 
                 GUILayout.Space(10);
-                
+
                 // Bulk action buttons
                 EditorGUILayout.BeginHorizontal();
-                
+
                 // Save All button (enabled only if there are unsaved items)
                 bool hasUnsaved = _lastGenerated.Any(x => x != null && (!_itemSavedState.ContainsKey(x) || !_itemSavedState[x]));
                 using (new EditorGUI.DisabledScope(!hasUnsaved || _template == null))
@@ -994,13 +905,13 @@ namespace GameLabs.Forge.Editor
                         SaveAllUnsavedItems();
                     }
                 }
-                
+
                 // Remove All button with confirmation
                 GUI.backgroundColor = new Color(1f, 0.5f, 0.5f);
                 if (GUILayout.Button(new GUIContent(" Remove All", UI.Trash), GUILayout.Height(24)))
                 {
-                    if (EditorUtility.DisplayDialog("Remove All Items?", 
-                        "This will remove all generated items. Saved assets will not be deleted.", 
+                    if (EditorUtility.DisplayDialog("Remove All Items?",
+                        "This will remove all generated items. Saved assets will not be deleted.",
                         "Remove All", "Cancel"))
                     {
                         _lastGenerated.Clear();
@@ -1010,7 +921,7 @@ namespace GameLabs.Forge.Editor
                     }
                 }
                 GUI.backgroundColor = Color.white;
-                
+
                 EditorGUILayout.EndHorizontal();
             }
         }
@@ -1021,14 +932,14 @@ namespace GameLabs.Forge.Editor
             var r = EditorGUILayout.GetControlRect(false, 1);
             EditorGUI.DrawRect(r, UI.Line);
             GUILayout.Space(6);
-            
+
             EditorGUILayout.BeginHorizontal();
             GUILayout.Space(12);
             GUILayout.Label("GameLabs | FORGE", UI.Hint);
             GUILayout.FlexibleSpace();
             GUILayout.Space(12);
             EditorGUILayout.EndHorizontal();
-            
+
             GUILayout.Space(6);
         }
 
@@ -1065,11 +976,17 @@ namespace GameLabs.Forge.Editor
                     ForgeLogger.Error("ForgeTemplateGenerator.Instance returned null");
                     return;
                 }
+
+                // Populate blueprint's existing items from discovered JSON
+                var effectiveStrategy = _blueprint.GetEffectiveDuplicateStrategy();
+
+                ForgeLogger.DebugLog($"Blueprint mode: Effective strategy = {effectiveStrategy}");
+
                 generator.GenerateFromBlueprint(_blueprint, _itemCount, OnGenerationComplete);
             }
             else if (_template != null)
             {
-                // Window-level generation (no blueprint)
+                // Window-level generation (no blueprint) - create temporary blueprint
                 _isGenerating = true;
                 _status = "Generating items…";
                 _statusType = MessageType.Info;
@@ -1085,7 +1002,16 @@ namespace GameLabs.Forge.Editor
                     ForgeLogger.Error("ForgeTemplateGenerator.Instance returned null");
                     return;
                 }
-                generator.GenerateFromTemplate(_template, _itemCount, OnGenerationComplete, _windowInstructions);
+
+                // Create temporary blueprint with window settings
+                var tempBlueprint = ScriptableObject.CreateInstance<ForgeBlueprint>();
+                tempBlueprint.Template = _template;
+                tempBlueprint.Instructions = _windowInstructions;
+                tempBlueprint.DiscoveryPathOverride = "";
+
+                ForgeLogger.DebugLog($"Window mode: Using global strategy");
+
+                generator.GenerateFromBlueprint(tempBlueprint, _itemCount, OnGenerationComplete);
             }
             else
             {
@@ -1108,19 +1034,19 @@ namespace GameLabs.Forge.Editor
             _lastGenerated.Clear();
             _itemSavedState.Clear();
             _lastGenerated.AddRange(result.items);
-            
+
             // Record statistics
             var settings = ForgeConfig.GetGeneratorSettings();
             var model = settings?.model ?? ForgeAIModel.GPT5Mini;
             ForgeStatistics.Instance.RecordGeneration(
-                _itemCount, 
-                result.items.Count, 
-                result.promptTokens, 
-                result.completionTokens, 
+                _itemCount,
+                result.items.Count,
+                result.promptTokens,
+                result.completionTokens,
                 result.estimatedCost,
                 model
             );
-            
+
             // Mark all as unsaved initially
             foreach (var item in result.items)
                 _itemSavedState[item] = false;
@@ -1132,7 +1058,7 @@ namespace GameLabs.Forge.Editor
                     : _template.GetType().Name;
 
                 var saved = SaveGeneratedAssets(result.items, folder);
-                
+
                 // Mark saved items
                 for (int i = 0; i < saved && i < result.items.Count; i++)
                     _itemSavedState[result.items[i]] = true;
@@ -1169,8 +1095,8 @@ namespace GameLabs.Forge.Editor
                     if (itm == null) continue;
 
                     string baseName = string.IsNullOrEmpty(itm.name)
-                        ? $"{itm.GetType().Name}_{stamp}_{i + 1}"
-                        : $"{itm.name}_{stamp}_{i + 1}";
+                        ? itm.GetType().Name
+                        : itm.name;
 
                     string unique = UniqueName(folderPath, baseName);
                     string full = Path.Combine(folderPath, unique + ".asset");
@@ -1219,10 +1145,9 @@ namespace GameLabs.Forge.Editor
             string folderPath = Path.Combine(ForgeAssetExporter.GetGeneratedBasePath(), folder);
             EnsureDir(folderPath);
 
-            string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string baseName = string.IsNullOrEmpty(item.name)
-                ? $"{item.GetType().Name}_{stamp}_{index + 1}"
-                : $"{item.name}_{stamp}_{index + 1}";
+                ? item.GetType().Name
+                : item.name;
 
             string unique = UniqueName(folderPath, baseName);
             string full = Path.Combine(folderPath, unique + ".asset");
@@ -1256,7 +1181,6 @@ namespace GameLabs.Forge.Editor
             EnsureDir(folderPath);
 
             int saved = 0;
-            string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
 
             AssetDatabase.StartAssetEditing();
             try
@@ -1265,14 +1189,14 @@ namespace GameLabs.Forge.Editor
                 {
                     var item = _lastGenerated[i];
                     if (item == null) continue;
-                    
+
                     // Skip already saved items
                     if (_itemSavedState.ContainsKey(item) && _itemSavedState[item])
                         continue;
 
                     string baseName = string.IsNullOrEmpty(item.name)
-                        ? $"{item.GetType().Name}_{stamp}_{i + 1}"
-                        : $"{item.name}_{stamp}_{i + 1}";
+                        ? item.GetType().Name
+                        : item.name;
 
                     string unique = UniqueName(folderPath, baseName);
                     string full = Path.Combine(folderPath, unique + ".asset");
@@ -1332,95 +1256,6 @@ namespace GameLabs.Forge.Editor
             }
         }
 
-        private void FindExistingItems()
-        {
-            if (_template == null)
-            {
-                _status = "Please select a template first.";
-                _statusType = MessageType.Error;
-                return;
-            }
-
-            var itemType = _template.GetType();
-            
-            // Get discovery path from blueprint override, or global default
-            string searchPath = "Assets";
-            if (_blueprint != null)
-            {
-                searchPath = _blueprint.GetEffectiveDiscoveryPath();
-            }
-            else
-            {
-                var settings = ForgeConfig.GetGeneratorSettings();
-                searchPath = settings?.existingAssetsSearchPath ?? "Assets";
-            }
-
-            var method = typeof(ForgeAssetDiscovery).GetMethod(nameof(ForgeAssetDiscovery.DiscoverAssetsAsJson),
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-            var generic = method.MakeGenericMethod(itemType);
-            var result = generic.Invoke(null, new object[] { searchPath }) as List<string>;
-
-            _foundJson = result ?? new List<string>();
-            _foundCount = _foundJson.Count;
-            
-            // Track what we discovered
-            _lastDiscoveredTemplateName = itemType.Name;
-            _lastDiscoveredPath = searchPath;
-
-            if (_foundCount == 0)
-            {
-                ForgeLogger.Warn($"No existing {itemType.Name} items found in '{searchPath}'.");
-            }
-            else
-            {
-                ForgeLogger.DebugLog($"Discovered {_foundCount} existing {itemType.Name} items in '{searchPath}'");
-            }
-
-            Repaint();
-        }
-
-        private void ShowFoundPopup()
-        {
-            var p = ScriptableObject.CreateInstance<ExistingItemsPopup>();
-            p.titleContent = new GUIContent($"Existing Items ({_foundCount})");
-            p.itemsJson = new List<string>(_foundJson);
-            p.minSize = new Vector2(520, 520);
-            p.maxSize = new Vector2(820, 1000);
-            p.ShowUtility();
-        }
-    }
-
-    /// <summary>Popup to display discovered existing items (visual only).</summary>
-    public class ExistingItemsPopup : EditorWindow
-    {
-        public List<string> itemsJson = new();
-        private Vector2 _scroll;
-
-        private void OnGUI()
-        {
-            GUILayout.Space(8);
-            EditorGUILayout.LabelField("Discovered Items", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox("Existing items used to avoid duplicates and maintain consistency.", MessageType.Info);
-
-            GUILayout.Space(6);
-            var r = EditorGUILayout.GetControlRect(false, 1);
-            EditorGUI.DrawRect(r, new Color(1, 1, 1, 0.07f));
-
-            GUILayout.Space(8);
-            _scroll = EditorGUILayout.BeginScrollView(_scroll);
-            foreach (var json in itemsJson)
-            {
-                EditorGUILayout.BeginVertical("HelpBox");
-                EditorGUILayout.TextArea(json, GUILayout.MinHeight(60));
-                EditorGUILayout.EndVertical();
-                GUILayout.Space(4);
-            }
-            EditorGUILayout.EndScrollView();
-
-            GUILayout.Space(6);
-            if (GUILayout.Button("Close", GUILayout.Height(26))) Close();
-            GUILayout.Space(6);
-        }
     }
 }
 #endif

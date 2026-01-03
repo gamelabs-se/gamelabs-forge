@@ -124,11 +124,24 @@ namespace GameLabs.Forge.Editor
             var schema = ForgeSchemaExtractor.ExtractSchema(templateType);
 
             // Build the user prompt with blueprint strategy
-            var prompt = BuildBlueprintPrompt(schema, count, blueprint);
+            var prompt = BuildBlueprintPrompt(schema, templateType, count, blueprint);
 
             ForgeLogger.DebugLog($"Generating {count} {templateType.Name} item(s) from blueprint '{blueprint.DisplayName}'...");
-            ForgeLogger.DebugLog($"Duplicate strategy: {blueprint.DuplicateStrategy}");
+            var effectiveStrategy = blueprint.GetEffectiveDuplicateStrategy();
+            bool isOverride = blueprint.OverrideDuplicateStrategy;
+            var globalSettings = ForgeConfig.GetGeneratorSettings();
+            var globalStrategy = globalSettings?.duplicateStrategy ?? ForgeDuplicateStrategy.Ignore;
+            
+            ForgeLogger.DebugLog($"Blueprint override enabled: {isOverride}");
+            ForgeLogger.DebugLog($"Blueprint strategy: {blueprint.DuplicateStrategy}");
+            ForgeLogger.DebugLog($"Global strategy: {globalStrategy}");
+            ForgeLogger.DebugLog($"Effective strategy: {effectiveStrategy}");
             ForgeLogger.DebugLog($"Schema fields: {schema.fields.Count}");
+            ForgeLogger.DebugLog($"Prompt length: {prompt.Length} characters");
+            if (ForgeLogger.DebugEnabled)
+            {
+                ForgeLogger.DebugLog($"=== FULL PROMPT ===\n{prompt}\n=== END PROMPT ===");
+            }
 
             ForgeTemplateGenerationResult result = null;
             bool completed = false;
@@ -177,6 +190,11 @@ namespace GameLabs.Forge.Editor
             ForgeLogger.DebugLog($"Generating {count} {templateType.Name} item(s) from template...");
             ForgeLogger.DebugLog($"Template type: {templateType.FullName}");
             ForgeLogger.DebugLog($"Schema fields: {schema.fields.Count}");
+            ForgeLogger.DebugLog($"Prompt length: {prompt.Length} characters");
+            if (ForgeLogger.DebugEnabled)
+            {
+                ForgeLogger.DebugLog($"=== FULL PROMPT ===\n{prompt}\n=== END PROMPT ===");
+            }
 
             ForgeTemplateGenerationResult result = null;
             bool completed = false;
@@ -312,7 +330,7 @@ CRITICAL RULES:
             return sb.ToString();
         }
 
-        private string BuildBlueprintPrompt(ForgeSchemaExtractor.TypeSchema schema, int count, ForgeBlueprint blueprint)
+        private string BuildBlueprintPrompt(ForgeSchemaExtractor.TypeSchema schema, Type templateType, int count, ForgeBlueprint blueprint)
         {
             var template = ForgeSchemaExtractor.GenerateJsonTemplate(schema);
             var schemaDesc = ForgeSchemaExtractor.GenerateSchemaDescription(schema);
@@ -342,49 +360,62 @@ CRITICAL RULES:
             sb.AppendLine();
 
             // Existing items context based on duplicate strategy
-            if (blueprint.DuplicateStrategy != ForgeDuplicateStrategy.Ignore && blueprint.ExistingItems.Count > 0)
+            var effectiveStrategy = blueprint.GetEffectiveDuplicateStrategy();
+            if (effectiveStrategy != ForgeDuplicateStrategy.Ignore)
             {
-                if (blueprint.DuplicateStrategy == ForgeDuplicateStrategy.NamesOnly)
+                // Auto-discover existing items based on strategy
+                string discoveryPath = blueprint.GetEffectiveDiscoveryPath();
+                
+                // Call the generic method using reflection
+                var method = typeof(ForgeAssetDiscovery).GetMethod(nameof(ForgeAssetDiscovery.DiscoverAssetsAsJson),
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                var genericMethod = method.MakeGenericMethod(templateType);
+                var existingItemsJson = genericMethod.Invoke(null, new object[] { discoveryPath }) as List<string> ?? new List<string>();
+                
+                ForgeLogger.DebugLog($"Auto-discovered {existingItemsJson.Count} existing items from '{discoveryPath}'");
+                
+                if (existingItemsJson.Count > 0)
                 {
-                    sb.AppendLine("=== EXISTING ITEM NAMES (AVOID THESE) ===");
-                    foreach (var item in blueprint.ExistingItems)
+                    if (effectiveStrategy == ForgeDuplicateStrategy.NamesOnly)
                     {
-                        if (item != null)
+                        sb.AppendLine("=== EXISTING ITEM NAMES (AVOID THESE) ===");
+                        foreach (var json in existingItemsJson)
                         {
-                            string nameValue = item.name;
-                            var nameProp = item.GetType().GetProperty("Name");
-                            if (nameProp != null)
+                            try
                             {
-                                nameValue = nameProp.GetValue(item)?.ToString() ?? item.name;
-                            }
-                            else
-                            {
-                                var nameField = item.GetType().GetField("Name");
-                                if (nameField != null)
+                                // Deserialize to get the name
+                                var tempItem = ScriptableObject.CreateInstance(templateType);
+                                JsonUtility.FromJsonOverwrite(json, tempItem);
+                                
+                                // Extract name using DeclaredOnly to avoid shadowing issues
+                                var nameField = templateType.GetField("name", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly);
+                                string itemName = nameField?.GetValue(tempItem)?.ToString() ?? tempItem.name ?? "";
+                                
+                                if (!string.IsNullOrEmpty(itemName))
                                 {
-                                    nameValue = nameField.GetValue(item)?.ToString() ?? item.name;
+                                    sb.AppendLine($"- {itemName}");
                                 }
                             }
-                            sb.AppendLine($"- {nameValue}");
+                            catch (Exception ex)
+                            {
+                                ForgeLogger.Warn($"Failed to extract name from existing item: {ex.Message}");
+                            }
                         }
+                        sb.AppendLine();
+                        sb.AppendLine("IMPORTANT: Avoid creating items with names matching those listed above.");
+                        sb.AppendLine();
                     }
-                    sb.AppendLine();
-                    sb.AppendLine("IMPORTANT: Avoid creating items with names matching those listed above.");
-                    sb.AppendLine();
-                }
-                else if (blueprint.DuplicateStrategy == ForgeDuplicateStrategy.FullComposition)
-                {
-                    sb.AppendLine("=== EXISTING ITEMS (AVOID DUPLICATING) ===");
-                    foreach (var item in blueprint.ExistingItems)
+                    else if (effectiveStrategy == ForgeDuplicateStrategy.FullComposition)
                     {
-                        if (item != null)
+                        sb.AppendLine("=== EXISTING ITEMS (AVOID DUPLICATING) ===");
+                        foreach (var json in existingItemsJson)
                         {
-                            sb.AppendLine(JsonUtility.ToJson(item, true));
+                            sb.AppendLine(json);
                         }
+                        sb.AppendLine();
+                        sb.AppendLine("IMPORTANT: Do NOT create items that match the above items in structure or values.");
+                        sb.AppendLine();
                     }
-                    sb.AppendLine();
-                    sb.AppendLine("IMPORTANT: Do NOT create items that match the above items in structure or values.");
-                    sb.AppendLine();
                 }
             }
 

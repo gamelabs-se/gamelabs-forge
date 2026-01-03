@@ -166,27 +166,24 @@ namespace GameLabs.Forge.Editor
         
         private void DrawExistingItemsSettings()
         {
-            EditorGUILayout.LabelField("Existing Items Context", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Duplicate Prevention", EditorStyles.boldLabel);
             
             EditorGUI.BeginChangeCheck();
             
-            settings.autoLoadExistingAssets = EditorGUILayout.Toggle("Auto-Load Existing Assets", settings.autoLoadExistingAssets);
+            settings.duplicateStrategy = (ForgeDuplicateStrategy)EditorGUILayout.EnumPopup("Strategy", settings.duplicateStrategy);
             
-            EditorGUILayout.Space(5);
-            settings.intent = (ExistingItemsIntent)EditorGUILayout.EnumPopup("Generation Intent", settings.intent);
-            
-            // Show description based on intent
-            string intentDesc = settings.intent switch
+            // Show description based on strategy
+            string strategyDesc = settings.duplicateStrategy switch
             {
-                ExistingItemsIntent.PreventDuplicates => "AI will generate unique items that don't duplicate existing ones",
-                ExistingItemsIntent.RefineNaming => "AI will use existing items as examples for naming conventions",
-                ExistingItemsIntent.PreventDuplicatesAndRefineNaming => "AI will both prevent duplicates AND follow naming conventions",
+                ForgeDuplicateStrategy.Ignore => "Don't send any existing items to the AI (lowest cost, default)",
+                ForgeDuplicateStrategy.NamesOnly => "Send only item names with instruction to avoid them (low cost)",
+                ForgeDuplicateStrategy.FullComposition => "Send full item data with instruction to avoid identical compositions (higher cost, highest quality)",
                 _ => ""
             };
             
-            if (!string.IsNullOrEmpty(intentDesc))
+            if (!string.IsNullOrEmpty(strategyDesc))
             {
-                EditorGUILayout.HelpBox(intentDesc, MessageType.Info);
+                EditorGUILayout.HelpBox(strategyDesc, MessageType.Info);
             }
             
             if (EditorGUI.EndChangeCheck())
@@ -207,6 +204,7 @@ namespace GameLabs.Forge.Editor
             if (EditorGUI.EndChangeCheck())
             {
                 ForgeLogger.DebugMode = debugMode;
+                ForgeConfig.SetDebugMode(debugMode); // Save immediately
             }
             
             EditorGUILayout.HelpBox("When disabled, only errors, warnings, and success messages are logged. Enable for detailed generation logs.", MessageType.None);
@@ -250,8 +248,8 @@ namespace GameLabs.Forge.Editor
                 ForgeConfig.SaveGeneratorSettings(settings);
                 ForgeConfig.SetDebugMode(ForgeLogger.DebugMode);
                 
-                ForgeLogger.Success("Settings saved to EditorPrefs (user-specific).");
-                EditorUtility.DisplayDialog("Settings", "Settings saved successfully to EditorPrefs.", "OK");
+                ForgeLogger.Success("Settings saved to project configuration.");
+                EditorUtility.DisplayDialog("Settings", "Settings saved successfully.", "OK");
             }
             catch (System.Exception e)
             {

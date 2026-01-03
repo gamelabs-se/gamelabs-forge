@@ -30,8 +30,7 @@ namespace GameLabs.Forge.Editor
             public string additionalRules;
             public string existingAssetsSearchPath = "Assets";
             public string generatedAssetsBasePath = "Resources/Generated";
-            public bool autoLoadExistingAssets = true;
-            public int intent;
+            public int duplicateStrategy;
             public bool debugMode;
         }
 
@@ -156,8 +155,7 @@ namespace GameLabs.Forge.Editor
                 additionalRules = config.additionalRules ?? "",
                 existingAssetsSearchPath = config.existingAssetsSearchPath ?? "Assets",
                 generatedAssetsBasePath = config.generatedAssetsBasePath ?? "Resources/Generated",
-                autoLoadExistingAssets = config.autoLoadExistingAssets,
-                intent = (ExistingItemsIntent)config.intent
+                duplicateStrategy = (ForgeDuplicateStrategy)config.duplicateStrategy
             };
         }
         
@@ -176,8 +174,7 @@ namespace GameLabs.Forge.Editor
             config.additionalRules = settings.additionalRules;
             config.existingAssetsSearchPath = settings.existingAssetsSearchPath;
             config.generatedAssetsBasePath = settings.generatedAssetsBasePath;
-            config.autoLoadExistingAssets = settings.autoLoadExistingAssets;
-            config.intent = (int)settings.intent;
+            config.duplicateStrategy = (int)settings.duplicateStrategy;
             
             SaveConfig(config);
         }

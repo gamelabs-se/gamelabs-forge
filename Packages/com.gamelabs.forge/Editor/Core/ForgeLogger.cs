@@ -25,6 +25,9 @@ namespace GameLabs.Forge.Editor
             set => _debugMode = value;
         }
         
+        /// <summary>Gets whether debug mode is enabled.</summary>
+        public static bool DebugEnabled => DebugMode;
+        
         /// <summary>Logs an informational message (only in debug mode).</summary>
         /// <param name="msg">The message to log.</param>
         public static void Log(string msg)

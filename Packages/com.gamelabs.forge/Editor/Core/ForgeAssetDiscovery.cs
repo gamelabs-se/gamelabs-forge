@@ -203,6 +203,8 @@ namespace GameLabs.Forge.Editor
             var jsonStrings = new List<string>();
             var assets = DiscoverAssets<T>(searchPath);
             
+            ForgeLogger.DebugLog($"DiscoverScriptableObjectsAsJson: Found {assets.Count} assets of type {typeof(T).Name}");
+            
             foreach (var asset in assets)
             {
                 if (asset != null)
@@ -210,6 +212,8 @@ namespace GameLabs.Forge.Editor
                     try
                     {
                         string json = JsonUtility.ToJson(asset);
+                        ForgeLogger.DebugLog($"Serialized asset '{asset.name}' to JSON: {json}");
+                        
                         if (!string.IsNullOrEmpty(json))
                         {
                             jsonStrings.Add(json);
@@ -222,6 +226,7 @@ namespace GameLabs.Forge.Editor
                 }
             }
             
+            ForgeLogger.DebugLog($"DiscoverScriptableObjectsAsJson: Returning {jsonStrings.Count} JSON strings");
             return jsonStrings;
         }
         
