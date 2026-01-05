@@ -38,6 +38,7 @@ namespace GameLabs.Forge.Editor
 
         private readonly List<ScriptableObject> _lastGenerated = new();
         private readonly Dictionary<ScriptableObject, bool> _itemSavedState = new(); // track saved/unsaved
+        private bool _showPreview = false; // Show preview panel when generation completes
 
         private const float LABEL_W = 120f; // unified label width
         private const float CONTENT_PADDING = 16f; // canonical horizontal padding everywhere
@@ -183,6 +184,32 @@ namespace GameLabs.Forge.Editor
             GUILayout.Label("GameLabs | FORGE", UI.Title);
 
             GUILayout.FlexibleSpace();
+            
+            // Session cost display
+            var costTracker = ForgeCostTracker.Instance;
+            if (costTracker.SessionGenerations > 0)
+            {
+                var costColor = costTracker.SessionCost < 0.10f ? Color.green :
+                               costTracker.SessionCost < 1.00f ? Color.yellow :
+                               new Color(1f, 0.5f, 0f); // orange
+                
+                var oldColor = GUI.contentColor;
+                GUI.contentColor = costColor;
+                GUILayout.Label($"💰 ${costTracker.SessionCost:F4}", UI.Header);
+                GUI.contentColor = oldColor;
+                
+                if (GUILayout.Button(new GUIContent("🔄", "Reset session cost"), GUILayout.Width(24), GUILayout.Height(24)))
+                {
+                    if (EditorUtility.DisplayDialog("Reset Session", 
+                        $"Reset session cost tracker?\n\n{costTracker.GetSessionSummary()}", 
+                        "Reset", "Cancel"))
+                    {
+                        costTracker.ResetSession();
+                    }
+                }
+                
+                GUILayout.Space(8);
+            }
 
             // Settings button
             if (GUILayout.Button(new GUIContent(UI.Gear, "Settings"), GUILayout.Width(24), GUILayout.Height(24)))
@@ -447,11 +474,64 @@ namespace GameLabs.Forge.Editor
                 EditorGUIUtility.labelWidth = LABEL_W;
 
                 var oldTemplate = _template;
+                EditorGUILayout.BeginHorizontal();
                 _template = (ScriptableObject)EditorGUILayout.ObjectField(
                     new GUIContent("Template", "Any existing ScriptableObject can be used as a template"),
                     _template,
                     typeof(ScriptableObject),
                     false);
+                
+                // Favorite star button
+                if (_template != null)
+                {
+                    var library = ForgeTemplateLibrary.Instance;
+                    bool isFav = library.IsFavorite(_template);
+                    string starIcon = isFav ? "⭐" : "☆";
+                    if (GUILayout.Button(new GUIContent(starIcon, isFav ? "Remove from favorites" : "Add to favorites"), 
+                        GUILayout.Width(28), GUILayout.Height(18)))
+                    {
+                        if (isFav)
+                            library.RemoveFromFavorites(_template);
+                        else
+                            library.AddToFavorites(_template);
+                    }
+                }
+                EditorGUILayout.EndHorizontal();
+                
+                // Show recent templates
+                var recents = ForgeTemplateLibrary.Instance.GetRecents();
+                var favorites = ForgeTemplateLibrary.Instance.GetFavorites();
+                if ((recents.Count > 0 || favorites.Count > 0) && _template == null)
+                {
+                    EditorGUILayout.Space(2);
+                    EditorGUILayout.LabelField("Quick Select:", UI.Hint);
+                    EditorGUILayout.BeginHorizontal();
+                    
+                    // Show favorites first
+                    foreach (var fav in favorites.Take(5))
+                    {
+                        if (GUILayout.Button(new GUIContent($"⭐ {fav.name}", fav.GetType().Name), GUILayout.Height(20)))
+                        {
+                            _template = fav;
+                            ForgeTemplateLibrary.Instance.RecordUsage(fav);
+                        }
+                    }
+                    
+                    // Then recents
+                    foreach (var recent in recents.Take(3))
+                    {
+                        if (!favorites.Contains(recent)) // Don't show if already in favorites
+                        {
+                            if (GUILayout.Button(new GUIContent(recent.name, recent.GetType().Name), GUILayout.Height(20)))
+                            {
+                                _template = recent;
+                                ForgeTemplateLibrary.Instance.RecordUsage(recent);
+                            }
+                        }
+                    }
+                    
+                    EditorGUILayout.EndHorizontal();
+                }
 
                 // Trigger refresh if template changed
                 if (_template != oldTemplate)
@@ -461,6 +541,12 @@ namespace GameLabs.Forge.Editor
                     {
                         _blueprint.Template = _template;
                         EditorUtility.SetDirty(_blueprint);
+                    }
+                    
+                    // Record as recently used
+                    if (_template != null)
+                    {
+                        ForgeTemplateLibrary.Instance.RecordUsage(_template);
                     }
                 }
 
@@ -533,6 +619,10 @@ namespace GameLabs.Forge.Editor
             using (new EditorGUILayout.VerticalScope(UI.Card))
             {
                 _autoSaveAsAsset = EditorGUILayout.ToggleLeft(new GUIContent("Auto-Save Assets", "Automatically create assets after generation"), _autoSaveAsAsset);
+                
+                EditorGUILayout.Space(2);
+                EditorGUILayout.LabelField("💡 Tip: Turn off Auto-Save to preview items before saving", UI.Hint);
+                
                 using (new EditorGUI.DisabledScope(!_autoSaveAsAsset))
                 {
                     var old = EditorGUIUtility.labelWidth;
@@ -1046,6 +1136,9 @@ namespace GameLabs.Forge.Editor
                 result.estimatedCost,
                 model
             );
+            
+            // Record cost tracking
+            ForgeCostTracker.Instance.RecordGeneration(result.items.Count, result.estimatedCost);
 
             // Mark all as unsaved initially
             foreach (var item in result.items)
@@ -1068,8 +1161,9 @@ namespace GameLabs.Forge.Editor
             }
             else
             {
-                _status = $"✓ Generated {result.items.Count} item(s)\n" +
-                          $"Cost: ${result.estimatedCost:F6} ({result.promptTokens} prompt, {result.completionTokens} completion tokens)";
+                _status = $"📋 Preview Mode: {result.items.Count} item(s) generated\n" +
+                          $"Cost: ${result.estimatedCost:F6} ({result.promptTokens} prompt, {result.completionTokens} completion tokens)\n" +
+                          $"💡 Review below and click 'Save' or 'Save All' when ready";
             }
 
             _statusType = MessageType.Info;
