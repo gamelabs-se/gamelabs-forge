@@ -460,7 +460,7 @@ namespace GameLabs.Forge.Editor
                 {
                     var library = ForgeTemplateLibrary.Instance;
                     bool isFav = library.IsFavorite(_template);
-                    string starIcon = isFav ? "Favorite" : "Favorite Icon";
+                    string starIcon = isFav ? "Favorite" : "StarEmpty";
                     var iconContent = EditorGUIUtility.IconContent(starIcon);
                     if (iconContent != null && iconContent.image != null)
                     {

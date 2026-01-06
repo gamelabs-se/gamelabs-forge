@@ -176,7 +176,7 @@ namespace GameLabs.Forge.Editor
                 if (!showFavButton)
                 {
                     bool isFav = library.IsFavorite(template);
-                    string icon = isFav ? "Favorite" : "Favorite Icon";
+                    string icon = isFav ? "Favorite" : "StarEmpty";
                     var iconContent = EditorGUIUtility.IconContent(icon);
                     if (iconContent != null && iconContent.image != null)
                     {
