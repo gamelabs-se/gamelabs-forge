@@ -12,6 +12,8 @@ namespace GameLabs.Forge.Editor
         [SerializeField] private float _sessionCost = 0f;
         [SerializeField] private int _sessionGenerations = 0;
         [SerializeField] private int _sessionItemsGenerated = 0;
+        [SerializeField] private int _sessionPromptTokens = 0;
+        [SerializeField] private int _sessionCompletionTokens = 0;
         [SerializeField] private DateTime _sessionStartTime;
         
         private const string PREFS_KEY = "GameLabs.Forge.CostTracker";
@@ -32,6 +34,9 @@ namespace GameLabs.Forge.Editor
         public float SessionCost => _sessionCost;
         public int SessionGenerations => _sessionGenerations;
         public int SessionItemsGenerated => _sessionItemsGenerated;
+        public int SessionPromptTokens => _sessionPromptTokens;
+        public int SessionCompletionTokens => _sessionCompletionTokens;
+        public int SessionTokens => _sessionPromptTokens + _sessionCompletionTokens;
         public DateTime SessionStartTime => _sessionStartTime;
         
         private ForgeCostTracker()
@@ -39,11 +44,13 @@ namespace GameLabs.Forge.Editor
             _sessionStartTime = DateTime.Now;
         }
         
-        public void RecordGeneration(int itemCount, float cost)
+        public void RecordGeneration(int itemCount, float cost, int promptTokens, int completionTokens)
         {
             _sessionCost += cost;
             _sessionGenerations++;
             _sessionItemsGenerated += itemCount;
+            _sessionPromptTokens += promptTokens;
+            _sessionCompletionTokens += completionTokens;
             Save();
         }
         
@@ -52,6 +59,8 @@ namespace GameLabs.Forge.Editor
             _sessionCost = 0f;
             _sessionGenerations = 0;
             _sessionItemsGenerated = 0;
+            _sessionPromptTokens = 0;
+            _sessionCompletionTokens = 0;
             _sessionStartTime = DateTime.Now;
             Save();
         }
@@ -59,7 +68,10 @@ namespace GameLabs.Forge.Editor
         public string GetSessionSummary()
         {
             var duration = DateTime.Now - _sessionStartTime;
-            return $"Session: {_sessionGenerations} generations, {_sessionItemsGenerated} items, ${_sessionCost:F4} ({duration.TotalMinutes:F0}m)";
+            return $"Session: {_sessionGenerations} generations, {_sessionItemsGenerated} items\n" +
+                   $"Tokens: {SessionTokens} (out: {_sessionCompletionTokens}, in: {_sessionPromptTokens})\n" +
+                   $"Cost: ${_sessionCost:F4}\n" +
+                   $"Duration: {duration.TotalMinutes:F0}m";
         }
         
         private void Save()

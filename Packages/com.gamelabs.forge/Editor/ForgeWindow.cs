@@ -184,32 +184,6 @@ namespace GameLabs.Forge.Editor
             GUILayout.Label("GameLabs | FORGE", UI.Title);
 
             GUILayout.FlexibleSpace();
-            
-            // Session cost display
-            var costTracker = ForgeCostTracker.Instance;
-            if (costTracker.SessionGenerations > 0)
-            {
-                var costColor = costTracker.SessionCost < 0.10f ? Color.green :
-                               costTracker.SessionCost < 1.00f ? Color.yellow :
-                               new Color(1f, 0.5f, 0f); // orange
-                
-                var oldColor = GUI.contentColor;
-                GUI.contentColor = costColor;
-                GUILayout.Label($"💰 ${costTracker.SessionCost:F4}", UI.Header);
-                GUI.contentColor = oldColor;
-                
-                if (GUILayout.Button(new GUIContent("🔄", "Reset session cost"), GUILayout.Width(24), GUILayout.Height(24)))
-                {
-                    if (EditorUtility.DisplayDialog("Reset Session", 
-                        $"Reset session cost tracker?\n\n{costTracker.GetSessionSummary()}", 
-                        "Reset", "Cancel"))
-                    {
-                        costTracker.ResetSession();
-                    }
-                }
-                
-                GUILayout.Space(8);
-            }
 
             // Settings button
             if (GUILayout.Button(new GUIContent(UI.Gear, "Settings"), GUILayout.Width(24), GUILayout.Height(24)))
@@ -621,7 +595,7 @@ namespace GameLabs.Forge.Editor
                 _autoSaveAsAsset = EditorGUILayout.ToggleLeft(new GUIContent("Auto-Save Assets", "Automatically create assets after generation"), _autoSaveAsAsset);
                 
                 EditorGUILayout.Space(2);
-                EditorGUILayout.LabelField("💡 Tip: Turn off Auto-Save to preview items before saving", UI.Hint);
+                EditorGUILayout.LabelField("Tip: Turn off Auto-Save to preview items before saving", UI.Hint);
                 
                 using (new EditorGUI.DisabledScope(!_autoSaveAsAsset))
                 {
@@ -1027,6 +1001,25 @@ namespace GameLabs.Forge.Editor
             GUILayout.Space(12);
             GUILayout.Label("GameLabs | FORGE", UI.Hint);
             GUILayout.FlexibleSpace();
+            
+            // Session cost and token tracking
+            var costTracker = ForgeCostTracker.Instance;
+            if (costTracker.SessionGenerations > 0)
+            {
+                string costText = $"Tokens: {costTracker.SessionTokens} (out: {costTracker.SessionCompletionTokens}, in: {costTracker.SessionPromptTokens}) | Approx. cost ${costTracker.SessionCost:F4}";
+                GUILayout.Label(costText, UI.Hint);
+                
+                if (GUILayout.Button(new GUIContent("Reset", "Reset session cost tracker"), GUILayout.Width(50), GUILayout.Height(18)))
+                {
+                    if (EditorUtility.DisplayDialog("Reset Session", 
+                        $"Reset session cost tracker?\n\n{costTracker.GetSessionSummary()}", 
+                        "Reset", "Cancel"))
+                    {
+                        costTracker.ResetSession();
+                    }
+                }
+            }
+            
             GUILayout.Space(12);
             EditorGUILayout.EndHorizontal();
 
@@ -1138,7 +1131,7 @@ namespace GameLabs.Forge.Editor
             );
             
             // Record cost tracking
-            ForgeCostTracker.Instance.RecordGeneration(result.items.Count, result.estimatedCost);
+            ForgeCostTracker.Instance.RecordGeneration(result.items.Count, result.estimatedCost, result.promptTokens, result.completionTokens);
 
             // Mark all as unsaved initially
             foreach (var item in result.items)
@@ -1161,9 +1154,9 @@ namespace GameLabs.Forge.Editor
             }
             else
             {
-                _status = $"📋 Preview Mode: {result.items.Count} item(s) generated\n" +
+                _status = $"Preview Mode: {result.items.Count} item(s) generated\n" +
                           $"Cost: ${result.estimatedCost:F6} ({result.promptTokens} prompt, {result.completionTokens} completion tokens)\n" +
-                          $"💡 Review below and click 'Save' or 'Save All' when ready";
+                          $"Review below and click 'Save' or 'Save All' when ready";
             }
 
             _statusType = MessageType.Info;
