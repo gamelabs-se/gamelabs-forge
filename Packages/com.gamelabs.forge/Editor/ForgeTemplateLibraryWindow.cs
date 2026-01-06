@@ -190,9 +190,25 @@ namespace GameLabs.Forge.Editor
                     GUILayout.Space(20);
                 }
                 
-                // Template button
+                // Template button with hover highlight
                 string displayName = $"{template.name} ({template.GetType().Name})";
-                if (GUILayout.Button(displayName, EditorStyles.label, GUILayout.Height(20)))
+                
+                var buttonStyle = new GUIStyle(EditorStyles.label);
+                buttonStyle.hover.background = Texture2D.whiteTexture;
+                buttonStyle.hover.textColor = Color.white;
+                buttonStyle.padding = new RectOffset(4, 4, 2, 2);
+                
+                var rect = GUILayoutUtility.GetRect(new GUIContent(displayName), buttonStyle, GUILayout.Height(20));
+                
+                if (Event.current.type == EventType.Repaint)
+                {
+                    if (rect.Contains(Event.current.mousePosition))
+                    {
+                        EditorGUI.DrawRect(rect, new Color(0.3f, 0.5f, 0.8f, 0.5f));
+                    }
+                }
+                
+                if (GUI.Button(rect, displayName, buttonStyle))
                 {
                     _onSelect?.Invoke(template);
                     Close();

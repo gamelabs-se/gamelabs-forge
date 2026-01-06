@@ -464,8 +464,13 @@ namespace GameLabs.Forge.Editor
                     var library = ForgeTemplateLibrary.Instance;
                     bool isFav = library.IsFavorite(_template);
                     string starIcon = isFav ? "⭐" : "☆";
+                    
+                    // Use vertical offset to align stars properly
+                    var starStyle = new GUIStyle(GUI.skin.button);
+                    starStyle.padding = new RectOffset(0, 0, -2, 0); // Move down 2 pixels
+                    
                     if (GUILayout.Button(new GUIContent(starIcon, isFav ? "Remove from favorites" : "Add to favorites"), 
-                        GUILayout.Width(24), GUILayout.Height(18)))
+                        starStyle, GUILayout.Width(24), GUILayout.Height(18)))
                     {
                         if (isFav)
                             library.RemoveFromFavorites(_template);
