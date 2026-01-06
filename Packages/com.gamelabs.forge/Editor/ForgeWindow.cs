@@ -463,7 +463,8 @@ namespace GameLabs.Forge.Editor
                 {
                     var library = ForgeTemplateLibrary.Instance;
                     bool isFav = library.IsFavorite(_template);
-                    if (GUILayout.Button(new GUIContent(isFav ? "*" : "o", isFav ? "Remove from favorites" : "Add to favorites"), 
+                    string starIcon = isFav ? "⭐" : "☆";
+                    if (GUILayout.Button(new GUIContent(starIcon, isFav ? "Remove from favorites" : "Add to favorites"), 
                         GUILayout.Width(24), GUILayout.Height(18)))
                     {
                         if (isFav)
