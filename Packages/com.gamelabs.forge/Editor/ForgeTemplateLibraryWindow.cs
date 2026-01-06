@@ -176,13 +176,28 @@ namespace GameLabs.Forge.Editor
                 if (!showFavButton)
                 {
                     bool isFav = library.IsFavorite(template);
-                    string icon = isFav ? "Star" : "StarEmpty";
-                    if (GUILayout.Button(EditorGUIUtility.IconContent(icon), GUILayout.Width(20), GUILayout.Height(20)))
+                    string icon = isFav ? "Favorite" : "Favorite Icon";
+                    var iconContent = EditorGUIUtility.IconContent(icon);
+                    if (iconContent != null && iconContent.image != null)
                     {
-                        if (isFav)
-                            library.RemoveFromFavorites(template);
-                        else
-                            library.AddToFavorites(template);
+                        if (GUILayout.Button(iconContent, GUILayout.Width(20), GUILayout.Height(20)))
+                        {
+                            if (isFav)
+                                library.RemoveFromFavorites(template);
+                            else
+                                library.AddToFavorites(template);
+                        }
+                    }
+                    else
+                    {
+                        // Fallback
+                        if (GUILayout.Button(isFav ? "*" : "o", GUILayout.Width(20), GUILayout.Height(20)))
+                        {
+                            if (isFav)
+                                library.RemoveFromFavorites(template);
+                            else
+                                library.AddToFavorites(template);
+                        }
                     }
                 }
                 else

@@ -460,14 +460,30 @@ namespace GameLabs.Forge.Editor
                 {
                     var library = ForgeTemplateLibrary.Instance;
                     bool isFav = library.IsFavorite(_template);
-                    string starIcon = isFav ? "Star" : "StarEmpty";
-                    if (GUILayout.Button(new GUIContent(EditorGUIUtility.IconContent(starIcon).image, isFav ? "Remove from favorites" : "Add to favorites"), 
-                        GUILayout.Width(24), GUILayout.Height(18)))
+                    string starIcon = isFav ? "Favorite" : "Favorite Icon";
+                    var iconContent = EditorGUIUtility.IconContent(starIcon);
+                    if (iconContent != null && iconContent.image != null)
                     {
-                        if (isFav)
-                            library.RemoveFromFavorites(_template);
-                        else
-                            library.AddToFavorites(_template);
+                        if (GUILayout.Button(new GUIContent(iconContent.image, isFav ? "Remove from favorites" : "Add to favorites"), 
+                            GUILayout.Width(24), GUILayout.Height(18)))
+                        {
+                            if (isFav)
+                                library.RemoveFromFavorites(_template);
+                            else
+                                library.AddToFavorites(_template);
+                        }
+                    }
+                    else
+                    {
+                        // Fallback to text if icon not available
+                        if (GUILayout.Button(new GUIContent(isFav ? "*" : "o", isFav ? "Remove from favorites" : "Add to favorites"), 
+                            GUILayout.Width(24), GUILayout.Height(18)))
+                        {
+                            if (isFav)
+                                library.RemoveFromFavorites(_template);
+                            else
+                                library.AddToFavorites(_template);
+                        }
                     }
                 }
                 
