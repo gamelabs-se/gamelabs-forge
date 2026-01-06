@@ -54,10 +54,17 @@ namespace GameLabs.Forge.Editor
         
         private void OnGUI()
         {
+            // Background
+            EditorGUI.DrawRect(new Rect(0, 0, position.width, position.height), new Color(0.22f, 0.22f, 0.22f));
+            
             DrawHeader();
             DrawSearch();
             
-            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
+            EditorGUILayout.Space(5);
+            
+            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUIStyle.none, GUI.skin.verticalScrollbar);
+            
+            GUILayout.Space(5);
             
             var library = ForgeTemplateLibrary.Instance;
             var favorites = library.GetFavorites();
@@ -78,7 +85,7 @@ namespace GameLabs.Forge.Editor
                 DrawCollapsedSection("Favorites", filteredFavorites.Count, ref _showFavorites);
             }
             
-            EditorGUILayout.Space(5);
+            EditorGUILayout.Space(3);
             
             // Recent section
             if (_showRecents)
@@ -90,7 +97,7 @@ namespace GameLabs.Forge.Editor
                 DrawCollapsedSection("Recent", filteredRecents.Count, ref _showRecents);
             }
             
-            EditorGUILayout.Space(5);
+            EditorGUILayout.Space(3);
             
             // All templates section
             if (_showAll)
@@ -102,30 +109,55 @@ namespace GameLabs.Forge.Editor
                 DrawCollapsedSection("All Templates", filteredAll.Count, ref _showAll);
             }
             
+            GUILayout.Space(10);
+            
             EditorGUILayout.EndScrollView();
         }
         
         private void DrawHeader()
         {
-            EditorGUILayout.Space(10);
-            EditorGUILayout.LabelField("Template Library", EditorStyles.boldLabel);
-            EditorGUILayout.Space(5);
+            GUILayout.Space(12);
+            
+            var headerStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 14,
+                alignment = TextAnchor.MiddleLeft
+            };
+            
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(10);
+            EditorGUILayout.LabelField("Template Library", headerStyle);
+            GUILayout.FlexibleSpace();
+            
+            if (GUILayout.Button("Refresh", GUILayout.Width(60), GUILayout.Height(20)))
+            {
+                RefreshTemplates();
+            }
+            GUILayout.Space(10);
+            EditorGUILayout.EndHorizontal();
+            
+            GUILayout.Space(8);
         }
         
         private void DrawSearch()
         {
             EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(10);
             GUI.SetNextControlName("SearchField");
-            _searchQuery = EditorGUILayout.TextField(_searchQuery, EditorStyles.toolbarSearchField);
             
-            if (GUILayout.Button("", GUI.skin.FindStyle("SearchCancelButton"), GUILayout.Width(18)))
+            var searchStyle = new GUIStyle(EditorStyles.toolbarSearchField);
+            searchStyle.fixedHeight = 20;
+            
+            _searchQuery = GUILayout.TextField(_searchQuery, searchStyle);
+            
+            if (GUILayout.Button("", GUI.skin.FindStyle("SearchCancelButton"), GUILayout.Width(18), GUILayout.Height(20)))
             {
                 _searchQuery = "";
                 GUI.FocusControl(null);
             }
             
+            GUILayout.Space(10);
             EditorGUILayout.EndHorizontal();
-            EditorGUILayout.Space(5);
         }
         
         private List<ScriptableObject> ApplySearch(List<ScriptableObject> templates)
@@ -141,43 +173,68 @@ namespace GameLabs.Forge.Editor
         
         private void DrawCollapsedSection(string title, int count, ref bool expanded)
         {
-            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-            if (GUILayout.Button($"> {title} ({count})", EditorStyles.toolbarButton))
+            var bgRect = EditorGUILayout.GetControlRect(false, 24);
+            EditorGUI.DrawRect(bgRect, new Color(0.25f, 0.25f, 0.25f));
+            
+            var arrowRect = new Rect(bgRect.x + 10, bgRect.y + 4, 16, 16);
+            var labelRect = new Rect(bgRect.x + 30, bgRect.y, bgRect.width - 30, bgRect.height);
+            
+            if (GUI.Button(bgRect, "", GUIStyle.none))
             {
                 expanded = !expanded;
                 SavePreference(title, expanded);
             }
-            EditorGUILayout.EndHorizontal();
+            
+            GUI.Label(arrowRect, ">", EditorStyles.boldLabel);
+            GUI.Label(labelRect, $"{title} ({count})", EditorStyles.label);
         }
         
         private void DrawSection(string title, List<ScriptableObject> templates, ref bool expanded, bool showFavButton)
         {
-            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-            if (GUILayout.Button($"v {title} ({templates.Count})", EditorStyles.toolbarButton))
+            var bgRect = EditorGUILayout.GetControlRect(false, 24);
+            EditorGUI.DrawRect(bgRect, new Color(0.3f, 0.3f, 0.3f));
+            
+            var arrowRect = new Rect(bgRect.x + 10, bgRect.y + 4, 16, 16);
+            var labelRect = new Rect(bgRect.x + 30, bgRect.y, bgRect.width - 30, bgRect.height);
+            
+            if (GUI.Button(bgRect, "", GUIStyle.none))
             {
                 expanded = !expanded;
                 SavePreference(title, expanded);
             }
-            EditorGUILayout.EndHorizontal();
+            
+            GUI.Label(arrowRect, "v", EditorStyles.boldLabel);
+            
+            var labelStyle = new GUIStyle(EditorStyles.boldLabel);
+            labelStyle.normal.textColor = Color.white;
+            GUI.Label(labelRect, $"{title} ({templates.Count})", labelStyle);
             
             if (templates.Count == 0)
             {
-                EditorGUILayout.LabelField("  No templates", EditorStyles.centeredGreyMiniLabel);
+                GUILayout.Space(5);
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.Space(30);
+                EditorGUILayout.LabelField("No templates", EditorStyles.centeredGreyMiniLabel);
+                EditorGUILayout.EndHorizontal();
+                GUILayout.Space(5);
                 return;
             }
+            
+            GUILayout.Space(2);
             
             var library = ForgeTemplateLibrary.Instance;
             
             foreach (var template in templates)
             {
                 EditorGUILayout.BeginHorizontal();
+                GUILayout.Space(10);
                 
-                // Favorite toggle (only if not in favorites section)
+                // Favorite toggle
                 if (!showFavButton)
                 {
                     bool isFav = library.IsFavorite(template);
                     string starIcon = isFav ? "⭐" : "☆";
-                    if (GUILayout.Button(starIcon, GUILayout.Width(20), GUILayout.Height(20)))
+                    if (GUILayout.Button(starIcon, GUILayout.Width(24), GUILayout.Height(22)))
                     {
                         if (isFav)
                             library.RemoveFromFavorites(template);
@@ -187,37 +244,53 @@ namespace GameLabs.Forge.Editor
                 }
                 else
                 {
-                    GUILayout.Space(20);
+                    GUILayout.Space(24);
                 }
                 
-                // Template button with hover highlight
-                string displayName = $"{template.name} ({template.GetType().Name})";
+                GUILayout.Space(6);
                 
-                var buttonStyle = new GUIStyle(EditorStyles.label);
-                buttonStyle.hover.background = Texture2D.whiteTexture;
-                buttonStyle.hover.textColor = Color.white;
-                buttonStyle.padding = new RectOffset(4, 4, 2, 2);
+                // Template button with hover
+                string displayName = $"{template.name}";
+                string typeName = $"{template.GetType().Name}";
                 
-                var rect = GUILayoutUtility.GetRect(new GUIContent(displayName), buttonStyle, GUILayout.Height(20));
+                var rect = GUILayoutUtility.GetRect(new GUIContent(displayName), EditorStyles.label, GUILayout.Height(22));
+                
+                bool isHovered = rect.Contains(Event.current.mousePosition);
                 
                 if (Event.current.type == EventType.Repaint)
                 {
-                    if (rect.Contains(Event.current.mousePosition))
+                    if (isHovered)
                     {
-                        EditorGUI.DrawRect(rect, new Color(0.3f, 0.5f, 0.8f, 0.5f));
+                        EditorGUI.DrawRect(rect, new Color(0.3f, 0.5f, 0.8f, 0.4f));
                     }
                 }
                 
-                if (GUI.Button(rect, displayName, buttonStyle))
+                var nameStyle = new GUIStyle(EditorStyles.label);
+                nameStyle.padding = new RectOffset(4, 4, 4, 4);
+                nameStyle.normal.textColor = isHovered ? Color.white : new Color(0.8f, 0.8f, 0.8f);
+                
+                var nameRect = new Rect(rect.x, rect.y, rect.width - 150, rect.height);
+                var typeRect = new Rect(rect.x + rect.width - 145, rect.y, 145, rect.height);
+                
+                GUI.Label(nameRect, displayName, nameStyle);
+                
+                var typeStyle = new GUIStyle(EditorStyles.miniLabel);
+                typeStyle.alignment = TextAnchor.MiddleRight;
+                typeStyle.normal.textColor = new Color(0.6f, 0.6f, 0.6f);
+                typeStyle.padding = new RectOffset(0, 8, 4, 4);
+                GUI.Label(typeRect, typeName, typeStyle);
+                
+                if (GUI.Button(rect, "", GUIStyle.none))
                 {
                     _onSelect?.Invoke(template);
                     Close();
                 }
                 
-                GUILayout.FlexibleSpace();
-                
+                GUILayout.Space(10);
                 EditorGUILayout.EndHorizontal();
             }
+            
+            GUILayout.Space(2);
         }
         
         private void SavePreference(string section, bool value)
