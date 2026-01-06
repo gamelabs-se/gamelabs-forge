@@ -448,47 +448,33 @@ namespace GameLabs.Forge.Editor
                 EditorGUIUtility.labelWidth = LABEL_W;
 
                 var oldTemplate = _template;
+                
                 EditorGUILayout.BeginHorizontal();
-                _template = (ScriptableObject)EditorGUILayout.ObjectField(
-                    new GUIContent("Template", "Any existing ScriptableObject can be used as a template"),
-                    _template,
-                    typeof(ScriptableObject),
-                    false);
+                
+                // Template field label
+                EditorGUILayout.LabelField("Template", GUILayout.Width(LABEL_W));
+                
+                // Show current template name or prompt
+                string displayName = _template != null ? $"{_template.name} ({_template.GetType().Name})" : "None (click ... to browse)";
+                EditorGUILayout.LabelField(displayName, EditorStyles.textField, GUILayout.Height(18));
                 
                 // Favorite star button
                 if (_template != null)
                 {
                     var library = ForgeTemplateLibrary.Instance;
                     bool isFav = library.IsFavorite(_template);
-                    string starIcon = isFav ? "Favorite" : "StarEmpty";
-                    var iconContent = EditorGUIUtility.IconContent(starIcon);
-                    if (iconContent != null && iconContent.image != null)
+                    if (GUILayout.Button(new GUIContent(isFav ? "*" : "o", isFav ? "Remove from favorites" : "Add to favorites"), 
+                        GUILayout.Width(24), GUILayout.Height(18)))
                     {
-                        if (GUILayout.Button(new GUIContent(iconContent.image, isFav ? "Remove from favorites" : "Add to favorites"), 
-                            GUILayout.Width(24), GUILayout.Height(18)))
-                        {
-                            if (isFav)
-                                library.RemoveFromFavorites(_template);
-                            else
-                                library.AddToFavorites(_template);
-                        }
-                    }
-                    else
-                    {
-                        // Fallback to text if icon not available
-                        if (GUILayout.Button(new GUIContent(isFav ? "*" : "o", isFav ? "Remove from favorites" : "Add to favorites"), 
-                            GUILayout.Width(24), GUILayout.Height(18)))
-                        {
-                            if (isFav)
-                                library.RemoveFromFavorites(_template);
-                            else
-                                library.AddToFavorites(_template);
-                        }
+                        if (isFav)
+                            library.RemoveFromFavorites(_template);
+                        else
+                            library.AddToFavorites(_template);
                     }
                 }
                 
                 // Library browser button
-                if (GUILayout.Button(new GUIContent("...", "Open Template Library"), GUILayout.Width(30), GUILayout.Height(18)))
+                if (GUILayout.Button(new GUIContent("...", "Browse templates"), GUILayout.Width(30), GUILayout.Height(18)))
                 {
                     ForgeTemplateLibraryWindow.Open((selected) => {
                         if (selected != null)
