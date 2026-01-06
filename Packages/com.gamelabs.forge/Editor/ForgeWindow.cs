@@ -460,9 +460,9 @@ namespace GameLabs.Forge.Editor
                 {
                     var library = ForgeTemplateLibrary.Instance;
                     bool isFav = library.IsFavorite(_template);
-                    string starIcon = isFav ? "⭐" : "☆";
-                    if (GUILayout.Button(new GUIContent(starIcon, isFav ? "Remove from favorites" : "Add to favorites"), 
-                        GUILayout.Width(28), GUILayout.Height(18)))
+                    string starIcon = isFav ? "Star" : "StarEmpty";
+                    if (GUILayout.Button(new GUIContent(EditorGUIUtility.IconContent(starIcon).image, isFav ? "Remove from favorites" : "Add to favorites"), 
+                        GUILayout.Width(24), GUILayout.Height(18)))
                     {
                         if (isFav)
                             library.RemoveFromFavorites(_template);
@@ -470,42 +470,20 @@ namespace GameLabs.Forge.Editor
                             library.AddToFavorites(_template);
                     }
                 }
-                EditorGUILayout.EndHorizontal();
                 
-                // Show recent templates
-                var recents = ForgeTemplateLibrary.Instance.GetRecents();
-                var favorites = ForgeTemplateLibrary.Instance.GetFavorites();
-                if ((recents.Count > 0 || favorites.Count > 0) && _template == null)
+                // Library browser button
+                if (GUILayout.Button(new GUIContent("...", "Open Template Library"), GUILayout.Width(30), GUILayout.Height(18)))
                 {
-                    EditorGUILayout.Space(2);
-                    EditorGUILayout.LabelField("Quick Select:", UI.Hint);
-                    EditorGUILayout.BeginHorizontal();
-                    
-                    // Show favorites first
-                    foreach (var fav in favorites.Take(5))
-                    {
-                        if (GUILayout.Button(new GUIContent($"⭐ {fav.name}", fav.GetType().Name), GUILayout.Height(20)))
+                    ForgeTemplateLibraryWindow.Open((selected) => {
+                        if (selected != null)
                         {
-                            _template = fav;
-                            ForgeTemplateLibrary.Instance.RecordUsage(fav);
+                            _template = selected;
+                            ForgeTemplateLibrary.Instance.RecordUsage(selected);
                         }
-                    }
-                    
-                    // Then recents
-                    foreach (var recent in recents.Take(3))
-                    {
-                        if (!favorites.Contains(recent)) // Don't show if already in favorites
-                        {
-                            if (GUILayout.Button(new GUIContent(recent.name, recent.GetType().Name), GUILayout.Height(20)))
-                            {
-                                _template = recent;
-                                ForgeTemplateLibrary.Instance.RecordUsage(recent);
-                            }
-                        }
-                    }
-                    
-                    EditorGUILayout.EndHorizontal();
+                    });
                 }
+                
+                EditorGUILayout.EndHorizontal();
 
                 // Trigger refresh if template changed
                 if (_template != oldTemplate)
@@ -1002,20 +980,18 @@ namespace GameLabs.Forge.Editor
             GUILayout.Label("GameLabs | FORGE", UI.Hint);
             GUILayout.FlexibleSpace();
             
-            // Session cost and token tracking
-            var costTracker = ForgeCostTracker.Instance;
-            if (costTracker.SessionGenerations > 0)
+            // Session cost and token tracking (clickable to open stats)
+            bool showTokenTracking = EditorPrefs.GetBool("GameLabs.Forge.ShowTokenTracking", true);
+            if (showTokenTracking)
             {
-                string costText = $"Tokens: {costTracker.SessionTokens} (out: {costTracker.SessionCompletionTokens}, in: {costTracker.SessionPromptTokens}) | Approx. cost ${costTracker.SessionCost:F4}";
-                GUILayout.Label(costText, UI.Hint);
-                
-                if (GUILayout.Button(new GUIContent("Reset", "Reset session cost tracker"), GUILayout.Width(50), GUILayout.Height(18)))
+                var costTracker = ForgeCostTracker.Instance;
+                if (costTracker.SessionGenerations > 0)
                 {
-                    if (EditorUtility.DisplayDialog("Reset Session", 
-                        $"Reset session cost tracker?\n\n{costTracker.GetSessionSummary()}", 
-                        "Reset", "Cancel"))
+                    string costText = $"Tokens: {costTracker.SessionTokens} (out: {costTracker.SessionCompletionTokens}, in: {costTracker.SessionPromptTokens}) | Approx. cost ${costTracker.SessionCost:F4}";
+                    
+                    if (GUILayout.Button(costText, UI.Hint))
                     {
-                        costTracker.ResetSession();
+                        ForgeStatisticsWindow.Open();
                     }
                 }
             }

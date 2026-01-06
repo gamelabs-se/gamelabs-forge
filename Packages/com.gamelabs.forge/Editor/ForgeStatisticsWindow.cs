@@ -36,6 +36,9 @@ namespace GameLabs.Forge.Editor
             DrawHeader();
             EditorGUILayout.Space(10);
             
+            DrawCurrentSession();
+            EditorGUILayout.Space(10);
+            
             DrawGenerationStats();
             EditorGUILayout.Space(10);
             
@@ -51,6 +54,62 @@ namespace GameLabs.Forge.Editor
             DrawActions();
             
             EditorGUILayout.EndScrollView();
+        }
+        
+        private void DrawCurrentSession()
+        {
+            EditorGUILayout.LabelField("Current Session", EditorStyles.boldLabel);
+            
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            
+            var costTracker = ForgeCostTracker.Instance;
+            
+            if (costTracker.SessionGenerations > 0)
+            {
+                EditorGUILayout.LabelField("Generations", costTracker.SessionGenerations.ToString());
+                EditorGUILayout.LabelField("Items Generated", costTracker.SessionItemsGenerated.ToString());
+                EditorGUILayout.LabelField("Total Tokens", costTracker.SessionTokens.ToString());
+                EditorGUILayout.LabelField("  Input Tokens", costTracker.SessionPromptTokens.ToString());
+                EditorGUILayout.LabelField("  Output Tokens", costTracker.SessionCompletionTokens.ToString());
+                EditorGUILayout.LabelField("Approx. Cost", $"${costTracker.SessionCost:F4}");
+                
+                var duration = System.DateTime.Now - costTracker.SessionStartTime;
+                EditorGUILayout.LabelField("Duration", $"{duration.TotalMinutes:F0}m");
+            }
+            else
+            {
+                EditorGUILayout.LabelField("No generations in this session yet", EditorStyles.centeredGreyMiniLabel);
+            }
+            
+            EditorGUILayout.Space(5);
+            
+            EditorGUILayout.BeginHorizontal();
+            
+            bool showTokens = EditorPrefs.GetBool("GameLabs.Forge.ShowTokenTracking", true);
+            bool newShowTokens = EditorGUILayout.ToggleLeft("Show Token Tracking in Footer", showTokens);
+            if (newShowTokens != showTokens)
+            {
+                EditorPrefs.SetBool("GameLabs.Forge.ShowTokenTracking", newShowTokens);
+            }
+            
+            GUILayout.FlexibleSpace();
+            
+            if (costTracker.SessionGenerations > 0)
+            {
+                if (GUILayout.Button("Reset Session", GUILayout.Width(120)))
+                {
+                    if (EditorUtility.DisplayDialog("Reset Session",
+                        $"Reset session cost tracker?\n\n{costTracker.GetSessionSummary()}",
+                        "Reset", "Cancel"))
+                    {
+                        costTracker.ResetSession();
+                    }
+                }
+            }
+            
+            EditorGUILayout.EndHorizontal();
+            
+            EditorGUILayout.EndVertical();
         }
         
         private void DrawHeader()
