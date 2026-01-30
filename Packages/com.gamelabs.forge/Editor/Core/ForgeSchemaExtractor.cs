@@ -140,6 +140,9 @@ namespace GameLabs.Forge.Editor
             if (type.IsEnum) return "string";
             if (type.IsArray || (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>)))
                 return "array";
+            // Identify Unity asset reference types
+            if (typeof(UnityEngine.Object).IsAssignableFrom(type))
+                return "asset_reference";
             return "object";
         }
         
@@ -208,7 +211,11 @@ namespace GameLabs.Forge.Editor
             {
                 sb.Append($"  - {field.name} ({field.type})");
                 
-                if (field.minValue != null || field.maxValue != null)
+                if (field.type == "asset_reference")
+                {
+                    sb.Append(" [USE: {\"instanceID\": 0}]");
+                }
+                else if (field.minValue != null || field.maxValue != null)
                 {
                     sb.Append($" [range: {field.minValue ?? "any"} to {field.maxValue ?? "any"}]");
                 }
@@ -249,6 +256,8 @@ namespace GameLabs.Forge.Editor
                     return "false";
                 case "array":
                     return "[]";
+                case "asset_reference":
+                    return "{\"instanceID\": 0}";
                 case "object":
                     return "{}";
                 default:
