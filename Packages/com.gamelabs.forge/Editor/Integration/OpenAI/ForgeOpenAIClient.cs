@@ -116,16 +116,17 @@ namespace GameLabs.Forge.Editor.Integration.OpenAI
 
             var req = new RequestData { model = model, messages = msgs };
             
-            // GPT-5 models don't support temperature parameter - they only accept temperature=1
-            // So we conditionally add it for other models
-            bool isGPT5 = model.StartsWith("gpt-5");
-            if (!isGPT5)
+            // Some models don't support the temperature parameter:
+            // - o1 models don't support temperature at all
+            // - GPT-5 models only accept temperature=1
+            bool skipTemperature = model.StartsWith("o1") || model.StartsWith("gpt-5");
+            if (!skipTemperature)
             {
                 req.temperature = temperature;
             }
             
             // Build JSON manually to handle optional temperature
-            string json = BuildRequestJson(req, isGPT5);
+            string json = BuildRequestJson(req, skipTemperature);
 
             ForgeEditorCoroutine.Start(Post(apiUrl, json, cb));
         }
@@ -155,7 +156,7 @@ namespace GameLabs.Forge.Editor.Integration.OpenAI
             }
             sb.Append("]");
             
-            // Add temperature only for non-GPT-5 models
+            // Add temperature only for models that support it
             if (!skipTemperature && req.temperature.HasValue)
             {
                 sb.Append($",\"temperature\":{req.temperature.Value:F1}");
