@@ -1,12 +1,10 @@
 # GameLabs FORGE
 
-**Unity editor tool for generating ScriptableObject assets from existing templates**
+**Unity editor tool for generating ScriptableObject assets from existing templates using AI**
 
 GameLabs FORGE generates new ScriptableObject assets directly inside the Unity editor, using your existing data definitions and Unity metadata (tooltips, ranges, enums, etc.).
 
-No base classes.
-No inheritance.
-No schema configuration.
+No base classes. No inheritance. No schema configuration.
 
 ---
 
@@ -20,57 +18,74 @@ The tool is editor-only and fully modular — you can generate assets and remove
 
 ## Quick Start
 
-### 1. Import
+### 1. Install
 
+**Option A: Unity Package**
 - Download the latest `.unitypackage` from Releases
 - In Unity: `Assets → Import Package → Custom Package`
-- Import the package
 
-### 2. Initial Setup (one time)
+**Option B: Package Manager (Git URL)**
+- Open Package Manager → Add package from git URL
+- Enter: `https://github.com/user/gamelabs-forge.git`
 
-- Open `GameLabs → Forge → Setup Wizard`
-- Enter your OpenAI API key (stored locally in `EditorPrefs`)
-- Configure basic project context
-- Finish
+### 2. Setup (one time)
 
-### 3. Generate Assets
+- Open `GameLabs → Forge → Re-run Setup Wizard`
+- Enter your OpenAI API key
+- Configure game context (name, description, audience)
+- Select AI model (GPT-5-mini recommended)
+- Click Finish
 
-- Open `GameLabs → Forge → FORGE`
-- Drag any ScriptableObject into the **Template** field
-- Choose how many assets to generate
-- Click **Generate**
-- Assets are created and saved directly into the project
+### 3. Generate
 
----
-
-## How It Works
-
-FORGE inspects the selected ScriptableObject using reflection and extracts:
-
-- Field types (`int`, `float`, `string`, enums, etc.)
-- Unity constraints (`[Range]`, `[Min]`, `[Tooltip]`)
-- Enum values
-- Existing assets (to reduce duplicates)
-
-Generation is constrained by this extracted schema rather than free-form prompting.
-
-Object reference fields are left unset and can be filled in manually if needed.
+- Open `GameLabs → Forge → Forge Window`
+- Drag a `.cs` script file containing a ScriptableObject class into the Template Class field
+- Set count (1-50) and click **Generate**
+- Assets save to `Assets/Resources/Generated/`
 
 ---
 
 ## Features
 
-- **Template-driven generation** — uses existing ScriptableObjects as input
-- **Unity metadata aware** — respects ranges, enums, and tooltips
-- **Editor-only** — no runtime dependency
-- **Batch generation** — generate multiple assets in one pass
-- **Automatic serialization** — assets saved directly to the project
-- **Reusable presets** — save generation settings for repeated use
-- **No project lock-in** — remove FORGE after generation if desired
+| Feature | Description |
+|---------|-------------|
+| **Template-driven** | Uses existing ScriptableObjects as schema source |
+| **Unity metadata aware** | Reads `[Tooltip]`, `[Range]`, `[Header]`, enums |
+| **Template Library** | Browse, search, favorite, and track recent templates |
+| **Blueprints** | Save generation presets (template + instructions + settings) |
+| **Preview mode** | Review generated items before saving |
+| **Duplicate prevention** | Three strategies to avoid similar items |
+| **Cost tracking** | Monitor tokens and estimated costs per session |
+| **Multiple models** | GPT-5-mini, GPT-4o, or o1 |
+| **Batch generation** | Up to 50 assets per request |
 
 ---
 
-## Example Template
+## How It Works
+
+FORGE uses reflection to extract a schema from your ScriptableObject:
+
+```
+Template ScriptableObject
+         ↓
+    Schema Extraction (fields, types, ranges, enums, tooltips)
+         ↓
+    AI Generation (constrained by schema)
+         ↓
+    Deserialization → New ScriptableObject Assets
+```
+
+**Extracted metadata:**
+- Field names and types (`int`, `float`, `string`, `bool`, enums)
+- `[Range(min, max)]` constraints
+- `[Tooltip("...")]` descriptions (improves AI understanding)
+- `[Header("...")]` groupings
+- Enum values and their names
+- Existing assets of the same type (for duplicate prevention)
+
+---
+
+## Example: Weapon Template
 
 ```csharp
 using UnityEngine;
@@ -78,57 +93,134 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Game/Weapon")]
 public class Weapon : ScriptableObject
 {
+    [Tooltip("Display name of the weapon")]
     public new string name;
 
+    [Tooltip("Base damage dealt per hit")]
     [Range(1, 100)]
     public int damage;
 
+    [Tooltip("Weight affecting swing speed")]
     [Range(0.1f, 10f)]
     public float weight;
 
+    [Tooltip("Category of weapon")]
     public WeaponType type;
+
+    [Tooltip("How rare this weapon is")]
+    public ItemRarity rarity;
 }
 
-public enum WeaponType { Sword, Axe, Mace, Dagger }
+public enum WeaponType { Sword, Axe, Mace, Dagger, Spear }
+public enum ItemRarity { Common, Uncommon, Rare, Epic, Legendary }
 ```
 
-Drag this ScriptableObject into FORGE and generate new assets that respect the defined structure and constraints.
+Create one asset manually as a template, then generate 20 more with balanced, varied stats.
 
 ---
 
 ## Configuration
 
-All configuration is stored per-user using `EditorPrefs`:
+Settings stored in `UserSettings/ForgeConfig.json` (gitignored):
 
-- OpenAI API key (never exported)
-- Project context (genre, theme, tone)
-- Generation parameters
-- Asset paths
+| Setting | Description |
+|---------|-------------|
+| OpenAI API Key | Required for generation |
+| AI Model | GPT-5-mini (default), GPT-4o, or o1 |
+| Game Name | Context for generation |
+| Game Description | Theme/genre context |
+| Target Audience | Affects tone and complexity |
+| Temperature | AI creativity (0-2) |
+| Duplicate Strategy | How to handle existing assets |
+| Generated Path | Where to save new assets |
 
-Settings are accessible via `GameLabs → Forge → Settings`.
+Access via ⚙️ button in Forge window or `GameLabs → Forge → Re-run Setup Wizard`.
+
+---
+
+## AI Models
+
+| Model | Best For | Input | Output |
+|-------|----------|-------|--------|
+| **GPT-4o-mini** | Most use cases | $0.15/1M tokens | $0.60/1M tokens |
+| GPT-4o | Complex items | $2.50/1M tokens | $10.00/1M tokens |
+| o1 | Premium reasoning | $15.00/1M tokens | $60.00/1M tokens |
+
+GPT-4o-mini recommended for most use cases. Actual costs depend on your template complexity (fields, tooltips, enums). Track your usage via Statistics (📊) to see real tokens/item for your templates.
+
+---
+
+## Advanced Features
+
+### Blueprints
+
+Save and reuse generation configurations:
+- Template reference
+- Custom instructions ("make items feel medieval", "balance for PvP")
+- Duplicate strategy override
+- Asset discovery path override
+
+Create via **Advanced Options** in Forge window.
+
+### Duplicate Prevention
+
+| Strategy | Description | Cost Impact |
+|----------|-------------|-------------|
+| **Ignore** | Don't check existing assets | Lowest |
+| **Names Only** | Send existing item names | Low |
+| **Full Composition** | Send full item data | Higher |
+
+### Statistics
+
+Track token usage per model via 📊 button:
+- Tokens used (input + output, per model)
+- Items generated per model
+- Average tokens per item (calculated from your actual usage)
+- Estimated costs (calculated from token counts)
+- Success/fulfillment rates
+
+All costs are **calculated from actual token usage** - no hardcoded estimates.
+
+---
+
+## Samples
+
+Import **Demo Items** sample via Package Manager:
+
+| Template | Fields | Description |
+|----------|--------|-------------|
+| **MeleeWeapon** | 8 | Swords, axes with damage, speed, rarity |
+| **Armor** | 10 | Equipment with slots, defense, modifiers |
+| **Skill** | 20 | RPG abilities with costs, scaling, effects |
+| **GameConfig** | 35 | Gameplay presets: movement, combat, difficulty |
+| **Spaceship** | 40+ | Sci-fi ships with full subsystems |
+
+**GameConfig** demonstrates that FORGE works for any ScriptableObject — not just "items". Generate entire difficulty presets, game modes, or configuration variants.
 
 ---
 
 ## Requirements
 
-- Unity 2021.3 or newer
+- Unity 2021.3+
 - OpenAI API key
-- Internet connection during generation
+- Internet connection (during generation only)
 
 ---
 
 ## License
 
-GameLabs FORGE may be used freely to develop and ship games (including commercial titles).
+GameLabs FORGE may be used freely for game development, including commercial titles.
 
 Redistribution or resale of the tool itself is not permitted.
 
-See `LICENSE` for full terms.
+See `LICENSE.md` for full terms.
 
 ---
 
-## Notes
+## Limitations
 
-FORGE is currently focused on single-layer data objects. Complex nested structures and deep object graphs are intentionally out of scope for now.
+- **Single-layer objects**: Nested ScriptableObject references are left null
+- **No asset references**: Sprite, Prefab, AudioClip fields are skipped
+- **Schema-constrained**: Generation follows your defined structure exactly
 
 ---
