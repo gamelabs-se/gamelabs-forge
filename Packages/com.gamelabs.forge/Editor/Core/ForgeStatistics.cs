@@ -6,6 +6,7 @@ namespace GameLabs.Forge.Editor
 {
     /// <summary>
     /// Tracks usage statistics for FORGE item generation.
+    /// All metrics are token-based - costs are calculated from tokens using current model pricing.
     /// Statistics persist across sessions and can be reset.
     /// </summary>
     [Serializable]
@@ -19,23 +20,23 @@ namespace GameLabs.Forge.Editor
         public int totalItemsGenerated = 0;
         public int totalFailures = 0;
         
-        [Header("Token Usage - Per Model")]
+        [Header("GPT-5-mini Stats")]
+        public int gpt5MiniGenerations = 0;
+        public int gpt5MiniItemsGenerated = 0;
         public long gpt5MiniPromptTokens = 0;
         public long gpt5MiniCompletionTokens = 0;
-        public float gpt5MiniCostUSD = 0f;
         
+        [Header("GPT-4o Stats")]
+        public int gpt4oGenerations = 0;
+        public int gpt4oItemsGenerated = 0;
         public long gpt4oPromptTokens = 0;
         public long gpt4oCompletionTokens = 0;
-        public float gpt4oCostUSD = 0f;
         
+        [Header("o1 Stats")]
+        public int o1Generations = 0;
+        public int o1ItemsGenerated = 0;
         public long o1PromptTokens = 0;
         public long o1CompletionTokens = 0;
-        public float o1CostUSD = 0f;
-        
-        [Header("Legacy Total Tracking (Deprecated)")]
-        public long totalPromptTokens = 0;
-        public long totalCompletionTokens = 0;
-        public float totalCostUSD = 0f;
         
         [Header("Session Info")]
         public string firstUsed = "";
@@ -63,7 +64,7 @@ namespace GameLabs.Forge.Editor
         }
         
         /// <summary>
-        /// Records a successful generation.
+        /// Records a successful generation. Cost is calculated from tokens.
         /// </summary>
         public void RecordGeneration(int itemsRequested, int itemsGenerated, int promptTokens, int completionTokens, float cost, ForgeAIModel model)
         {
@@ -74,34 +75,31 @@ namespace GameLabs.Forge.Editor
             totalItemsGenerated += itemsGenerated;
             sessionItemsGenerated += itemsGenerated;
             
-            // Track per-model
+            // Track per-model (tokens and items)
             switch (model)
             {
                 case ForgeAIModel.GPT5Mini:
+                    gpt5MiniGenerations++;
+                    gpt5MiniItemsGenerated += itemsGenerated;
                     gpt5MiniPromptTokens += promptTokens;
                     gpt5MiniCompletionTokens += completionTokens;
-                    gpt5MiniCostUSD += cost;
                     break;
                 case ForgeAIModel.GPT4o:
+                    gpt4oGenerations++;
+                    gpt4oItemsGenerated += itemsGenerated;
                     gpt4oPromptTokens += promptTokens;
                     gpt4oCompletionTokens += completionTokens;
-                    gpt4oCostUSD += cost;
                     break;
                 case ForgeAIModel.O1:
+                    o1Generations++;
+                    o1ItemsGenerated += itemsGenerated;
                     o1PromptTokens += promptTokens;
                     o1CompletionTokens += completionTokens;
-                    o1CostUSD += cost;
                     break;
             }
             
-            // Also update legacy totals for backwards compatibility
-            totalPromptTokens += promptTokens;
-            totalCompletionTokens += completionTokens;
-            totalCostUSD += cost;
-            
             if (itemsGenerated < itemsRequested)
             {
-                // Partial failure
                 totalFailures++;
                 ForgeLogger.Warn($"Partial generation: requested {itemsRequested}, got {itemsGenerated}");
             }
@@ -125,9 +123,96 @@ namespace GameLabs.Forge.Editor
             Save();
         }
         
-        /// <summary>
-        /// Gets the success rate as a percentage.
-        /// </summary>
+        // ===== Calculated Properties (Token-based) =====
+        
+        /// <summary>Total tokens across all models.</summary>
+        public long GetTotalTokens()
+        {
+            return gpt5MiniPromptTokens + gpt5MiniCompletionTokens +
+                   gpt4oPromptTokens + gpt4oCompletionTokens +
+                   o1PromptTokens + o1CompletionTokens;
+        }
+        
+        /// <summary>Total prompt (input) tokens across all models.</summary>
+        public long GetTotalPromptTokens()
+        {
+            return gpt5MiniPromptTokens + gpt4oPromptTokens + o1PromptTokens;
+        }
+        
+        /// <summary>Total completion (output) tokens across all models.</summary>
+        public long GetTotalCompletionTokens()
+        {
+            return gpt5MiniCompletionTokens + gpt4oCompletionTokens + o1CompletionTokens;
+        }
+        
+        /// <summary>Calculate cost for a model from its token usage.</summary>
+        public float CalculateModelCost(ForgeAIModel model)
+        {
+            return model switch
+            {
+                ForgeAIModel.GPT5Mini => ForgeAIModelHelper.CalculateCost(model, (int)gpt5MiniPromptTokens, (int)gpt5MiniCompletionTokens),
+                ForgeAIModel.GPT4o => ForgeAIModelHelper.CalculateCost(model, (int)gpt4oPromptTokens, (int)gpt4oCompletionTokens),
+                ForgeAIModel.O1 => ForgeAIModelHelper.CalculateCost(model, (int)o1PromptTokens, (int)o1CompletionTokens),
+                _ => 0f
+            };
+        }
+        
+        /// <summary>Total estimated cost across all models (calculated from tokens).</summary>
+        public float GetTotalCost()
+        {
+            return CalculateModelCost(ForgeAIModel.GPT5Mini) +
+                   CalculateModelCost(ForgeAIModel.GPT4o) +
+                   CalculateModelCost(ForgeAIModel.O1);
+        }
+        
+        /// <summary>Average tokens per item for a specific model.</summary>
+        public float GetAvgTokensPerItem(ForgeAIModel model)
+        {
+            return model switch
+            {
+                ForgeAIModel.GPT5Mini => gpt5MiniItemsGenerated > 0 
+                    ? (gpt5MiniPromptTokens + gpt5MiniCompletionTokens) / (float)gpt5MiniItemsGenerated 
+                    : 0f,
+                ForgeAIModel.GPT4o => gpt4oItemsGenerated > 0 
+                    ? (gpt4oPromptTokens + gpt4oCompletionTokens) / (float)gpt4oItemsGenerated 
+                    : 0f,
+                ForgeAIModel.O1 => o1ItemsGenerated > 0 
+                    ? (o1PromptTokens + o1CompletionTokens) / (float)o1ItemsGenerated 
+                    : 0f,
+                _ => 0f
+            };
+        }
+        
+        /// <summary>Average cost per item for a specific model.</summary>
+        public float GetAvgCostPerItem(ForgeAIModel model)
+        {
+            int items = model switch
+            {
+                ForgeAIModel.GPT5Mini => gpt5MiniItemsGenerated,
+                ForgeAIModel.GPT4o => gpt4oItemsGenerated,
+                ForgeAIModel.O1 => o1ItemsGenerated,
+                _ => 0
+            };
+            
+            if (items == 0) return 0f;
+            return CalculateModelCost(model) / items;
+        }
+        
+        /// <summary>Average tokens per item across all models.</summary>
+        public float GetOverallAvgTokensPerItem()
+        {
+            if (totalItemsGenerated == 0) return 0f;
+            return GetTotalTokens() / (float)totalItemsGenerated;
+        }
+        
+        /// <summary>Average cost per item across all models.</summary>
+        public float GetOverallAvgCostPerItem()
+        {
+            if (totalItemsGenerated == 0) return 0f;
+            return GetTotalCost() / totalItemsGenerated;
+        }
+        
+        /// <summary>Success rate as percentage.</summary>
         public float GetSuccessRate()
         {
             if (totalGenerations == 0) return 100f;
@@ -135,44 +220,7 @@ namespace GameLabs.Forge.Editor
             return (successes / (float)totalGenerations) * 100f;
         }
         
-        /// <summary>
-        /// Gets the average items per generation.
-        /// </summary>
-        public float GetAverageItemsPerGeneration()
-        {
-            if (totalGenerations == 0) return 0f;
-            return totalItemsGenerated / (float)totalGenerations;
-        }
-        
-        /// <summary>
-        /// Gets the average cost per generation.
-        /// </summary>
-        public float GetAverageCostPerGeneration()
-        {
-            if (totalGenerations == 0) return 0f;
-            return totalCostUSD / totalGenerations;
-        }
-        
-        /// <summary>
-        /// Gets the average cost per item.
-        /// </summary>
-        public float GetAverageCostPerItem()
-        {
-            if (totalItemsGenerated == 0) return 0f;
-            return totalCostUSD / totalItemsGenerated;
-        }
-        
-        /// <summary>
-        /// Gets the total tokens used.
-        /// </summary>
-        public long GetTotalTokens()
-        {
-            return totalPromptTokens + totalCompletionTokens;
-        }
-        
-        /// <summary>
-        /// Gets the fulfillment rate (items generated / items requested).
-        /// </summary>
+        /// <summary>Fulfillment rate (items generated / items requested).</summary>
         public float GetFulfillmentRate()
         {
             if (totalItemsRequested == 0) return 100f;
@@ -188,9 +236,22 @@ namespace GameLabs.Forge.Editor
             totalItemsRequested = 0;
             totalItemsGenerated = 0;
             totalFailures = 0;
-            totalPromptTokens = 0;
-            totalCompletionTokens = 0;
-            totalCostUSD = 0f;
+            
+            gpt5MiniGenerations = 0;
+            gpt5MiniItemsGenerated = 0;
+            gpt5MiniPromptTokens = 0;
+            gpt5MiniCompletionTokens = 0;
+            
+            gpt4oGenerations = 0;
+            gpt4oItemsGenerated = 0;
+            gpt4oPromptTokens = 0;
+            gpt4oCompletionTokens = 0;
+            
+            o1Generations = 0;
+            o1ItemsGenerated = 0;
+            o1PromptTokens = 0;
+            o1CompletionTokens = 0;
+            
             firstUsed = "";
             lastUsed = "";
             sessionGenerations = 0;
@@ -240,7 +301,6 @@ namespace GameLabs.Forge.Editor
                 ForgeLogger.Warn($"Failed to load statistics: {e.Message}");
             }
             
-            // Return new instance if load fails
             var newStats = new ForgeStatistics();
             newStats.UpdateTimestamps();
             return newStats;
@@ -270,10 +330,15 @@ namespace GameLabs.Forge.Editor
                    $"Success Rate: {GetSuccessRate():F1}%\n" +
                    $"Fulfillment Rate: {GetFulfillmentRate():F1}%\n" +
                    $"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-                   $"Total Tokens: {GetTotalTokens():N0} ({totalPromptTokens:N0} prompt + {totalCompletionTokens:N0} completion)\n" +
-                   $"Total Cost: ${totalCostUSD:F4}\n" +
-                   $"Avg Cost/Generation: ${GetAverageCostPerGeneration():F6}\n" +
-                   $"Avg Cost/Item: ${GetAverageCostPerItem():F6}\n" +
+                   $"Total Tokens: {GetTotalTokens():N0} ({GetTotalPromptTokens():N0} in + {GetTotalCompletionTokens():N0} out)\n" +
+                   $"Avg Tokens/Item: {GetOverallAvgTokensPerItem():F0}\n" +
+                   $"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                   $"GPT-5-mini: {gpt5MiniItemsGenerated} items, {gpt5MiniPromptTokens + gpt5MiniCompletionTokens:N0} tokens, ~${CalculateModelCost(ForgeAIModel.GPT5Mini):F4}\n" +
+                   $"GPT-4o: {gpt4oItemsGenerated} items, {gpt4oPromptTokens + gpt4oCompletionTokens:N0} tokens, ~${CalculateModelCost(ForgeAIModel.GPT4o):F4}\n" +
+                   $"o1: {o1ItemsGenerated} items, {o1PromptTokens + o1CompletionTokens:N0} tokens, ~${CalculateModelCost(ForgeAIModel.O1):F4}\n" +
+                   $"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                   $"Est. Total Cost: ~${GetTotalCost():F4}\n" +
+                   $"Avg Cost/Item: ~${GetOverallAvgCostPerItem():F6}\n" +
                    $"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
                    $"First Used: {firstUsed}\n" +
                    $"Last Used: {lastUsed}";
