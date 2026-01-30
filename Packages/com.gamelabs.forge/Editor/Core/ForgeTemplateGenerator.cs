@@ -79,10 +79,12 @@ namespace GameLabs.Forge.Editor
         /// <param name="blueprint">The blueprint containing template, instructions, and settings.</param>
         /// <param name="count">Number of items to generate.</param>
         /// <param name="callback">Callback with generated ScriptableObject instances.</param>
+        /// <param name="sessionInstructions">Optional session-specific instructions (not persisted).</param>
         public void GenerateFromBlueprint(
             ForgeBlueprint blueprint,
             int count,
-            Action<ForgeTemplateGenerationResult> callback)
+            Action<ForgeTemplateGenerationResult> callback,
+            string sessionInstructions = null)
         {
             if (blueprint == null)
             {
@@ -96,13 +98,14 @@ namespace GameLabs.Forge.Editor
                 return;
             }
 
-            ForgeEditorCoroutine.Start(GenerateFromBlueprintCoroutine(blueprint, count, callback));
+            ForgeEditorCoroutine.Start(GenerateFromBlueprintCoroutine(blueprint, count, callback, sessionInstructions));
         }
 
         private IEnumerator GenerateFromBlueprintCoroutine(
             ForgeBlueprint blueprint,
             int count,
-            Action<ForgeTemplateGenerationResult> callback)
+            Action<ForgeTemplateGenerationResult> callback,
+            string sessionInstructions = null)
         {
             var client = ForgeOpenAIClient.Instance;
             
@@ -113,8 +116,9 @@ namespace GameLabs.Forge.Editor
                 yield break;
             }
 
-            // Configure client
-            string modelName = ForgeAIModelHelper.GetModelName(settings.model);
+            // Configure client - use blueprint's effective model
+            var effectiveModel = blueprint.GetEffectiveModel();
+            string modelName = ForgeAIModelHelper.GetModelName(effectiveModel);
             client.SetModel(modelName);
             client.SetTemperature(settings.temperature);
             client.SetSystemRole(BuildSystemPrompt());
@@ -124,9 +128,9 @@ namespace GameLabs.Forge.Editor
             var schema = ForgeSchemaExtractor.ExtractSchema(templateType);
 
             // Build the user prompt with blueprint strategy
-            var prompt = BuildBlueprintPrompt(schema, templateType, count, blueprint);
+            var prompt = BuildBlueprintPrompt(schema, templateType, count, blueprint, sessionInstructions);
 
-            ForgeLogger.DebugLog($"Generating {count} {templateType.Name} item(s) from blueprint '{blueprint.DisplayName}'...");
+            ForgeLogger.DebugLog($"Generating {count} {templateType.Name} item(s) from blueprint '{blueprint.DisplayName}' using model {effectiveModel}...");
             var effectiveStrategy = blueprint.GetEffectiveDuplicateStrategy();
             bool isOverride = blueprint.OverrideDuplicateStrategy;
             var globalSettings = ForgeConfig.GetGeneratorSettings();
@@ -157,6 +161,167 @@ namespace GameLabs.Forge.Editor
                 yield return null;
 
             callback?.Invoke(result);
+        }
+        
+        /// <summary>
+        /// Generates variants of an existing ScriptableObject item.
+        /// </summary>
+        /// <param name="sourceItem">The source item to create variants of.</param>
+        /// <param name="count">Number of variants to generate.</param>
+        /// <param name="variantInstructions">Instructions describing how variants should differ.</param>
+        /// <param name="callback">Callback with generated ScriptableObject instances.</param>
+        public void GenerateVariants(
+            ScriptableObject sourceItem,
+            int count,
+            string variantInstructions,
+            Action<ForgeTemplateGenerationResult> callback)
+        {
+            if (sourceItem == null)
+            {
+                callback?.Invoke(ForgeTemplateGenerationResult.Error("Source item cannot be null."));
+                return;
+            }
+
+            ForgeEditorCoroutine.Start(GenerateVariantsCoroutine(sourceItem, count, variantInstructions, callback));
+        }
+        
+        private IEnumerator GenerateVariantsCoroutine(
+            ScriptableObject sourceItem,
+            int count,
+            string variantInstructions,
+            Action<ForgeTemplateGenerationResult> callback)
+        {
+            var client = ForgeOpenAIClient.Instance;
+            
+            if (client == null)
+            {
+                ForgeLogger.Error("Failed to get ForgeOpenAIClient instance");
+                callback?.Invoke(ForgeTemplateGenerationResult.Error("Failed to initialize OpenAI client"));
+                yield break;
+            }
+
+            // Get effective model from global settings
+            var globalSettings = ForgeConfig.GetGeneratorSettings();
+            var effectiveModel = globalSettings?.model ?? ForgeAIModel.GPT5Mini;
+            string modelName = ForgeAIModelHelper.GetModelName(effectiveModel);
+            
+            client.SetModel(modelName);
+            client.SetTemperature(settings.temperature);
+            client.SetSystemRole(BuildVariantSystemPrompt());
+
+            // Extract schema and current values from source item
+            var itemType = sourceItem.GetType();
+            var schema = ForgeSchemaExtractor.ExtractSchema(itemType);
+            var sourceJson = JsonUtility.ToJson(sourceItem, true);
+
+            // Build the variant prompt
+            var prompt = BuildVariantPrompt(schema, sourceItem, sourceJson, count, variantInstructions);
+
+            ForgeLogger.DebugLog($"Generating {count} variants of {sourceItem.name} ({itemType.Name}) using model {effectiveModel}...");
+            if (ForgeLogger.DebugEnabled)
+            {
+                ForgeLogger.DebugLog($"=== VARIANT PROMPT ===\n{prompt}\n=== END PROMPT ===");
+            }
+
+            ForgeTemplateGenerationResult result = null;
+            bool completed = false;
+
+            client.Chat(prompt, response =>
+            {
+                result = ProcessResponse(response, itemType, count);
+                completed = true;
+            });
+
+            // Wait for completion
+            while (!completed)
+                yield return null;
+
+            callback?.Invoke(result);
+        }
+        
+        private string BuildVariantSystemPrompt()
+        {
+            return @"You are a game item variant generation API. Your job is to create variants of existing game items.
+
+CRITICAL RULES:
+1. ALWAYS respond with valid JSON that matches the exact structure of the source item.
+2. For single variants, respond with a JSON object.
+3. For multiple variants, respond with a JSON array.
+4. DO NOT include any text before or after the JSON.
+5. DO NOT use markdown code blocks.
+6. Ensure all field names match exactly as specified in the schema.
+7. Each variant should be meaningfully different while maintaining game balance.
+8. Preserve the essence of the original item while creating interesting variations.
+9. Consider gameplay implications of stat changes.
+10. For Unity asset references (GameObject, Sprite, AudioClip, Texture, Material, etc.), ALWAYS use empty object notation: {""instanceID"": 0}
+11. NEVER generate fake GUIDs or fileIDs for asset references.";
+        }
+        
+        private string BuildVariantPrompt(ForgeSchemaExtractor.TypeSchema schema, ScriptableObject sourceItem, string sourceJson, int count, string variantInstructions)
+        {
+            var schemaDesc = ForgeSchemaExtractor.GenerateSchemaDescription(schema);
+            var template = ForgeSchemaExtractor.GenerateJsonTemplate(schema);
+            
+            var sb = new StringBuilder();
+            
+            sb.AppendLine("=== TASK: CREATE VARIANTS ===");
+            sb.AppendLine($"Create {count} variant(s) of the source item below.");
+            sb.AppendLine("Each variant should be a unique version with modified values while preserving the item's core identity.");
+            sb.AppendLine();
+            
+            sb.AppendLine("=== CRITICAL: ASSET REFERENCES ===");
+            sb.AppendLine("For any field that references Unity assets (GameObject, Sprite, AudioClip, Texture, Material, Prefab, etc.):");
+            sb.AppendLine("- Use EXACTLY this format: {\"instanceID\": 0}");
+            sb.AppendLine("- Do NOT generate GUIDs, fileIDs, or any other reference format.");
+            sb.AppendLine("- These fields will be assigned manually by the developer later.");
+            sb.AppendLine();
+            
+            // User instructions take priority
+            if (!string.IsNullOrEmpty(variantInstructions))
+            {
+                sb.AppendLine("=== IMPORTANT: VARIANT REQUIREMENTS ===");
+                sb.AppendLine("Pay special attention to these instructions for how variants should differ:");
+                sb.AppendLine(variantInstructions);
+                sb.AppendLine();
+            }
+            else
+            {
+                sb.AppendLine("=== DEFAULT VARIANT GUIDANCE ===");
+                sb.AppendLine("Create variants with:");
+                sb.AppendLine("- Different names that suggest the variation");
+                sb.AppendLine("- Adjusted stats that create meaningful gameplay differences");
+                sb.AppendLine("- Varied rarity or tier levels if applicable");
+                sb.AppendLine("- Thematic consistency with the original");
+                sb.AppendLine();
+            }
+            
+            sb.AppendLine("=== SOURCE ITEM ===");
+            sb.AppendLine($"Name: {sourceItem.name}");
+            sb.AppendLine($"Type: {schema.typeName}");
+            sb.AppendLine("Current values:");
+            sb.AppendLine(sourceJson);
+            sb.AppendLine();
+            
+            sb.AppendLine("=== ITEM SCHEMA ===");
+            sb.AppendLine(schemaDesc);
+            sb.AppendLine();
+            
+            sb.AppendLine("=== JSON TEMPLATE ===");
+            sb.AppendLine(template);
+            sb.AppendLine();
+            
+            sb.AppendLine("=== OUTPUT FORMAT ===");
+            if (count == 1)
+            {
+                sb.AppendLine("Respond with a single JSON object representing the variant.");
+            }
+            else
+            {
+                sb.AppendLine($"Respond with a JSON array containing exactly {count} variant objects.");
+            }
+            sb.AppendLine("Each variant must follow the exact schema structure.");
+            
+            return sb.ToString();
         }
 
         private IEnumerator GenerateFromTemplateCoroutine(
@@ -224,7 +389,9 @@ CRITICAL RULES:
 5. DO NOT use markdown code blocks.
 6. Ensure all field names match exactly as specified.
 7. Generate creative, balanced, and game-appropriate content.
-8. Respect all value ranges and enum constraints provided.";
+8. Respect all value ranges and enum constraints provided.
+9. For Unity asset references (GameObject, Sprite, AudioClip, Texture, Material, etc.), ALWAYS use empty object notation: {""instanceID"": 0}
+10. NEVER generate fake GUIDs or fileIDs for asset references.";
         }
 
         /// <summary>
@@ -330,23 +497,32 @@ CRITICAL RULES:
             return sb.ToString();
         }
 
-        private string BuildBlueprintPrompt(ForgeSchemaExtractor.TypeSchema schema, Type templateType, int count, ForgeBlueprint blueprint)
+        private string BuildBlueprintPrompt(ForgeSchemaExtractor.TypeSchema schema, Type templateType, int count, ForgeBlueprint blueprint, string sessionInstructions = null)
         {
             var template = ForgeSchemaExtractor.GenerateJsonTemplate(schema);
             var schemaDesc = ForgeSchemaExtractor.GenerateSchemaDescription(schema);
 
             var sb = new StringBuilder();
 
-            // Blueprint-specific instructions come FIRST (highest priority)
+            // Session instructions come FIRST (highest priority, user's immediate intent)
+            if (!string.IsNullOrEmpty(sessionInstructions))
+            {
+                sb.AppendLine("=== IMPORTANT: USER REQUEST ===");
+                sb.AppendLine("Pay special attention to the following user instructions for this generation:");
+                sb.AppendLine(sessionInstructions);
+                sb.AppendLine();
+            }
+
+            // Blueprint-specific instructions (saved with blueprint)
             if (!string.IsNullOrEmpty(blueprint.Instructions))
             {
-                sb.AppendLine("=== GENERATION INSTRUCTIONS ===");
+                sb.AppendLine("=== GENERATION GUIDELINES ===");
                 sb.AppendLine(blueprint.Instructions);
                 sb.AppendLine();
             }
-            else
+            else if (string.IsNullOrEmpty(sessionInstructions))
             {
-                // Only use global game context if blueprint has no instructions
+                // Only use global game context if neither session nor blueprint has instructions
                 AppendGameContext(sb);
             }
 

@@ -13,10 +13,20 @@ namespace GameLabs.Forge.Editor
     /// </summary>
     public class ForgeWindow : EditorWindow
     {
+        // ========= Generation Mode =========
+        private enum GenerationMode
+        {
+            New,      // Generate new items from a template type
+            Variants  // Generate variants of an existing item
+        }
+        private GenerationMode _mode = GenerationMode.New;
+        
         // ========= UI State =========
         private Vector2 _scroll;
         private ForgeBlueprint _blueprint;
-        private ScriptableObject _template;
+        private MonoScript _templateScript;  // The .cs file containing the ScriptableObject class
+        private Type _templateType;          // Cached type extracted from the script
+        private ScriptableObject _sourceItem; // For variant mode: the item to create variants of
         private int _itemCount = 20;
         private string _customFolderName = "";
         private bool _useCustomFolder = false;
@@ -28,9 +38,14 @@ namespace GameLabs.Forge.Editor
         private bool _blueprintOverrideStrategy = false;
         private ForgeDuplicateStrategy _blueprintStrategy = ForgeDuplicateStrategy.Ignore;
         private string _blueprintDiscoveryPath = "";
+        private bool _blueprintOverrideModel = false;
+        private ForgeAIModel _blueprintModel = ForgeAIModel.GPT5Mini;
         private bool _blueprintDirty = false;
-        // Window-level settings (used when no blueprint selected)
-        private string _windowInstructions = "";
+        
+        // Session-level instructions (not persisted, cleared on window close)
+        // Separate instructions per mode so they don't carry over
+        private string _newItemsInstructions = "";
+        private string _variantsInstructions = "";
 
         private bool _isGenerating = false;
         private string _status = "";
@@ -59,6 +74,63 @@ namespace GameLabs.Forge.Editor
         {
             _showAdvanced = EditorPrefs.GetBool("GameLabs.Forge.ShowAdvanced", false);
         }
+        
+        /// <summary>
+        /// Sets the template type from a MonoScript (C# file).
+        /// Returns true if the script contains a valid ScriptableObject type.
+        /// </summary>
+        private bool SetTemplateFromScript(MonoScript script)
+        {
+            if (script == null)
+            {
+                _templateScript = null;
+                _templateType = null;
+                return false;
+            }
+            
+            var type = script.GetClass();
+            if (type == null)
+            {
+                ForgeLogger.Warn($"Could not get type from script: {script.name}");
+                return false;
+            }
+            
+            if (!typeof(ScriptableObject).IsAssignableFrom(type))
+            {
+                ForgeLogger.Warn($"Type {type.Name} is not a ScriptableObject");
+                return false;
+            }
+            
+            if (type.IsAbstract)
+            {
+                ForgeLogger.Warn($"Type {type.Name} is abstract and cannot be instantiated");
+                return false;
+            }
+            
+            _templateScript = script;
+            _templateType = type;
+            ForgeLogger.DebugLog($"Template set to type: {type.FullName}");
+            return true;
+        }
+        
+        /// <summary>
+        /// Gets the effective template type (from script or blueprint).
+        /// </summary>
+        private Type GetEffectiveTemplateType()
+        {
+            if (_templateType != null)
+                return _templateType;
+            
+            if (_blueprint?.Template != null)
+                return _blueprint.Template.GetType();
+            
+            return null;
+        }
+        
+        /// <summary>
+        /// Returns true if we have a valid template type to generate from.
+        /// </summary>
+        private bool HasValidTemplate => GetEffectiveTemplateType() != null;
 
         // ========= Styles =========
         private static class UI
@@ -146,25 +218,82 @@ namespace GameLabs.Forge.Editor
 
             DrawTopBar();
             DrawToolbar();
+            DrawModeSelector();
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
 
-            DrawTemplateSection();      // #1 - Template first
-            GUILayout.Space(4);          // Reduced spacing between sections
-            DrawGenerateOptions();      // #2 - How many to generate
-            GUILayout.Space(4);
-            DrawSaveOptions();          // #3 - Where to save
-            GUILayout.Space(4);
-            DrawAdvancedSection();      // #4 - Collapsed advanced options
+            if (_mode == GenerationMode.New)
+            {
+                DrawTemplateSection();      // #1 - Template type
+                GUILayout.Space(4);
+                DrawGenerateOptions();      // #2 - How many to generate
+                GUILayout.Space(4);
+                DrawInstructionsSection();  // #3 - Optional context
+                GUILayout.Space(4);
+                DrawSaveOptions();          // #4 - Where to save
+                GUILayout.Space(4);
+                DrawAdvancedSection();      // #5 - Collapsed advanced options
+            }
+            else // Variants mode
+            {
+                DrawSourceItemSection();    // #1 - Source item to create variants of
+                GUILayout.Space(4);
+                DrawGenerateOptions();      // #2 - How many variants
+                GUILayout.Space(4);
+                DrawVariantInstructions();  // #3 - What kind of variants
+                GUILayout.Space(4);
+                DrawSaveOptions();          // #4 - Where to save
+            }
 
-            GUILayout.Space(8);          // Space before primary action
-            DrawPrimaryButton();        // #5 - Big generate button
+            GUILayout.Space(8);
+            DrawPrimaryButton();
             DrawStatus();
             DrawResults();
 
             EditorGUILayout.EndScrollView();
 
             DrawFooter();
+        }
+        
+        private void DrawModeSelector()
+        {
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(CONTENT_PADDING);
+            
+            var newStyle = new GUIStyle(EditorStyles.miniButtonLeft);
+            var variantStyle = new GUIStyle(EditorStyles.miniButtonRight);
+            
+            // Highlight active mode
+            if (_mode == GenerationMode.New)
+            {
+                newStyle.fontStyle = FontStyle.Bold;
+                GUI.backgroundColor = UI.Accent;
+            }
+            
+            if (GUILayout.Button(new GUIContent("New Items", "Generate new items from a template class"), newStyle, GUILayout.Height(24)))
+            {
+                _mode = GenerationMode.New;
+            }
+            
+            GUI.backgroundColor = Color.white;
+            
+            if (_mode == GenerationMode.Variants)
+            {
+                variantStyle.fontStyle = FontStyle.Bold;
+                GUI.backgroundColor = UI.Accent;
+            }
+            
+            if (GUILayout.Button(new GUIContent("Variants", "Generate variants of an existing item"), variantStyle, GUILayout.Height(24)))
+            {
+                _mode = GenerationMode.Variants;
+            }
+            
+            GUI.backgroundColor = Color.white;
+            
+            GUILayout.Space(CONTENT_PADDING);
+            EditorGUILayout.EndHorizontal();
+            
+            GUILayout.Space(8);
         }
 
         // ========= Bars =========
@@ -239,10 +368,12 @@ namespace GameLabs.Forge.Editor
                     ForgeLogger.DebugLog($"Blueprint changed from {oldBlueprint?.name} to {_blueprint?.name}");
                     
                     // ALWAYS load blueprint's template - even if null
-                    if (_blueprint != null)
+                    if (_blueprint != null && _blueprint.Template != null)
                     {
-                        _template = _blueprint.Template;
-                        ForgeLogger.DebugLog($"Loaded template from blueprint: {(_template != null ? _template.name : "NULL")}");
+                        // Blueprint uses an instance - extract its type
+                        _templateType = _blueprint.Template.GetType();
+                        _templateScript = null; // Clear script reference since we're using blueprint
+                        ForgeLogger.DebugLog($"Loaded template from blueprint: {_templateType?.Name ?? "NULL"}");
                     }
 
                     // Load blueprint values into editor fields
@@ -252,9 +383,11 @@ namespace GameLabs.Forge.Editor
                         _blueprintOverrideStrategy = _blueprint.OverrideDuplicateStrategy;
                         _blueprintStrategy = _blueprint.DuplicateStrategy;
                         _blueprintDiscoveryPath = _blueprint.DiscoveryPathOverride;
+                        _blueprintOverrideModel = _blueprint.OverrideModel;
+                        _blueprintModel = _blueprint.Model;
                         _blueprintDirty = false;
                         
-                        ForgeLogger.DebugLog($"Loaded blueprint settings: override={_blueprintOverrideStrategy}, strategy={_blueprintStrategy}");
+                        ForgeLogger.DebugLog($"Loaded blueprint settings: override={_blueprintOverrideStrategy}, strategy={_blueprintStrategy}, modelOverride={_blueprintOverrideModel}");
                     }
                     // NOTE: Window settings are preserved even if blueprint is removed
                 }
@@ -269,6 +402,33 @@ namespace GameLabs.Forge.Editor
                 if (_blueprint != null)
                 {
                     EditorGUILayout.Space(6);
+
+                    // AI Model override
+                    EditorGUILayout.LabelField("AI Model");
+                    var newModel = (ForgeAIModel)EditorGUILayout.EnumPopup(_blueprintModel);
+                    if (newModel != _blueprintModel)
+                    {
+                        _blueprintModel = newModel;
+                        _blueprint.Model = newModel;
+                        _blueprint.OverrideModel = true;
+                        _blueprintOverrideModel = true;
+                        EditorUtility.SetDirty(_blueprint);
+                        AssetDatabase.SaveAssets();
+                        _blueprintDirty = false;
+                        ForgeLogger.DebugLog($"Model changed to {newModel}, override=true, SAVED TO DISK");
+                    }
+
+                    var globalModel = ForgeConfig.GetModel();
+                    if (_blueprintModel == globalModel)
+                    {
+                        EditorGUILayout.LabelField("(Same as global - no override)", UI.Hint);
+                    }
+                    else
+                    {
+                        EditorGUILayout.LabelField($"(Overriding global: {globalModel})", UI.Hint);
+                    }
+
+                    EditorGUILayout.Space(4);
 
                     // Editable blueprint settings
                     EditorGUILayout.LabelField("Duplicate Strategy");
@@ -298,7 +458,7 @@ namespace GameLabs.Forge.Editor
                     }
 
                     EditorGUILayout.Space(4);
-                    EditorGUILayout.LabelField("Instructions (Optional)");
+                    EditorGUILayout.LabelField(new GUIContent("Default Context", "Saved with blueprint. Applied to every generation."));
                     var newInstructions = EditorGUILayout.TextArea(_blueprintInstructions, UI.Code, GUILayout.MinHeight(50));
                     if (newInstructions != _blueprintInstructions)
                     {
@@ -366,6 +526,8 @@ namespace GameLabs.Forge.Editor
                         _blueprintOverrideStrategy = _blueprint.OverrideDuplicateStrategy;
                         _blueprintStrategy = _blueprint.DuplicateStrategy;
                         _blueprintDiscoveryPath = _blueprint.DiscoveryPathOverride;
+                        _blueprintOverrideModel = _blueprint.OverrideModel;
+                        _blueprintModel = _blueprint.Model;
                         _blueprintDirty = false;
                     }
 
@@ -376,18 +538,21 @@ namespace GameLabs.Forge.Editor
                     EditorGUILayout.Space(6);
 
                     var globalSettings = ForgeConfig.GetGeneratorSettings();
+                    var globalModel = ForgeConfig.GetModel();
                     var globalStrategy = globalSettings?.duplicateStrategy ?? ForgeDuplicateStrategy.Ignore;
-                    EditorGUILayout.LabelField("Duplicate Strategy", EditorStyles.boldLabel);
-                    EditorGUILayout.LabelField($"Using global setting: {globalStrategy}", UI.Hint);
-                    EditorGUILayout.HelpBox("Change in Settings window or create a Blueprint to override.", MessageType.Info);
-
+                    
+                    EditorGUILayout.LabelField("AI Model", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField($"Using global: {globalModel}", UI.Hint);
+                    
                     EditorGUILayout.Space(4);
-                    EditorGUILayout.LabelField("Instructions (Optional)");
-                    _windowInstructions = EditorGUILayout.TextArea(_windowInstructions, UI.Code, GUILayout.MinHeight(50));
+                    EditorGUILayout.LabelField("Duplicate Strategy", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField($"Using global: {globalStrategy}", UI.Hint);
+                    
+                    EditorGUILayout.HelpBox("Create a Blueprint to override model and strategy.", MessageType.Info);
 
                     var settings = ForgeConfig.GetGeneratorSettings();
                     string effectivePath = settings?.existingAssetsSearchPath ?? "Assets";
-                    GUILayout.Label($"Discovery path: {effectivePath} (auto-discovery on generate)", UI.Hint);
+                    GUILayout.Label($"Discovery path: {effectivePath}", UI.Hint);
                 }
 
                 EditorGUIUtility.labelWidth = old;
@@ -403,10 +568,13 @@ namespace GameLabs.Forge.Editor
             var blueprint = ScriptableObject.CreateInstance<ForgeBlueprint>();
             blueprint.name = System.IO.Path.GetFileNameWithoutExtension(path);
 
-            // Initialize with current template if available
-            if (_template != null)
+            // Initialize with current template type if available
+            // Blueprint needs an instance, so create a temporary one from the type
+            var templateType = GetEffectiveTemplateType();
+            if (templateType != null)
             {
-                blueprint.Template = _template;
+                var tempInstance = ScriptableObject.CreateInstance(templateType);
+                blueprint.Template = tempInstance;
             }
 
             AssetDatabase.CreateAsset(blueprint, path);
@@ -417,6 +585,8 @@ namespace GameLabs.Forge.Editor
             _blueprintOverrideStrategy = blueprint.OverrideDuplicateStrategy;
             _blueprintStrategy = blueprint.DuplicateStrategy;
             _blueprintDiscoveryPath = blueprint.DiscoveryPathOverride;
+            _blueprintOverrideModel = blueprint.OverrideModel;
+            _blueprintModel = blueprint.Model;
             _blueprintDirty = false;
 
             ForgeLogger.DebugLog($"Created new blueprint: {blueprint.DisplayName}");
@@ -424,9 +594,9 @@ namespace GameLabs.Forge.Editor
 
         private void DrawTemplateSection()
         {
-            DrawSectionHeader("1. Select Template");
+            DrawSectionHeader("1. Select Template Type");
 
-            bool hasTemplate = _template != null;
+            bool hasTemplate = HasValidTemplate;
 
             using (new EditorGUILayout.VerticalScope(UI.Card))
             {
@@ -440,80 +610,53 @@ namespace GameLabs.Forge.Editor
                         alignment = TextAnchor.MiddleCenter,
                         fontSize = 10
                     };
-                    EditorGUI.LabelField(readyRect, "✓ Template Detected", labelStyle);
+                    EditorGUI.LabelField(readyRect, "✓ Template Type Selected", labelStyle);
                     GUILayout.Space(6);
                 }
 
                 var old = EditorGUIUtility.labelWidth;
                 EditorGUIUtility.labelWidth = LABEL_W;
 
-                var oldTemplate = _template;
+                var oldScript = _templateScript;
                 
                 EditorGUILayout.BeginHorizontal();
                 
                 // Template field label
-                EditorGUILayout.LabelField("Template", GUILayout.Width(LABEL_W));
+                EditorGUILayout.LabelField("Template Class", GUILayout.Width(LABEL_W));
                 
-                // Show current template name or prompt
-                string displayName = _template != null ? $"{_template.name} ({_template.GetType().Name})" : "None (click ... to browse)";
-                EditorGUILayout.LabelField(displayName, EditorStyles.textField, GUILayout.Height(18));
-                
-                // Favorite star button
-                if (_template != null)
-                {
-                    var library = ForgeTemplateLibrary.Instance;
-                    bool isFav = library.IsFavorite(_template);
-                    string starIcon = isFav ? "⭐" : "☆";
-                    
-                    // Use vertical offset to align stars properly
-                    var starStyle = new GUIStyle(GUI.skin.button);
-                    starStyle.padding = new RectOffset(0, 0, -2, 0); // Move down 2 pixels
-                    
-                    if (GUILayout.Button(new GUIContent(starIcon, isFav ? "Remove from favorites" : "Add to favorites"), 
-                        starStyle, GUILayout.Width(24), GUILayout.Height(18)))
-                    {
-                        if (isFav)
-                            library.RemoveFromFavorites(_template);
-                        else
-                            library.AddToFavorites(_template);
-                    }
-                }
-                
-                // Library browser button
-                if (GUILayout.Button(new GUIContent("...", "Browse templates"), GUILayout.Width(30), GUILayout.Height(18)))
-                {
-                    ForgeTemplateLibraryWindow.Open((selected) => {
-                        if (selected != null)
-                        {
-                            _template = selected;
-                            ForgeTemplateLibrary.Instance.RecordUsage(selected);
-                        }
-                    });
-                }
+                // MonoScript field - allows selecting .cs files
+                var newScript = (MonoScript)EditorGUILayout.ObjectField(
+                    _templateScript, 
+                    typeof(MonoScript), 
+                    false,
+                    GUILayout.Height(18));
                 
                 EditorGUILayout.EndHorizontal();
-
-                // Trigger refresh if template changed
-                if (_template != oldTemplate)
+                
+                // Handle script change
+                if (newScript != oldScript)
                 {
-                    // Template changed - sync to blueprint if one is selected
-                    if (_blueprint != null)
+                    if (newScript != null)
                     {
-                        _blueprint.Template = _template;
-                        EditorUtility.SetDirty(_blueprint);
+                        if (!SetTemplateFromScript(newScript))
+                        {
+                            // Invalid script - show error
+                            EditorUtility.DisplayDialog("Invalid Template", 
+                                "The selected script must be a non-abstract class that inherits from ScriptableObject.", 
+                                "OK");
+                        }
                     }
-                    
-                    // Record as recently used
-                    if (_template != null)
+                    else
                     {
-                        ForgeTemplateLibrary.Instance.RecordUsage(_template);
+                        _templateScript = null;
+                        _templateType = null;
                     }
                 }
 
-                if (_template != null)
+                var templateType = GetEffectiveTemplateType();
+                if (templateType != null)
                 {
-                    var t = _template.GetType();
-                    var schema = ForgeSchemaExtractor.ExtractSchema(t);
+                    var schema = ForgeSchemaExtractor.ExtractSchema(templateType);
 
                     EditorGUILayout.Space(4);
                     EditorGUILayout.BeginHorizontal();
@@ -537,7 +680,8 @@ namespace GameLabs.Forge.Editor
                 else
                 {
                     EditorGUILayout.HelpBox(
-                        "Any existing ScriptableObject can be used as a template.",
+                        "Select a C# script file (.cs) that defines a ScriptableObject class.\n" +
+                        "The class will be used as the template for generation.",
                         MessageType.Info);
                 }
 
@@ -560,7 +704,7 @@ namespace GameLabs.Forge.Editor
                 Rect slider = new Rect(label.xMax + 4, row.y, row.width - LABEL_W - 60, row.height);
                 Rect badge = new Rect(slider.xMax + 6, row.y, 40, row.height);
 
-                EditorGUI.LabelField(label, "Item Count");
+                EditorGUI.LabelField(label, _mode == GenerationMode.Variants ? "Variant Count" : "Item Count");
                 _itemCount = Mathf.RoundToInt(GUI.HorizontalSlider(slider, _itemCount, 1, 50));
                 // badge
                 EditorGUI.DrawRect(badge, UI.Accent);
@@ -572,9 +716,109 @@ namespace GameLabs.Forge.Editor
             }
         }
 
+        private void DrawInstructionsSection()
+        {
+            DrawSectionHeader("3. Context (Optional)");
+
+            using (new EditorGUILayout.VerticalScope(UI.Card))
+            {
+                _newItemsInstructions = EditorGUILayout.TextArea(_newItemsInstructions, UI.Code, GUILayout.MinHeight(44));
+                EditorGUILayout.LabelField("Guide the AI: theme, style, balance, or specific requirements", UI.Hint);
+            }
+        }
+        
+        private void DrawSourceItemSection()
+        {
+            DrawSectionHeader("1. Select Source Item");
+
+            using (new EditorGUILayout.VerticalScope(UI.Card))
+            {
+                if (_sourceItem != null)
+                {
+                    var readyRect = EditorGUILayout.GetControlRect(GUILayout.Height(20));
+                    EditorGUI.DrawRect(readyRect, new Color(0.2f, 0.75f, 0.35f, 0.15f));
+                    var labelStyle = new GUIStyle(EditorStyles.miniLabel)
+                    {
+                        alignment = TextAnchor.MiddleCenter,
+                        fontSize = 10
+                    };
+                    EditorGUI.LabelField(readyRect, "✓ Source Item Selected", labelStyle);
+                    GUILayout.Space(6);
+                }
+
+                var old = EditorGUIUtility.labelWidth;
+                EditorGUIUtility.labelWidth = LABEL_W;
+
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("Source Item", GUILayout.Width(LABEL_W));
+                _sourceItem = (ScriptableObject)EditorGUILayout.ObjectField(
+                    _sourceItem,
+                    typeof(ScriptableObject),
+                    false,
+                    GUILayout.Height(18));
+                EditorGUILayout.EndHorizontal();
+
+                if (_sourceItem != null)
+                {
+                    var itemType = _sourceItem.GetType();
+                    var schema = ForgeSchemaExtractor.ExtractSchema(itemType);
+
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.BeginHorizontal();
+                    GUILayout.Label($"Type: {itemType.Name}", UI.Header, GUILayout.Height(22));
+                    GUILayout.Space(8);
+                    
+                    // Item name pill
+                    string itemName = _sourceItem.name;
+                    var nameField = itemType.GetField("name", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly);
+                    if (nameField != null)
+                    {
+                        var val = nameField.GetValue(_sourceItem);
+                        if (val != null && !string.IsNullOrEmpty(val.ToString()))
+                            itemName = val.ToString();
+                    }
+                    
+                    var pillRect = GUILayoutUtility.GetRect(150, 22, GUILayout.Width(150));
+                    EditorGUI.DrawRect(pillRect, new Color(0.2f, 0.75f, 0.35f, 0.18f));
+                    GUI.Label(pillRect, $"\"{itemName}\"", UI.Pill);
+                    GUILayout.FlexibleSpace();
+                    EditorGUILayout.EndHorizontal();
+
+                    GUILayout.Space(2);
+                    GUILayout.Label($"Variants will inherit structure and modify values based on your instructions.", UI.Hint);
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox(
+                        "Drag an existing ScriptableObject asset to create variants of it.\n" +
+                        "Variants share the same structure but with modified values.",
+                        MessageType.Info);
+                }
+
+                EditorGUIUtility.labelWidth = old;
+            }
+        }
+        
+        private void DrawVariantInstructions()
+        {
+            DrawSectionHeader("3. Variant Instructions");
+
+            using (new EditorGUILayout.VerticalScope(UI.Card))
+            {
+                EditorGUILayout.LabelField(new GUIContent("How should variants differ?", "Describe what makes each variant unique"), EditorStyles.boldLabel);
+                _variantsInstructions = EditorGUILayout.TextArea(_variantsInstructions, UI.Code, GUILayout.MinHeight(60));
+                
+                EditorGUILayout.Space(4);
+                EditorGUILayout.LabelField("Examples:", UI.Hint);
+                EditorGUILayout.LabelField("• \"Different elemental types: fire, ice, lightning\"", UI.Hint);
+                EditorGUILayout.LabelField("• \"Varying rarity tiers from common to legendary\"", UI.Hint);
+                EditorGUILayout.LabelField("• \"Same stats but different themes/names\"", UI.Hint);
+            }
+        }
+
         private void DrawSaveOptions()
         {
-            DrawSectionHeader("3. Save Options");
+            DrawSectionHeader(_mode == GenerationMode.New ? "4. Save Options" : "4. Save Options");
 
             using (new EditorGUILayout.VerticalScope(UI.Card))
             {
@@ -593,9 +837,9 @@ namespace GameLabs.Forge.Editor
                     {
                         _customFolderName = EditorGUILayout.TextField(new GUIContent("Folder Name"), _customFolderName);
                     }
-                    else if (_template != null)
+                    else if (HasValidTemplate)
                     {
-                        GUILayout.Label($"Will save to: Generated/{_template.GetType().Name}/", UI.Hint);
+                        GUILayout.Label($"Will save to: Generated/{GetEffectiveTemplateType()?.Name ?? "Unknown"}/", UI.Hint);
                     }
 
                     GUILayout.Space(4);
@@ -650,19 +894,22 @@ namespace GameLabs.Forge.Editor
                 {
                     ForgeLogger.DebugLog($"Blueprint changed (advanced) from {oldBlueprint?.name} to {_blueprint?.name}");
                     
-                    // ALWAYS load blueprint's template
-                    if (_blueprint != null)
+                    // ALWAYS load blueprint's template type
+                    if (_blueprint != null && _blueprint.Template != null)
                     {
-                        _template = _blueprint.Template;
-                        ForgeLogger.DebugLog($"Loaded template from blueprint (advanced): {(_template != null ? _template.name : "NULL")}");
+                        _templateType = _blueprint.Template.GetType();
+                        _templateScript = null;
+                        ForgeLogger.DebugLog($"Loaded template from blueprint (advanced): {_templateType?.Name ?? "NULL"}");
                         
                         _blueprintInstructions = _blueprint.Instructions;
                         _blueprintOverrideStrategy = _blueprint.OverrideDuplicateStrategy;
                         _blueprintStrategy = _blueprint.DuplicateStrategy;
                         _blueprintDiscoveryPath = _blueprint.DiscoveryPathOverride;
+                        _blueprintOverrideModel = _blueprint.OverrideModel;
+                        _blueprintModel = _blueprint.Model;
                         _blueprintDirty = false;
                         
-                        ForgeLogger.DebugLog($"Loaded blueprint settings (advanced): override={_blueprintOverrideStrategy}, strategy={_blueprintStrategy}");
+                        ForgeLogger.DebugLog($"Loaded blueprint settings (advanced): override={_blueprintOverrideStrategy}, strategy={_blueprintStrategy}, modelOverride={_blueprintOverrideModel}");
                     }
                 }
 
@@ -676,6 +923,33 @@ namespace GameLabs.Forge.Editor
                 if (_blueprint != null)
                 {
                     EditorGUILayout.Space(6);
+
+                    // AI Model override
+                    EditorGUILayout.LabelField("AI Model");
+                    var newModel = (ForgeAIModel)EditorGUILayout.EnumPopup(_blueprintModel);
+                    if (newModel != _blueprintModel)
+                    {
+                        _blueprintModel = newModel;
+                        _blueprint.Model = newModel;
+                        _blueprint.OverrideModel = true;
+                        _blueprintOverrideModel = true;
+                        EditorUtility.SetDirty(_blueprint);
+                        AssetDatabase.SaveAssets();
+                        _blueprintDirty = false;
+                        ForgeLogger.DebugLog($"Model changed to {newModel}, override=true, SAVED TO DISK");
+                    }
+
+                    var globalModel = ForgeConfig.GetModel();
+                    if (_blueprintModel == globalModel)
+                    {
+                        EditorGUILayout.LabelField("(Same as global - no override)", UI.Hint);
+                    }
+                    else
+                    {
+                        EditorGUILayout.LabelField($"(Overriding global: {globalModel})", UI.Hint);
+                    }
+
+                    EditorGUILayout.Space(4);
 
                     EditorGUILayout.LabelField("Duplicate Strategy");
                     var newStrat = (ForgeDuplicateStrategy)EditorGUILayout.EnumPopup(_blueprintStrategy);
@@ -703,7 +977,7 @@ namespace GameLabs.Forge.Editor
                     }
 
                     EditorGUILayout.Space(4);
-                    EditorGUILayout.LabelField("Additional Instructions (optional)");
+                    EditorGUILayout.LabelField(new GUIContent("Default Context", "Saved with blueprint. Applied to every generation."));
                     var newInstructions = EditorGUILayout.TextArea(_blueprintInstructions, UI.Code, GUILayout.MinHeight(50));
                     if (newInstructions != _blueprintInstructions)
                     {
@@ -769,6 +1043,8 @@ namespace GameLabs.Forge.Editor
                         _blueprintOverrideStrategy = _blueprint.OverrideDuplicateStrategy;
                         _blueprintStrategy = _blueprint.DuplicateStrategy;
                         _blueprintDiscoveryPath = _blueprint.DiscoveryPathOverride;
+                        _blueprintOverrideModel = _blueprint.OverrideModel;
+                        _blueprintModel = _blueprint.Model;
                         _blueprintDirty = false;
                     }
 
@@ -779,14 +1055,17 @@ namespace GameLabs.Forge.Editor
                     EditorGUILayout.Space(6);
 
                     var globalSettings = ForgeConfig.GetGeneratorSettings();
+                    var globalModel = ForgeConfig.GetModel();
                     var globalStrategy = globalSettings?.duplicateStrategy ?? ForgeDuplicateStrategy.Ignore;
-                    EditorGUILayout.LabelField("Duplicate Strategy", EditorStyles.boldLabel);
-                    EditorGUILayout.LabelField($"Using global setting: {globalStrategy}", UI.Hint);
-                    EditorGUILayout.HelpBox("Change in Settings window or create a Blueprint to override.", MessageType.Info);
-
+                    
+                    EditorGUILayout.LabelField("AI Model", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField($"Using global: {globalModel}", UI.Hint);
+                    
                     EditorGUILayout.Space(4);
-                    EditorGUILayout.LabelField("Additional Instructions (optional)");
-                    _windowInstructions = EditorGUILayout.TextArea(_windowInstructions, UI.Code, GUILayout.MinHeight(50));
+                    EditorGUILayout.LabelField("Duplicate Strategy", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField($"Using global: {globalStrategy}", UI.Hint);
+                    
+                    EditorGUILayout.HelpBox("Create a Blueprint to override model and strategy.", MessageType.Info);
                 }
 
                 EditorGUIUtility.labelWidth = old;
@@ -796,16 +1075,31 @@ namespace GameLabs.Forge.Editor
         // ========= Primary Generate Button =========
         private void DrawPrimaryButton()
         {
-            bool hasTemplateOrBlueprint = _template != null || (_blueprint != null && _blueprint.Template != null);
+            bool canGenerate;
+            string disabledText;
+            string enabledText;
+            
+            if (_mode == GenerationMode.New)
+            {
+                canGenerate = HasValidTemplate || (_blueprint != null && _blueprint.Template != null);
+                disabledText = "Select a template to generate items";
+                enabledText = $"Generate {_itemCount} Items";
+            }
+            else // Variants
+            {
+                canGenerate = _sourceItem != null;
+                disabledText = "Select a source item to create variants";
+                enabledText = $"Generate {_itemCount} Variants";
+            }
 
-            EditorGUI.BeginDisabledGroup(_isGenerating || !hasTemplateOrBlueprint);
+            EditorGUI.BeginDisabledGroup(_isGenerating || !canGenerate);
 
             // Aligned to content bounds, not full width
             var r = GUILayoutUtility.GetRect(0, 52, GUILayout.ExpandWidth(true));
 
             // Clean background with proper corners (no 1px gaps)
             var bgRect = new Rect(r.x, r.y, r.width, r.height);
-            if (hasTemplateOrBlueprint)
+            if (canGenerate)
             {
                 EditorGUI.DrawRect(bgRect, UI.Accent);
             }
@@ -815,18 +1109,23 @@ namespace GameLabs.Forge.Editor
             }
 
             // Hover effect
-            if (r.Contains(Event.current.mousePosition) && !_isGenerating && hasTemplateOrBlueprint)
+            if (r.Contains(Event.current.mousePosition) && !_isGenerating && canGenerate)
                 EditorGUI.DrawRect(bgRect, new Color(1, 1, 1, 0.08f));
 
             // Click area
             if (GUI.Button(r, GUIContent.none, GUIStyle.none))
-                GenerateItems();
+            {
+                if (_mode == GenerationMode.New)
+                    GenerateItems();
+                else
+                    GenerateVariants();
+            }
 
             // Text only (no icon - clean and clear)
             string text;
-            if (!hasTemplateOrBlueprint)
+            if (!canGenerate)
             {
-                text = "Select a template to generate items";
+                text = disabledText;
             }
             else if (_isGenerating)
             {
@@ -834,11 +1133,11 @@ namespace GameLabs.Forge.Editor
             }
             else
             {
-                text = $"Generate {_itemCount} Items";
+                text = enabledText;
             }
 
             var textStyle = new GUIStyle(UI.PrimaryBtnText);
-            textStyle.normal.textColor = hasTemplateOrBlueprint ? Color.white :
+            textStyle.normal.textColor = canGenerate ? Color.white :
                 (EditorGUIUtility.isProSkin ? new Color(1, 1, 1, 0.5f) : new Color(0, 0, 0, 0.5f));
 
             EditorGUI.LabelField(r, text, textStyle);
@@ -867,7 +1166,7 @@ namespace GameLabs.Forge.Editor
                 EditorGUI.DrawRect(successRect, new Color(0.2f, 0.75f, 0.35f, 0.2f));
 
                 var labelRect = new Rect(successRect.x + 12, successRect.y, successRect.width - 12, successRect.height);
-                string savePath = _template != null ? ForgeAssetExporter.GetSavePathFor(_template.GetType(), _useCustomFolder ? _customFolderName : null) : "";
+                string savePath = HasValidTemplate ? ForgeAssetExporter.GetSavePathFor(GetEffectiveTemplateType(), _useCustomFolder ? _customFolderName : null) : "";
                 EditorGUI.LabelField(labelRect, $"✓ Generated {savedCount} assets in {savePath}", EditorStyles.boldLabel);
             }
 
@@ -888,7 +1187,7 @@ namespace GameLabs.Forge.Editor
 
                 GUILayout.Space(4);
 
-                using (new EditorGUI.DisabledScope(!(_template != null)))
+                using (new EditorGUI.DisabledScope(!(HasValidTemplate)))
                 {
                     if (GUILayout.Button(new GUIContent(" Open Folder", UI.Folder), GUILayout.Height(24), GUILayout.Width(120)))
                         OpenGeneratedFolder();
@@ -948,7 +1247,7 @@ namespace GameLabs.Forge.Editor
 
                 // Save All button (enabled only if there are unsaved items)
                 bool hasUnsaved = _lastGenerated.Any(x => x != null && (!_itemSavedState.ContainsKey(x) || !_itemSavedState[x]));
-                using (new EditorGUI.DisabledScope(!hasUnsaved || _template == null))
+                using (new EditorGUI.DisabledScope(!hasUnsaved || !HasValidTemplate))
                 {
                     if (GUILayout.Button(new GUIContent(" Save All", UI.Save), GUILayout.Height(24)))
                     {
@@ -1049,9 +1348,9 @@ namespace GameLabs.Forge.Editor
 
                 ForgeLogger.DebugLog($"Blueprint mode: Effective strategy = {effectiveStrategy}");
 
-                generator.GenerateFromBlueprint(_blueprint, _itemCount, OnGenerationComplete);
+                generator.GenerateFromBlueprint(_blueprint, _itemCount, OnGenerationComplete, _newItemsInstructions);
             }
-            else if (_template != null)
+            else if (HasValidTemplate)
             {
                 // Window-level generation (no blueprint) - create temporary blueprint
                 _isGenerating = true;
@@ -1072,18 +1371,49 @@ namespace GameLabs.Forge.Editor
 
                 // Create temporary blueprint with window settings
                 var tempBlueprint = ScriptableObject.CreateInstance<ForgeBlueprint>();
-                tempBlueprint.Template = _template;
-                tempBlueprint.Instructions = _windowInstructions;
+                var templateType = GetEffectiveTemplateType();
+                if (templateType != null)
+                {
+                    tempBlueprint.Template = ScriptableObject.CreateInstance(templateType);
+                }
+                tempBlueprint.Instructions = ""; // No blueprint instructions in window mode
                 tempBlueprint.DiscoveryPathOverride = "";
 
                 ForgeLogger.DebugLog($"Window mode: Using global strategy");
 
-                generator.GenerateFromBlueprint(tempBlueprint, _itemCount, OnGenerationComplete);
+                generator.GenerateFromBlueprint(tempBlueprint, _itemCount, OnGenerationComplete, _newItemsInstructions);
             }
             else
             {
                 EditorUtility.DisplayDialog("FORGE", "Select a template or blueprint to generate items.", "OK");
             }
+        }
+        
+        private void GenerateVariants()
+        {
+            if (_sourceItem == null)
+            {
+                EditorUtility.DisplayDialog("FORGE", "Select a source item to create variants of.", "OK");
+                return;
+            }
+            
+            _isGenerating = true;
+            _status = "Generating variants…";
+            _statusType = MessageType.Info;
+            _lastGenerated.Clear();
+            Repaint();
+
+            var generator = ForgeTemplateGenerator.Instance;
+            if (generator == null)
+            {
+                _isGenerating = false;
+                _status = "Error: Failed to initialize generator.";
+                _statusType = MessageType.Error;
+                ForgeLogger.Error("ForgeTemplateGenerator.Instance returned null");
+                return;
+            }
+
+            generator.GenerateVariants(_sourceItem, _itemCount, _variantsInstructions, OnGenerationComplete);
         }
 
         private void OnGenerationComplete(ForgeTemplateGenerationResult result)
@@ -1102,16 +1432,25 @@ namespace GameLabs.Forge.Editor
             _itemSavedState.Clear();
             _lastGenerated.AddRange(result.items);
 
-            // Record statistics
-            var settings = ForgeConfig.GetGeneratorSettings();
-            var model = settings?.model ?? ForgeAIModel.GPT5Mini;
+            // Record statistics - use effective model from blueprint if available
+            ForgeAIModel effectiveModel;
+            if (_blueprint != null)
+            {
+                effectiveModel = _blueprint.GetEffectiveModel();
+            }
+            else
+            {
+                var settings = ForgeConfig.GetGeneratorSettings();
+                effectiveModel = settings?.model ?? ForgeAIModel.GPT5Mini;
+            }
+            
             ForgeStatistics.Instance.RecordGeneration(
                 _itemCount,
                 result.items.Count,
                 result.promptTokens,
                 result.completionTokens,
                 result.estimatedCost,
-                model
+                effectiveModel
             );
             
             // Record cost tracking
@@ -1121,11 +1460,11 @@ namespace GameLabs.Forge.Editor
             foreach (var item in result.items)
                 _itemSavedState[item] = false;
 
-            if (_autoSaveAsAsset && _template != null)
+            if (_autoSaveAsAsset && HasValidTemplate)
             {
                 string folder = _useCustomFolder && !string.IsNullOrEmpty(_customFolderName)
                     ? _customFolderName
-                    : _template.GetType().Name;
+                    : GetEffectiveTemplateType()?.Name ?? "Unknown";
 
                 var saved = SaveGeneratedAssets(result.items, folder);
 
@@ -1207,11 +1546,11 @@ namespace GameLabs.Forge.Editor
 
         private void SaveSingleItem(ScriptableObject item, int index)
         {
-            if (item == null || _template == null) return;
+            if (item == null || !HasValidTemplate) return;
 
             string folder = _useCustomFolder && !string.IsNullOrEmpty(_customFolderName)
                 ? _customFolderName
-                : _template.GetType().Name;
+                : GetEffectiveTemplateType()?.Name ?? "Unknown";
 
             string folderPath = Path.Combine(ForgeAssetExporter.GetGeneratedBasePath(), folder);
             EnsureDir(folderPath);
@@ -1242,11 +1581,11 @@ namespace GameLabs.Forge.Editor
 
         private void SaveAllUnsavedItems()
         {
-            if (_template == null) return;
+            if (!HasValidTemplate) return;
 
             string folder = _useCustomFolder && !string.IsNullOrEmpty(_customFolderName)
                 ? _customFolderName
-                : _template.GetType().Name;
+                : GetEffectiveTemplateType()?.Name ?? "Unknown";
 
             string folderPath = Path.Combine(ForgeAssetExporter.GetGeneratedBasePath(), folder);
             EnsureDir(folderPath);
@@ -1308,11 +1647,11 @@ namespace GameLabs.Forge.Editor
 
         private void OpenGeneratedFolder()
         {
-            if (_template == null) return;
+            if (!HasValidTemplate) return;
 
             string folder = _useCustomFolder && !string.IsNullOrEmpty(_customFolderName)
                 ? _customFolderName
-                : _template.GetType().Name;
+                : GetEffectiveTemplateType()?.Name ?? "Unknown";
 
             var path = Path.Combine(ForgeAssetExporter.GetGeneratedBasePath(), folder);
             var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
