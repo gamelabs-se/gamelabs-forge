@@ -46,7 +46,8 @@ namespace GameLabs.Forge.Editor
         {
             EditorApplication.update -= CheckFirstRun;
             
-            if (!EditorPrefs.HasKey(HasCompletedWizardKey))
+            // Only open if user has never completed the wizard
+            if (!EditorPrefs.GetBool(HasCompletedWizardKey, false))
             {
                 EditorApplication.delayCall += () => Open();
             }

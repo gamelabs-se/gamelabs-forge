@@ -41,6 +41,13 @@ namespace GameLabs.Forge.Editor
         [SerializeField]
         private string _discoveryPathOverride = ""; // Empty = use global default
 
+        [HideInInspector]
+        [SerializeField]
+        private bool _overrideModel = false;
+
+        [SerializeField]
+        private ForgeAIModel _model = ForgeAIModel.GPT5Mini;
+
         /// <summary>
         /// The template ScriptableObject that defines the item schema.
         /// </summary>
@@ -107,6 +114,36 @@ namespace GameLabs.Forge.Editor
 
             var config = ForgeConfig.GetGeneratorSettings();
             return config?.existingAssetsSearchPath ?? "Assets";
+        }
+
+        /// <summary>
+        /// Whether this blueprint overrides the global AI model.
+        /// </summary>
+        public bool OverrideModel
+        {
+            get => _overrideModel;
+            set => _overrideModel = value;
+        }
+
+        /// <summary>
+        /// AI model to use for generation.
+        /// Only used if OverrideModel is true.
+        /// </summary>
+        public ForgeAIModel Model
+        {
+            get => _model;
+            set => _model = value;
+        }
+
+        /// <summary>
+        /// Gets the effective AI model (override if set, otherwise global default).
+        /// </summary>
+        public ForgeAIModel GetEffectiveModel()
+        {
+            if (_overrideModel)
+                return _model;
+
+            return ForgeConfig.GetModel();
         }
 
         /// <summary>
