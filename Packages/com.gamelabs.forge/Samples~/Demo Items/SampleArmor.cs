@@ -7,8 +7,8 @@ namespace GameLabs.Forge.Demo
     /// Example armor/equipment item for Forge demo.
     /// Use this as a template in the Forge Template Generator.
     /// </summary>
-    [CreateAssetMenu(fileName = "New Armor", menuName = "GameLabs/Forge Demo/Armor")]
-    public class Armor : ScriptableObject
+    [CreateAssetMenu(fileName = "New Armor", menuName = "FORGE Samples/Armor")]
+    public class SampleArmor : ScriptableObject
 {
     [Tooltip("Name of the armor")]
     public new string name;

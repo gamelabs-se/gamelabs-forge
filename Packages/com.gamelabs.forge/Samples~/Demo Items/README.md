@@ -1,28 +1,54 @@
-# Demo Items
+# FORGE Sample Templates
 
-Example ScriptableObject templates for GameLabs FORGE.
+Example ScriptableObject templates demonstrating FORGE capabilities.
 
-## Included Templates
+## Templates
 
-- **MeleeWeapon** - Swords, axes, maces with damage and stats
-- **Consumable** - Potions and food with effects
-- **Armor** - Equipment with defense values
-- **Collectible** - Treasures with lore
-- **Spaceship** - Complex sci-fi ships with multiple subsystems
+| File | Description | Fields |
+|------|-------------|--------|
+| `SampleWeapon.cs` | Melee weapon with damage, speed, rarity | 8 |
+| `SampleArmor.cs` | Armor with defense, slots, materials | 10 |
+| `SampleSkill.cs` | RPG skill with scaling, targeting, effects | 25+ |
+| `SampleSpaceship.cs` | Complex spaceship with 40+ parameters | 40+ |
+| `SampleGameConfig.cs` | Game settings preset (movement, combat, etc.) | 35+ |
 
-## How to Use
+## Usage
 
-1. Open **GameLabs → Forge → FORGE**
-2. Drag any `.asset` file into the **Template** field
-3. Set the number of items to generate
-4. Click **Generate Items**
+1. Import this sample via Package Manager
+2. Open **GameLabs → Forge → Forge Window**
+3. Drag any `Sample*.cs` file into the Template Class field
+4. Click **Generate**
 
-Example templates included:
+## Example Assets
 
-- `Iron Sword.asset` - Simple melee weapon
-- `Armor Template.asset` - Defense equipment
-- `Peacekeeper.asset` - Complex spaceship
+Pre-generated examples included:
+- `Example Weapon.asset` - A sample weapon
+- `Example Armor.asset` - A sample armor piece  
+- `Example Spaceship.asset` - A sample spaceship
 
-## Customization
+## Creating Your Own
 
-Use the `.cs` files as examples to create your own ScriptableObject definitions. Forge works with any ScriptableObject—no inheritance required.
+Copy any `Sample*.cs` as a starting point:
+
+```csharp
+using UnityEngine;
+
+[CreateAssetMenu(menuName = "My Game/My Item")]
+public class MyItem : ScriptableObject
+{
+    [Tooltip("Item name")]
+    public new string name;
+    
+    [Range(1, 100)]
+    [Tooltip("How much damage this deals")]
+    public int damage = 10;
+    
+    // Add more fields...
+}
+```
+
+Key tips:
+- Use `[Tooltip()]` to guide AI generation
+- Use `[Range()]` to constrain numeric values
+- Use enums for categorical choices
+- Keep field names descriptive

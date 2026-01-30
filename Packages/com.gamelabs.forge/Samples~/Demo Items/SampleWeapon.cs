@@ -7,8 +7,8 @@ namespace GameLabs.Forge.Demo
     /// Example melee weapon item for Forge demo.
     /// Use this as a template in the Forge Template Generator.
     /// </summary>
-    [CreateAssetMenu(fileName = "New Melee Weapon", menuName = "GameLabs/Forge Demo/Melee Weapon")]
-    public class MeleeWeapon : ScriptableObject
+    [CreateAssetMenu(fileName = "New Melee Weapon", menuName = "FORGE Samples/Weapon")]
+    public class SampleWeapon : ScriptableObject
     {
         [Tooltip("Name of the weapon")]
         public new string name;

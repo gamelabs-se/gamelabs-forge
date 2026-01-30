@@ -2,8 +2,8 @@ using UnityEngine;
 
 namespace GameLabs.Forge.Demo
 {
-    [CreateAssetMenu(fileName = "Spaceship", menuName = "GameLabs/Demo/Spaceship")]
-    public class Spaceship : ScriptableObject
+    [CreateAssetMenu(fileName = "Spaceship", menuName = "FORGE Samples/Spaceship")]
+    public class SampleSpaceship : ScriptableObject
     {
 
         [Tooltip("Display name shown to the player.")]
