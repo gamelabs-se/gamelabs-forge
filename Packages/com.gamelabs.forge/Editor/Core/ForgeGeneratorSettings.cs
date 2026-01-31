@@ -38,6 +38,11 @@ namespace GameLabs.Forge.Editor
         [Tooltip("AI model to use.")]
         public ForgeAIModel model = ForgeAIModel.GPT5Mini;
         
+        [Header("Validation")]
+        [Tooltip("Maximum retry attempts if validation fails (for items implementing IForgeValidatable).")]
+        [Range(1, 10)]
+        public int maxValidationRetries = 3;
+        
         [Header("Item Context")]
         [Tooltip("Additional context or rules for item generation.")]
         [TextArea(2, 4)]

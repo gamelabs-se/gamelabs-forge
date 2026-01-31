@@ -148,17 +148,64 @@ namespace GameLabs.Forge.Editor
             }
 
             ForgeTemplateGenerationResult result = null;
-            bool completed = false;
-
-            client.Chat(prompt, response =>
+            int maxRetries = globalSettings?.maxValidationRetries ?? 3;
+            
+            // Retry loop for validation
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
-                result = ProcessResponse(response, templateType, count);
-                completed = true;
-            });
+                bool completed = false;
+                string currentPrompt = (attempt == 1) ? prompt : prompt; // Will be modified for retries
 
-            // Wait for completion
-            while (!completed)
-                yield return null;
+                client.Chat(currentPrompt, response =>
+                {
+                    result = ProcessResponse(response, templateType, count);
+                    completed = true;
+                });
+
+                // Wait for completion
+                while (!completed)
+                    yield return null;
+
+                // Check if generation succeeded
+                if (!result.success)
+                {
+                    ForgeLogger.Warn($"Generation attempt {attempt}/{maxRetries} failed: {result.errorMessage}");
+                    if (attempt < maxRetries)
+                    {
+                        yield return new UnityEngine.WaitForSeconds(1f); // Brief pause before retry
+                        continue;
+                    }
+                    break;
+                }
+
+                // Validate items
+                var validationErrors = ValidateItems(result.items);
+                
+                if (validationErrors.Count == 0)
+                {
+                    // All items valid - success!
+                    ForgeLogger.Success($"All {result.items.Count} items validated successfully");
+                    break;
+                }
+                
+                // Validation failed
+                if (attempt < maxRetries)
+                {
+                    ForgeLogger.Warn($"Validation failed on attempt {attempt}/{maxRetries}. Retrying with feedback...");
+                    
+                    // Build retry prompt with validation errors
+                    var errorSummary = string.Join("\n", validationErrors);
+                    prompt = prompt + $"\n\n=== VALIDATION ERRORS FROM PREVIOUS ATTEMPT ===\n{errorSummary}\n\nPlease fix these validation errors and regenerate the items.";
+                    
+                    yield return new UnityEngine.WaitForSeconds(1f); // Brief pause before retry
+                }
+                else
+                {
+                    // Max retries reached - return with validation errors
+                    ForgeLogger.Error($"Max validation retries ({maxRetries}) reached. Items may have validation errors.");
+                    result.errorMessage = $"Validation warnings:\n{string.Join("\n", validationErrors)}";
+                }
+            }
 
             callback?.Invoke(result);
         }
@@ -224,17 +271,58 @@ namespace GameLabs.Forge.Editor
             }
 
             ForgeTemplateGenerationResult result = null;
-            bool completed = false;
-
-            client.Chat(prompt, response =>
+            int maxRetries = globalSettings?.maxValidationRetries ?? 3;
+            
+            // Retry loop for validation
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
-                result = ProcessResponse(response, itemType, count);
-                completed = true;
-            });
+                bool completed = false;
 
-            // Wait for completion
-            while (!completed)
-                yield return null;
+                client.Chat(prompt, response =>
+                {
+                    result = ProcessResponse(response, itemType, count);
+                    completed = true;
+                });
+
+                // Wait for completion
+                while (!completed)
+                    yield return null;
+
+                // Check if generation succeeded
+                if (!result.success)
+                {
+                    ForgeLogger.Warn($"Generation attempt {attempt}/{maxRetries} failed: {result.errorMessage}");
+                    if (attempt < maxRetries)
+                    {
+                        yield return new UnityEngine.WaitForSeconds(1f);
+                        continue;
+                    }
+                    break;
+                }
+
+                // Validate items
+                var validationErrors = ValidateItems(result.items);
+                
+                if (validationErrors.Count == 0)
+                {
+                    ForgeLogger.Success($"All {result.items.Count} variants validated successfully");
+                    break;
+                }
+                
+                // Validation failed
+                if (attempt < maxRetries)
+                {
+                    ForgeLogger.Warn($"Validation failed on attempt {attempt}/{maxRetries}. Retrying with feedback...");
+                    var errorSummary = string.Join("\n", validationErrors);
+                    prompt = prompt + $"\n\n=== VALIDATION ERRORS FROM PREVIOUS ATTEMPT ===\n{errorSummary}\n\nPlease fix these validation errors and regenerate the variants.";
+                    yield return new UnityEngine.WaitForSeconds(1f);
+                }
+                else
+                {
+                    ForgeLogger.Error($"Max validation retries ({maxRetries}) reached. Variants may have validation errors.");
+                    result.errorMessage = $"Validation warnings:\n{string.Join("\n", validationErrors)}";
+                }
+            }
 
             callback?.Invoke(result);
         }
@@ -362,17 +450,59 @@ CRITICAL RULES:
             }
 
             ForgeTemplateGenerationResult result = null;
-            bool completed = false;
-
-            client.Chat(prompt, response =>
+            var globalSettings = ForgeConfig.GetGeneratorSettings();
+            int maxRetries = globalSettings?.maxValidationRetries ?? 3;
+            
+            // Retry loop for validation
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
-                result = ProcessResponse(response, templateType, count);
-                completed = true;
-            });
+                bool completed = false;
 
-            // Wait for completion
-            while (!completed)
-                yield return null;
+                client.Chat(prompt, response =>
+                {
+                    result = ProcessResponse(response, templateType, count);
+                    completed = true;
+                });
+
+                // Wait for completion
+                while (!completed)
+                    yield return null;
+
+                // Check if generation succeeded
+                if (!result.success)
+                {
+                    ForgeLogger.Warn($"Generation attempt {attempt}/{maxRetries} failed: {result.errorMessage}");
+                    if (attempt < maxRetries)
+                    {
+                        yield return new UnityEngine.WaitForSeconds(1f);
+                        continue;
+                    }
+                    break;
+                }
+
+                // Validate items
+                var validationErrors = ValidateItems(result.items);
+                
+                if (validationErrors.Count == 0)
+                {
+                    ForgeLogger.Success($"All {result.items.Count} items validated successfully");
+                    break;
+                }
+                
+                // Validation failed
+                if (attempt < maxRetries)
+                {
+                    ForgeLogger.Warn($"Validation failed on attempt {attempt}/{maxRetries}. Retrying with feedback...");
+                    var errorSummary = string.Join("\n", validationErrors);
+                    prompt = prompt + $"\n\n=== VALIDATION ERRORS FROM PREVIOUS ATTEMPT ===\n{errorSummary}\n\nPlease fix these validation errors and regenerate the items.";
+                    yield return new UnityEngine.WaitForSeconds(1f);
+                }
+                else
+                {
+                    ForgeLogger.Error($"Max validation retries ({maxRetries}) reached. Items may have validation errors.");
+                    result.errorMessage = $"Validation warnings:\n{string.Join("\n", validationErrors)}";
+                }
+            }
 
             callback?.Invoke(result);
         }
@@ -716,6 +846,60 @@ CRITICAL RULES:
                 ForgeLogger.Error($"Failed to create and populate {type.Name}: {e.Message}");
                 return null;
             }
+        }
+        
+        /// <summary>
+        /// Validates an item using IForgeValidatable interface or reflection.
+        /// Returns null if valid, error message if invalid.
+        /// </summary>
+        private string ValidateItem(ScriptableObject item)
+        {
+            if (item == null) return "Item is null";
+            
+            // Check if item implements IForgeValidatable interface
+            if (item is IForgeValidatable validatable)
+            {
+                return validatable.ValidateForgeItem();
+            }
+            
+            // Fall back to reflection - look for ValidateForgeItem method
+            var method = item.GetType().GetMethod("ValidateForgeItem", 
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            
+            if (method != null && method.ReturnType == typeof(string))
+            {
+                try
+                {
+                    return method.Invoke(item, null) as string;
+                }
+                catch (Exception e)
+                {
+                    ForgeLogger.Error($"Validation method threw exception: {e.Message}");
+                    return $"Validation error: {e.Message}";
+                }
+            }
+            
+            // No validation method found - item is valid
+            return null;
+        }
+        
+        /// <summary>
+        /// Validates all items in a list. Returns list of error messages for failed items.
+        /// </summary>
+        private List<string> ValidateItems(List<ScriptableObject> items)
+        {
+            var errors = new List<string>();
+            
+            for (int i = 0; i < items.Count; i++)
+            {
+                var error = ValidateItem(items[i]);
+                if (!string.IsNullOrEmpty(error))
+                {
+                    errors.Add($"Item {i + 1} ({items[i]?.name ?? "unnamed"}): {error}");
+                }
+            }
+            
+            return errors;
         }
 
         private string ConvertEnumStringsToIntegers(string json, Type type)
