@@ -1476,6 +1476,9 @@ namespace GameLabs.Forge.Editor
             // Interactive mode: open review window
             if (_interactiveMode && result.items.Count > 0)
             {
+                // Record history for interactive mode (paths are empty until review completes)
+                RecordGenerationHistory(result, new List<string>(), effectiveModel);
+                
                 // If review window is already open, add items to it
                 if (_reviewWindow != null)
                 {
