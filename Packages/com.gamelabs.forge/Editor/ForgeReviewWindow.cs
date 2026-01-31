@@ -389,6 +389,13 @@ namespace GameLabs.Forge.Editor
             bool isAccepted = decision == ItemDecision.Accepted;
             bool isDiscarded = decision == ItemDecision.Discarded || decision == ItemDecision.DiscardedWithFeedback;
             
+            int pendingCount = _decisions.Count(d => d.Value == ItemDecision.Pending);
+            bool allReviewed = pendingCount == 0;
+            bool canGenerateMore = _onGenerateMore != null && !_isGenerating;
+            
+            // Fixed height container to prevent layout jumping
+            EditorGUILayout.BeginVertical(GUILayout.Height(80));
+            
             EditorGUILayout.BeginHorizontal();
             
             // Accept / Continue button
@@ -396,20 +403,40 @@ namespace GameLabs.Forge.Editor
                 ? new Color(0.2f, 0.9f, 0.3f, 0.8f) 
                 : new Color(0.2f, 0.7f, 0.3f, 0.5f);
             
-            string acceptLabel = isPending ? "Accept" : (isAccepted ? "Continue →" : "Accept");
+            // Determine label based on state
+            string acceptLabel;
+            if (isPending)
+                acceptLabel = "Accept";
+            else if (isAccepted && allReviewed && canGenerateMore)
+                acceptLabel = $"Generate More ({_generateCount}) →";
+            else if (isAccepted)
+                acceptLabel = "Continue →";
+            else
+                acceptLabel = "Accept";
+            
+            GUI.enabled = !_isGenerating;
             if (GUILayout.Button(acceptLabel, GUILayout.Height(32)))
             {
                 if (isAccepted)
                 {
-                    // Already accepted, just move to next
-                    MoveToNextPending();
+                    if (allReviewed && canGenerateMore)
+                    {
+                        // All reviewed - trigger new generation
+                        TriggerGenerateMore();
+                    }
+                    else
+                    {
+                        // Move to next pending
+                        MoveToNextPending();
+                    }
                 }
                 else
                 {
-                    // If was previously discarded, need to save it now
+                    // Accept this item (save to disk)
                     AcceptItem(item);
                 }
             }
+            GUI.enabled = true;
             
             GUI.backgroundColor = Color.white;
             
@@ -420,20 +447,40 @@ namespace GameLabs.Forge.Editor
                 ? new Color(0.9f, 0.3f, 0.3f, 0.8f)
                 : new Color(0.7f, 0.3f, 0.3f, 0.5f);
             
-            string discardLabel = isPending ? "Discard" : (isDiscarded ? "Continue →" : "Discard");
+            // Determine label based on state
+            string discardLabel;
+            if (isPending)
+                discardLabel = "Discard";
+            else if (isDiscarded && allReviewed && canGenerateMore)
+                discardLabel = $"Generate More ({_generateCount}) →";
+            else if (isDiscarded)
+                discardLabel = "Continue →";
+            else
+                discardLabel = "Discard";
+            
+            GUI.enabled = !_isGenerating;
             if (GUILayout.Button(discardLabel, GUILayout.Height(32)))
             {
                 if (isDiscarded)
                 {
-                    // Already discarded, just move to next
-                    MoveToNextPending();
+                    if (allReviewed && canGenerateMore)
+                    {
+                        // All reviewed - trigger new generation
+                        TriggerGenerateMore();
+                    }
+                    else
+                    {
+                        // Move to next pending
+                        MoveToNextPending();
+                    }
                 }
                 else
                 {
-                    // If was previously accepted, need to delete from disk
+                    // Discard this item (delete from disk if saved)
                     DiscardItem(item, false);
                 }
             }
+            GUI.enabled = true;
             
             GUI.backgroundColor = Color.white;
             
@@ -444,29 +491,35 @@ namespace GameLabs.Forge.Editor
                 ? new Color(0.9f, 0.6f, 0.2f, 0.8f)
                 : new Color(0.7f, 0.5f, 0.2f, 0.5f);
             
+            GUI.enabled = !_isGenerating;
             if (GUILayout.Button("Discard + Feedback", GUILayout.Height(32)))
             {
                 _showFeedbackInput = true;
                 _currentFeedbackInput = _discardFeedback.ContainsKey(item) ? _discardFeedback[item] : "";
             }
+            GUI.enabled = true;
             
             GUI.backgroundColor = Color.white;
             
             EditorGUILayout.EndHorizontal();
             
-            // Show saved path if accepted
-            if (isAccepted && _savedPaths.ContainsKey(item))
+            // Show status messages inside the fixed height container
+            EditorGUILayout.Space(4);
+            
+            if (_isGenerating)
             {
-                EditorGUILayout.Space(4);
+                EditorGUILayout.HelpBox("Generating more items...", MessageType.Info);
+            }
+            else if (isAccepted && _savedPaths.ContainsKey(item))
+            {
                 EditorGUILayout.HelpBox($"Saved: {_savedPaths[item]}", MessageType.Info);
             }
-            
-            // Show existing feedback if any
-            if (decision == ItemDecision.DiscardedWithFeedback && _discardFeedback.ContainsKey(item))
+            else if (decision == ItemDecision.DiscardedWithFeedback && _discardFeedback.ContainsKey(item))
             {
-                EditorGUILayout.Space(4);
                 EditorGUILayout.HelpBox($"Feedback: {_discardFeedback[item]}", MessageType.Info);
             }
+            
+            EditorGUILayout.EndVertical();
         }
         
         /// <summary>
@@ -542,6 +595,18 @@ namespace GameLabs.Forge.Editor
             }
             
             ForgeLogger.DebugLog($"Batch accepted {pendingItems.Count} items");
+        }
+        
+        /// <summary>
+        /// Triggers generation of more items.
+        /// </summary>
+        private void TriggerGenerateMore()
+        {
+            if (_onGenerateMore == null || _isGenerating) return;
+            
+            _isGenerating = true;
+            Repaint();
+            _onGenerateMore.Invoke();
         }
         
         /// <summary>
@@ -692,6 +757,9 @@ namespace GameLabs.Forge.Editor
         
         private void DrawActionButtons()
         {
+            // Fixed height container for bottom buttons to prevent layout jumping
+            EditorGUILayout.BeginVertical(GUILayout.Height(80));
+            
             var divRect = EditorGUILayout.GetControlRect(GUILayout.Height(1));
             EditorGUI.DrawRect(divRect, new Color(0.5f, 0.5f, 0.5f, 0.3f));
             
@@ -703,62 +771,46 @@ namespace GameLabs.Forge.Editor
             EditorGUILayout.BeginHorizontal();
             GUILayout.Space(16);
             
-            // Quick actions
-            if (pending > 0)
+            // Quick actions - always show buttons (even if disabled) to prevent layout shift
+            GUI.enabled = pending > 0 && !_isGenerating;
+            
+            if (GUILayout.Button($"Accept All ({pending})", GUILayout.Height(28), GUILayout.Width(140)))
             {
-                if (GUILayout.Button($"Accept All Remaining ({pending})", GUILayout.Height(28), GUILayout.Width(180)))
-                {
-                    AcceptAllPending();
-                    Repaint();
-                }
-                
-                GUILayout.Space(8);
-                
-                if (GUILayout.Button($"Discard All Remaining ({pending})", GUILayout.Height(28), GUILayout.Width(180)))
-                {
-                    foreach (var item in _items)
-                    {
-                        if (_decisions[item] == ItemDecision.Pending)
-                        {
-                            _decisions[item] = ItemDecision.Discarded;
-                        }
-                    }
-                    Repaint();
-                }
+                AcceptAllPending();
+                Repaint();
             }
+            
+            GUILayout.Space(8);
+            
+            if (GUILayout.Button($"Discard All ({pending})", GUILayout.Height(28), GUILayout.Width(140)))
+            {
+                foreach (var item in _items)
+                {
+                    if (_decisions[item] == ItemDecision.Pending)
+                    {
+                        _decisions[item] = ItemDecision.Discarded;
+                    }
+                }
+                Repaint();
+            }
+            
+            GUI.enabled = true;
             
             GUILayout.FlexibleSpace();
             
-            // Generate more button
-            if (_onGenerateMore != null)
-            {
-                GUI.backgroundColor = new Color(0.3f, 0.5f, 0.9f, 0.7f);
-                string genLabel = _isGenerating ? "Generating..." : $"Generate More ({_generateCount})";
-                GUI.enabled = !_isGenerating;
-                
-                if (GUILayout.Button(genLabel, GUILayout.Height(28), GUILayout.Width(150)))
-                {
-                    _isGenerating = true;
-                    _onGenerateMore?.Invoke();
-                }
-                
-                GUI.enabled = true;
-                GUI.backgroundColor = Color.white;
-                
-                GUILayout.Space(8);
-            }
-            
-            // Finish button - now just closes since items are already saved
+            // Finish button - fixed position on right
             GUI.backgroundColor = accepted > 0 
                 ? new Color(0.2f, 0.8f, 0.3f, 0.8f) 
                 : new Color(0.5f, 0.5f, 0.5f, 0.5f);
             
             string finishLabel = accepted > 0 ? $"Finish ({accepted} saved)" : "Finish";
             
-            if (GUILayout.Button(finishLabel, GUILayout.Height(28), GUILayout.Width(180)))
+            GUI.enabled = !_isGenerating;
+            if (GUILayout.Button(finishLabel, GUILayout.Height(28), GUILayout.Width(160)))
             {
                 FinishReview();
             }
+            GUI.enabled = true;
             
             GUI.backgroundColor = Color.white;
             
@@ -768,14 +820,15 @@ namespace GameLabs.Forge.Editor
             // Feedback summary
             if (_feedbackMessages.Count > 0)
             {
-                EditorGUILayout.Space(8);
+                EditorGUILayout.Space(4);
                 EditorGUILayout.HelpBox(
                     $"{_feedbackMessages.Count} feedback message(s) will be sent with the next generation.",
                     MessageType.Info
                 );
             }
             
-            EditorGUILayout.Space(8);
+            EditorGUILayout.Space(4);
+            EditorGUILayout.EndVertical();
         }
         
         private void MoveToNextPending()
