@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -10,6 +11,7 @@ namespace GameLabs.Forge.Editor
     /// <summary>
     /// Interactive review window for generated items.
     /// Allows accepting, discarding, or providing feedback on each item.
+    /// Accepted items are saved to disk immediately; discarded items remain in memory.
     /// </summary>
     public class ForgeReviewWindow : EditorWindow
     {
@@ -23,6 +25,9 @@ namespace GameLabs.Forge.Editor
         private enum ItemDecision { Pending, Accepted, Discarded, DiscardedWithFeedback }
         private Dictionary<ScriptableObject, ItemDecision> _decisions = new();
         private Dictionary<ScriptableObject, string> _discardFeedback = new();
+        
+        // Track saved asset paths (item -> path on disk)
+        private Dictionary<ScriptableObject, string> _savedPaths = new();
         
         // Accumulated feedback for next generation
         private List<string> _feedbackMessages = new();
@@ -40,6 +45,7 @@ namespace GameLabs.Forge.Editor
         // Configuration from parent
         private int _generateCount = 10;
         private string _sessionInstructions = "";
+        private string _saveFolder = "";
         
         // Embedded inspector
         private UnityEditor.Editor _itemEditor;
@@ -52,7 +58,8 @@ namespace GameLabs.Forge.Editor
             Action<List<ScriptableObject>, List<string>> onComplete,
             Action onGenerateMore = null,
             int generateCount = 10,
-            string sessionInstructions = "")
+            string sessionInstructions = "",
+            string saveFolder = "")
         {
             var window = GetWindow<ForgeReviewWindow>(true, "Review Generated Items", true);
             window.minSize = new Vector2(600, 700);
@@ -63,10 +70,12 @@ namespace GameLabs.Forge.Editor
             window._decisions.Clear();
             window._discardFeedback.Clear();
             window._feedbackMessages.Clear();
+            window._savedPaths.Clear();
             window._onComplete = onComplete;
             window._onGenerateMore = onGenerateMore;
             window._generateCount = generateCount;
             window._sessionInstructions = sessionInstructions;
+            window._saveFolder = string.IsNullOrEmpty(saveFolder) ? "ReviewedItems" : saveFolder;
             
             // Initialize all items as pending
             foreach (var item in items)
@@ -80,15 +89,27 @@ namespace GameLabs.Forge.Editor
         
         /// <summary>
         /// Adds more items to the review queue (for "generate more" functionality).
+        /// Automatically scrolls to view the first new item.
         /// </summary>
         public void AddItems(List<ScriptableObject> newItems)
         {
+            int firstNewIndex = _items.Count;
+            
             foreach (var item in newItems)
             {
                 _items.Add(item);
                 _decisions[item] = ItemDecision.Pending;
             }
+            
             _isGenerating = false;
+            
+            // Jump to the first new item
+            if (newItems.Count > 0)
+            {
+                _currentIndex = firstNewIndex;
+                RefreshItemEditor();
+            }
+            
             Repaint();
         }
         
@@ -96,6 +117,11 @@ namespace GameLabs.Forge.Editor
         /// Gets the accumulated feedback messages for the next generation.
         /// </summary>
         public List<string> GetAccumulatedFeedback() => new List<string>(_feedbackMessages);
+        
+        /// <summary>
+        /// Gets all paths of items that have been saved to disk.
+        /// </summary>
+        public List<string> GetSavedPaths() => new List<string>(_savedPaths.Values);
         
         private void OnDestroy()
         {
@@ -105,8 +131,18 @@ namespace GameLabs.Forge.Editor
                 DestroyImmediate(_itemEditor);
             }
             
-            // If window closed without completing, treat pending items as discarded
+            // Collect accepted items (those saved to disk)
             var accepted = _items.Where(i => _decisions.ContainsKey(i) && _decisions[i] == ItemDecision.Accepted).ToList();
+            
+            // Destroy any in-memory items that weren't saved
+            foreach (var item in _items)
+            {
+                if (item != null && !_savedPaths.ContainsKey(item))
+                {
+                    DestroyImmediate(item);
+                }
+            }
+            
             _onComplete?.Invoke(accepted, _feedbackMessages);
         }
         
@@ -349,35 +385,54 @@ namespace GameLabs.Forge.Editor
         private void DrawItemActionButtons(ScriptableObject item)
         {
             var decision = _decisions.ContainsKey(item) ? _decisions[item] : ItemDecision.Pending;
+            bool isPending = decision == ItemDecision.Pending;
+            bool isAccepted = decision == ItemDecision.Accepted;
+            bool isDiscarded = decision == ItemDecision.Discarded || decision == ItemDecision.DiscardedWithFeedback;
             
             EditorGUILayout.BeginHorizontal();
             
-            // Accept button
-            GUI.backgroundColor = decision == ItemDecision.Accepted 
+            // Accept / Continue button
+            GUI.backgroundColor = isAccepted 
                 ? new Color(0.2f, 0.9f, 0.3f, 0.8f) 
                 : new Color(0.2f, 0.7f, 0.3f, 0.5f);
             
-            if (GUILayout.Button(decision == ItemDecision.Accepted ? "✓ Accepted" : "Accept", GUILayout.Height(32)))
+            string acceptLabel = isPending ? "Accept" : (isAccepted ? "Continue →" : "Accept");
+            if (GUILayout.Button(acceptLabel, GUILayout.Height(32)))
             {
-                _decisions[item] = ItemDecision.Accepted;
-                _discardFeedback.Remove(item);
-                MoveToNextPending();
+                if (isAccepted)
+                {
+                    // Already accepted, just move to next
+                    MoveToNextPending();
+                }
+                else
+                {
+                    // If was previously discarded, need to save it now
+                    AcceptItem(item);
+                }
             }
             
             GUI.backgroundColor = Color.white;
             
             GUILayout.Space(8);
             
-            // Discard button
-            GUI.backgroundColor = (decision == ItemDecision.Discarded || decision == ItemDecision.DiscardedWithFeedback)
+            // Discard / Continue button
+            GUI.backgroundColor = isDiscarded
                 ? new Color(0.9f, 0.3f, 0.3f, 0.8f)
                 : new Color(0.7f, 0.3f, 0.3f, 0.5f);
             
-            if (GUILayout.Button(decision == ItemDecision.Discarded ? "✗ Discarded" : "Discard", GUILayout.Height(32)))
+            string discardLabel = isPending ? "Discard" : (isDiscarded ? "Continue →" : "Discard");
+            if (GUILayout.Button(discardLabel, GUILayout.Height(32)))
             {
-                _decisions[item] = ItemDecision.Discarded;
-                _discardFeedback.Remove(item);
-                MoveToNextPending();
+                if (isDiscarded)
+                {
+                    // Already discarded, just move to next
+                    MoveToNextPending();
+                }
+                else
+                {
+                    // If was previously accepted, need to delete from disk
+                    DiscardItem(item, false);
+                }
             }
             
             GUI.backgroundColor = Color.white;
@@ -399,12 +454,173 @@ namespace GameLabs.Forge.Editor
             
             EditorGUILayout.EndHorizontal();
             
+            // Show saved path if accepted
+            if (isAccepted && _savedPaths.ContainsKey(item))
+            {
+                EditorGUILayout.Space(4);
+                EditorGUILayout.HelpBox($"Saved: {_savedPaths[item]}", MessageType.Info);
+            }
+            
             // Show existing feedback if any
             if (decision == ItemDecision.DiscardedWithFeedback && _discardFeedback.ContainsKey(item))
             {
                 EditorGUILayout.Space(4);
                 EditorGUILayout.HelpBox($"Feedback: {_discardFeedback[item]}", MessageType.Info);
             }
+        }
+        
+        /// <summary>
+        /// Accepts an item - saves it to disk immediately.
+        /// </summary>
+        private void AcceptItem(ScriptableObject item)
+        {
+            var previousDecision = _decisions.ContainsKey(item) ? _decisions[item] : ItemDecision.Pending;
+            
+            // If already saved, nothing to do
+            if (_savedPaths.ContainsKey(item))
+            {
+                _decisions[item] = ItemDecision.Accepted;
+                _discardFeedback.Remove(item);
+                MoveToNextPending();
+                return;
+            }
+            
+            // Save to disk
+            string path = SaveItemToDisk(item);
+            if (!string.IsNullOrEmpty(path))
+            {
+                _savedPaths[item] = path;
+                _decisions[item] = ItemDecision.Accepted;
+                _discardFeedback.Remove(item);
+                ForgeLogger.DebugLog($"Accepted and saved: {path}");
+            }
+            else
+            {
+                ForgeLogger.Error($"Failed to save item: {item.name}");
+            }
+            
+            MoveToNextPending();
+        }
+        
+        /// <summary>
+        /// Accepts all pending items - batch saves to disk.
+        /// </summary>
+        private void AcceptAllPending()
+        {
+            var pendingItems = _items.Where(i => _decisions[i] == ItemDecision.Pending).ToList();
+            if (pendingItems.Count == 0) return;
+            
+            string folderPath = Path.Combine(ForgeAssetExporter.GetGeneratedBasePath(), _saveFolder);
+            
+            // Ensure directory exists
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+                AssetDatabase.Refresh();
+            }
+            
+            AssetDatabase.StartAssetEditing();
+            try
+            {
+                foreach (var item in pendingItems)
+                {
+                    if (item == null) continue;
+                    
+                    string path = SaveItemToDisk(item);
+                    if (!string.IsNullOrEmpty(path))
+                    {
+                        _savedPaths[item] = path;
+                        _decisions[item] = ItemDecision.Accepted;
+                        _discardFeedback.Remove(item);
+                    }
+                }
+            }
+            finally
+            {
+                AssetDatabase.StopAssetEditing();
+                AssetDatabase.SaveAssets();
+            }
+            
+            ForgeLogger.DebugLog($"Batch accepted {pendingItems.Count} items");
+        }
+        
+        /// <summary>
+        /// Discards an item - deletes from disk if it was previously saved.
+        /// </summary>
+        private void DiscardItem(ScriptableObject item, bool withFeedback)
+        {
+            // If item was previously saved, delete from disk
+            if (_savedPaths.ContainsKey(item))
+            {
+                string path = _savedPaths[item];
+                if (AssetDatabase.DeleteAsset(path))
+                {
+                    ForgeLogger.DebugLog($"Deleted from disk: {path}");
+                }
+                _savedPaths.Remove(item);
+                
+                // Need to recreate the item in memory since the asset was deleted
+                // The item reference becomes invalid after deletion
+            }
+            
+            _decisions[item] = withFeedback ? ItemDecision.DiscardedWithFeedback : ItemDecision.Discarded;
+            
+            if (!withFeedback)
+            {
+                _discardFeedback.Remove(item);
+                MoveToNextPending();
+            }
+        }
+        
+        /// <summary>
+        /// Saves an item to disk and returns the path.
+        /// </summary>
+        private string SaveItemToDisk(ScriptableObject item)
+        {
+            if (item == null) return null;
+            
+            string folderPath = Path.Combine(ForgeAssetExporter.GetGeneratedBasePath(), _saveFolder);
+            
+            // Ensure directory exists
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+                AssetDatabase.Refresh();
+            }
+            
+            string baseName = string.IsNullOrEmpty(item.name) ? item.GetType().Name : item.name;
+            string safeName = SanitizeFileName(baseName);
+            string fullPath = Path.Combine(folderPath, safeName + ".asset");
+            
+            // Handle duplicates
+            int counter = 1;
+            while (File.Exists(fullPath))
+            {
+                fullPath = Path.Combine(folderPath, $"{safeName}_{counter}.asset");
+                counter++;
+            }
+            
+            try
+            {
+                AssetDatabase.CreateAsset(item, fullPath);
+                AssetDatabase.SaveAssets();
+                return fullPath;
+            }
+            catch (Exception e)
+            {
+                ForgeLogger.Error($"Failed to save asset: {e.Message}");
+                return null;
+            }
+        }
+        
+        private string SanitizeFileName(string name)
+        {
+            char[] invalid = Path.GetInvalidFileNameChars();
+            foreach (char c in invalid)
+            {
+                name = name.Replace(c, '_');
+            }
+            return name;
         }
         
         private void DrawFeedbackPopup()
@@ -450,7 +666,11 @@ namespace GameLabs.Forge.Editor
             if (GUILayout.Button("Submit Feedback", GUILayout.Height(28)))
             {
                 var currentItem = _items[_currentIndex];
-                _decisions[currentItem] = ItemDecision.DiscardedWithFeedback;
+                
+                // First discard (handles disk deletion if needed)
+                DiscardItem(currentItem, true);
+                
+                // Now set feedback
                 _discardFeedback[currentItem] = _currentFeedbackInput;
                 
                 // Add to accumulated feedback (avoid duplicates)
@@ -488,13 +708,7 @@ namespace GameLabs.Forge.Editor
             {
                 if (GUILayout.Button($"Accept All Remaining ({pending})", GUILayout.Height(28), GUILayout.Width(180)))
                 {
-                    foreach (var item in _items)
-                    {
-                        if (_decisions[item] == ItemDecision.Pending)
-                        {
-                            _decisions[item] = ItemDecision.Accepted;
-                        }
-                    }
+                    AcceptAllPending();
                     Repaint();
                 }
                 
@@ -534,12 +748,12 @@ namespace GameLabs.Forge.Editor
                 GUILayout.Space(8);
             }
             
-            // Finish button
+            // Finish button - now just closes since items are already saved
             GUI.backgroundColor = accepted > 0 
                 ? new Color(0.2f, 0.8f, 0.3f, 0.8f) 
                 : new Color(0.5f, 0.5f, 0.5f, 0.5f);
             
-            string finishLabel = accepted > 0 ? $"Finish & Save ({accepted})" : "Finish (nothing to save)";
+            string finishLabel = accepted > 0 ? $"Finish ({accepted} saved)" : "Finish";
             
             if (GUILayout.Button(finishLabel, GUILayout.Height(28), GUILayout.Width(180)))
             {
@@ -596,13 +810,13 @@ namespace GameLabs.Forge.Editor
         
         private void FinishReview()
         {
-            // Collect accepted items
+            // Collect accepted items (already saved to disk)
             var accepted = _items.Where(i => _decisions.ContainsKey(i) && _decisions[i] == ItemDecision.Accepted).ToList();
             
-            // Destroy discarded items
+            // Destroy discarded items that are still in memory (not saved)
             foreach (var item in _items)
             {
-                if (_decisions[item] != ItemDecision.Accepted && item != null)
+                if (item != null && !_savedPaths.ContainsKey(item))
                 {
                     DestroyImmediate(item);
                 }
@@ -616,7 +830,7 @@ namespace GameLabs.Forge.Editor
             // Close window
             Close();
             
-            // Invoke callback with results
+            // Invoke callback with results (items are already saved, just report)
             callback?.Invoke(accepted, feedback);
         }
     }

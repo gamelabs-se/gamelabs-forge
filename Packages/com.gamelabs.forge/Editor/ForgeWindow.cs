@@ -1489,12 +1489,18 @@ namespace GameLabs.Forge.Editor
                         ? _variantsInstructions 
                         : _newItemsInstructions;
                     
+                    // Determine save folder
+                    string saveFolder = _useCustomFolder && !string.IsNullOrEmpty(_customFolderName)
+                        ? _customFolderName
+                        : GetEffectiveTemplateType()?.Name ?? "GeneratedItems";
+                    
                     _reviewWindow = ForgeReviewWindow.Open(
                         result.items,
                         OnInteractiveReviewComplete,
                         OnGenerateMoreFromReview,
                         _itemCount,
-                        currentInstructions
+                        currentInstructions,
+                        saveFolder
                     );
                     
                     _status = $"Generated {result.items.Count} item(s) - Review in progress...";
@@ -1578,6 +1584,7 @@ namespace GameLabs.Forge.Editor
         
         /// <summary>
         /// Called when the interactive review window is closed.
+        /// Items are already saved to disk by the review window.
         /// </summary>
         private void OnInteractiveReviewComplete(List<ScriptableObject> acceptedItems, List<string> feedback)
         {
@@ -1592,35 +1599,19 @@ namespace GameLabs.Forge.Editor
                 return;
             }
             
-            // Save accepted items
+            // Items are already saved by the review window
             _lastGenerated.Clear();
             _itemSavedState.Clear();
             _lastGenerated.AddRange(acceptedItems);
             
             foreach (var item in acceptedItems)
-                _itemSavedState[item] = false;
+                _itemSavedState[item] = true; // Already saved
             
-            if (_autoSaveAsAsset && HasValidTemplate)
+            _status = $"✓ Review complete: {acceptedItems.Count} item(s) saved";
+            
+            if (feedback.Count > 0)
             {
-                string folder = _useCustomFolder && !string.IsNullOrEmpty(_customFolderName)
-                    ? _customFolderName
-                    : GetEffectiveTemplateType()?.Name ?? "Unknown";
-
-                var saved = SaveGeneratedAssets(acceptedItems, folder);
-
-                for (int i = 0; i < saved && i < acceptedItems.Count; i++)
-                    _itemSavedState[acceptedItems[i]] = true;
-
-                _status = $"✓ Review complete: saved {saved} accepted item(s)";
-                
-                if (feedback.Count > 0)
-                {
-                    _status += $"\n{feedback.Count} feedback message(s) collected for future generations";
-                }
-            }
-            else
-            {
-                _status = $"Review complete: {acceptedItems.Count} item(s) accepted (not auto-saved)";
+                _status += $"\n{feedback.Count} feedback message(s) collected for future generations";
             }
             
             _statusType = MessageType.Info;
