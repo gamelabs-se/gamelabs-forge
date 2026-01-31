@@ -1514,13 +1514,14 @@ namespace GameLabs.Forge.Editor
             foreach (var item in result.items)
                 _itemSavedState[item] = false;
 
+            List<string> savedPaths = new List<string>();
             if (_autoSaveAsAsset && HasValidTemplate)
             {
                 string folder = _useCustomFolder && !string.IsNullOrEmpty(_customFolderName)
                     ? _customFolderName
                     : GetEffectiveTemplateType()?.Name ?? "Unknown";
 
-                var saved = SaveGeneratedAssets(result.items, folder);
+                var saved = SaveGeneratedAssets(result.items, folder, savedPaths);
 
                 // Mark saved items
                 for (int i = 0; i < saved && i < result.items.Count; i++)
@@ -1535,9 +1536,44 @@ namespace GameLabs.Forge.Editor
                           $"Cost: ${result.estimatedCost:F6} ({result.promptTokens} prompt, {result.completionTokens} completion tokens)\n" +
                           $"Review below and click 'Save' or 'Save All' when ready";
             }
+            
+            // Record to generation history
+            RecordGenerationHistory(result, savedPaths, effectiveModel);
 
             _statusType = MessageType.Info;
             Repaint();
+        }
+        
+        /// <summary>
+        /// Records a generation to the history system.
+        /// </summary>
+        private void RecordGenerationHistory(ForgeTemplateGenerationResult result, List<string> savedPaths, ForgeAIModel model)
+        {
+            string blueprintName = _blueprint != null ? _blueprint.DisplayName : null;
+            string templateTypeName = GetEffectiveTemplateType()?.Name;
+            string instructions = _mode == GenerationMode.Variants ? _variantsInstructions : _newItemsInstructions;
+            
+            var itemNames = result.items.Select(i => i.name).ToList();
+            
+            ForgeGenerationHistory.Instance.AddRecord(
+                blueprintName: blueprintName,
+                templateTypeName: templateTypeName,
+                isVariantMode: result.isVariantMode,
+                model: model,
+                itemsRequested: _itemCount,
+                itemsGenerated: result.items.Count,
+                promptTokens: result.promptTokens,
+                completionTokens: result.completionTokens,
+                durationSeconds: result.durationSeconds,
+                userInstructions: instructions,
+                assetPaths: savedPaths,
+                itemNames: itemNames,
+                hadValidationErrors: result.hadValidationErrors,
+                retryCount: result.retryCount,
+                sourceAssetPath: result.sourceAssetPath,
+                wasSuccessful: result.success,
+                errorMessage: result.errorMessage
+            );
         }
         
         /// <summary>
@@ -1641,7 +1677,7 @@ namespace GameLabs.Forge.Editor
             }
         }
 
-        private int SaveGeneratedAssets(List<ScriptableObject> items, string folder)
+        private int SaveGeneratedAssets(List<ScriptableObject> items, string folder, List<string> outPaths = null)
         {
             if (items == null || items.Count == 0) return 0;
 
@@ -1668,6 +1704,7 @@ namespace GameLabs.Forge.Editor
 
                     AssetDatabase.CreateAsset(itm, full);
                     saved++;
+                    outPaths?.Add(full);
                     ForgeLogger.DebugLog($"Saved asset: {full}");
                 }
             }

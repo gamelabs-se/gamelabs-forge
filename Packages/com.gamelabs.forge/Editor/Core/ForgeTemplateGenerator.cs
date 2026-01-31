@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using UnityEngine;
@@ -108,6 +109,7 @@ namespace GameLabs.Forge.Editor
             Action<ForgeTemplateGenerationResult> callback,
             string sessionInstructions = null)
         {
+            var stopwatch = Stopwatch.StartNew();
             var client = ForgeOpenAIClient.Instance;
             
             if (client == null)
@@ -205,8 +207,13 @@ namespace GameLabs.Forge.Editor
                     // Max retries reached - return with validation errors
                     ForgeLogger.Error($"Max validation retries ({maxRetries}) reached. Items may have validation errors.");
                     result.errorMessage = $"Validation warnings:\n{string.Join("\n", validationErrors)}";
+                    result.hadValidationErrors = true;
                 }
+                result.retryCount = attempt - 1;
             }
+            
+            // Track duration
+            result.durationSeconds = (float)stopwatch.Elapsed.TotalSeconds;
 
             callback?.Invoke(result);
         }
@@ -239,6 +246,7 @@ namespace GameLabs.Forge.Editor
             string variantInstructions,
             Action<ForgeTemplateGenerationResult> callback)
         {
+            var stopwatch = Stopwatch.StartNew();
             var client = ForgeOpenAIClient.Instance;
             
             if (client == null)
@@ -273,6 +281,7 @@ namespace GameLabs.Forge.Editor
 
             ForgeTemplateGenerationResult result = null;
             int maxRetries = globalSettings?.maxValidationRetries ?? 3;
+            string sourceAssetPath = UnityEditor.AssetDatabase.GetAssetPath(sourceItem);
             
             // Retry loop for validation
             for (int attempt = 1; attempt <= maxRetries; attempt++)
@@ -322,8 +331,15 @@ namespace GameLabs.Forge.Editor
                 {
                     ForgeLogger.Error($"Max validation retries ({maxRetries}) reached. Variants may have validation errors.");
                     result.errorMessage = $"Validation warnings:\n{string.Join("\n", validationErrors)}";
+                    result.hadValidationErrors = true;
                 }
+                result.retryCount = attempt - 1;
             }
+            
+            // Track variant-specific data
+            result.durationSeconds = (float)stopwatch.Elapsed.TotalSeconds;
+            result.isVariantMode = true;
+            result.sourceAssetPath = sourceAssetPath;
 
             callback?.Invoke(result);
         }
@@ -1202,6 +1218,13 @@ CRITICAL RULES:
         public int promptTokens;
         public int completionTokens;
         public float estimatedCost;
+        
+        // Additional tracking for history
+        public float durationSeconds;
+        public int retryCount;
+        public bool hadValidationErrors;
+        public bool isVariantMode;
+        public string sourceAssetPath; // For variant mode
 
         public static ForgeTemplateGenerationResult Error(string message)
         {
