@@ -1671,9 +1671,15 @@ namespace GameLabs.Forge.Editor
             {
                 generator.GenerateVariants(_sourceItem, _itemCount, instructions, OnGenerationComplete);
             }
-            else if (HasValidTemplate)
+            else if (_blueprint != null)
             {
-                generator.Generate(GetEffectiveTemplateType(), _itemCount, instructions, _blueprint, OnGenerationComplete);
+                generator.GenerateFromBlueprint(_blueprint, _itemCount, OnGenerationComplete, instructions);
+            }
+            else if (_templateType != null)
+            {
+                // Create a temporary template instance from the type
+                var tempTemplate = ScriptableObject.CreateInstance(_templateType);
+                generator.GenerateFromTemplate(tempTemplate, _itemCount, OnGenerationComplete, instructions);
             }
         }
 

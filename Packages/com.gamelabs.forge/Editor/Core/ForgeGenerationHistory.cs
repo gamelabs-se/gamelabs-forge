@@ -108,7 +108,7 @@ namespace GameLabs.Forge.Editor
                 blueprintName = blueprintName,
                 templateTypeName = templateTypeName,
                 generationMode = isVariantMode ? "Variant" : "New",
-                modelUsed = ForgeAIModelHelper.GetModelId(model),
+                modelUsed = ForgeAIModelHelper.GetModelName(model),
                 itemsRequested = itemsRequested,
                 itemsGenerated = itemsGenerated,
                 promptTokens = promptTokens,
@@ -191,8 +191,8 @@ namespace GameLabs.Forge.Editor
                 return (0, 0, 0, 0);
             
             int totalItems = blueprintRecords.Sum(r => r.itemsGenerated);
-            float avgTokens = blueprintRecords.Average(r => r.promptTokens + r.completionTokens);
-            float avgCost = blueprintRecords.Average(r => r.estimatedCost);
+            float avgTokens = (float)blueprintRecords.Average(r => r.promptTokens + r.completionTokens);
+            float avgCost = (float)blueprintRecords.Average(r => r.estimatedCost);
             float successRate = blueprintRecords.Count(r => r.wasSuccessful) / (float)blueprintRecords.Count * 100f;
             
             return (totalItems, avgTokens, avgCost, successRate);
