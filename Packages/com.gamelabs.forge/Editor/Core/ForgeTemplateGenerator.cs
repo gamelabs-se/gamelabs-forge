@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using UnityEngine;
 using GameLabs.Forge.Editor.Integration.OpenAI;
@@ -852,54 +853,87 @@ CRITICAL RULES:
         /// Validates an item using IForgeValidatable interface or reflection.
         /// Returns null if valid, error message if invalid.
         /// </summary>
-        private string ValidateItem(ScriptableObject item)
+        private void ValidateItem(ScriptableObject item, int itemIndex, List<string> allErrors)
         {
-            if (item == null) return "Item is null";
+            if (item == null)
+            {
+                allErrors.Add($"Item {itemIndex + 1}: Item is null");
+                return;
+            }
+            
+            var itemErrors = new List<string>();
             
             // Check if item implements IForgeValidatable interface
             if (item is IForgeValidatable validatable)
             {
-                return validatable.ValidateForgeItem();
+                validatable.ValidateForgeItem(itemErrors);
             }
-            
-            // Fall back to reflection - look for ValidateForgeItem method
-            var method = item.GetType().GetMethod("ValidateForgeItem", 
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-            
-            if (method != null && method.ReturnType == typeof(string))
+            else
             {
-                try
+                // Fall back to reflection - look for ValidateForgeItem method
+                var method = item.GetType().GetMethod("ValidateForgeItem", 
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                
+                if (method != null)
                 {
-                    return method.Invoke(item, null) as string;
-                }
-                catch (Exception e)
-                {
-                    ForgeLogger.Error($"Validation method threw exception: {e.Message}");
-                    return $"Validation error: {e.Message}";
+                    var parameters = method.GetParameters();
+                    if (parameters.Length == 1 && parameters[0].ParameterType == typeof(List<string>))
+                    {
+                        try
+                        {
+                            method.Invoke(item, new object[] { itemErrors });
+                        }
+                        catch (Exception e)
+                        {
+                            ForgeLogger.Error($"Validation method threw exception: {e.Message}");
+                            itemErrors.Add($"Validation error: {e.Message}");
+                        }
+                    }
                 }
             }
             
-            // No validation method found - item is valid
-            return null;
+            // Add item errors with item context
+            foreach (var error in itemErrors)
+            {
+                allErrors.Add($"Item {itemIndex + 1} ({item.name ?? "unnamed"}): {error}");
+            }
         }
         
         /// <summary>
         /// Validates all items in a list. Returns list of error messages for failed items.
+        /// Aggregates duplicate errors and sorts by frequency.
         /// </summary>
         private List<string> ValidateItems(List<ScriptableObject> items)
         {
-            var errors = new List<string>();
+            var allErrors = new List<string>();
             
+            // Collect all validation errors
             for (int i = 0; i < items.Count; i++)
             {
-                var error = ValidateItem(items[i]);
-                if (!string.IsNullOrEmpty(error))
-                {
-                    errors.Add($"Item {i + 1} ({items[i]?.name ?? "unnamed"}): {error}");
-                }
+                ValidateItem(items[i], i, allErrors);
             }
             
-            return errors;
+            if (allErrors.Count == 0)
+                return allErrors;
+            
+            // Aggregate errors: count occurrences and group
+            var errorCounts = new Dictionary<string, int>();
+            foreach (var error in allErrors)
+            {
+                if (errorCounts.ContainsKey(error))
+                    errorCounts[error]++;
+                else
+                    errorCounts[error] = 1;
+            }
+            
+            // Sort by frequency (most common first), then alphabetically
+            var sortedErrors = errorCounts
+                .OrderByDescending(kvp => kvp.Value)
+                .ThenBy(kvp => kvp.Key)
+                .Select(kvp => kvp.Value > 1 ? $"{kvp.Key} (×{kvp.Value})" : kvp.Key)
+                .ToList();
+            
+            return sortedErrors;
         }
 
         private string ConvertEnumStringsToIntegers(string json, Type type)

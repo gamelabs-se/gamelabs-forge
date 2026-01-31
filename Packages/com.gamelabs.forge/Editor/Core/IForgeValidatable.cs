@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace GameLabs.Forge.Editor
 {
     /// <summary>
@@ -8,10 +10,11 @@ namespace GameLabs.Forge.Editor
     public interface IForgeValidatable
     {
         /// <summary>
-        /// Validates the generated item. Return null if valid, or an error message string if invalid.
-        /// The error message will be sent back to the AI for retry attempts.
+        /// Validates the generated item. Add error messages to the list for any validation failures.
+        /// Leave the list empty if the item is valid.
+        /// The error messages will be sent back to the AI for retry attempts.
         /// </summary>
-        /// <returns>Null if valid, error message string if validation fails.</returns>
-        string ValidateForgeItem();
+        /// <param name="validationErrors">List to add error messages to. Empty list = valid item.</param>
+        void ValidateForgeItem(List<string> validationErrors);
     }
 }

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using GameLabs.Forge.Editor;
 
@@ -106,78 +107,76 @@ namespace GameLabs.Forge.Demo
 
         /// <summary>
         /// Validates skill balance and logical consistency.
-        /// Returns null if valid, error message if invalid.
+        /// Adds error messages to the list for any validation failures.
         /// </summary>
-        public string ValidateForgeItem()
+        public void ValidateForgeItem(List<string> validationErrors)
         {
             // Basic name validation
             if (string.IsNullOrWhiteSpace(name))
-                return "Skill name cannot be empty";
+                validationErrors.Add("Skill name cannot be empty");
 
             if (string.IsNullOrWhiteSpace(description))
-                return "Skill description cannot be empty";
+                validationErrors.Add("Skill description cannot be empty");
 
             // Power-to-cost balance check
             float powerPerMana = manaCost > 0 ? (float)basePower / manaCost : 999f;
             if (powerPerMana > 10f)
-                return $"Skill is too mana-efficient ({basePower} power for {manaCost} mana). Increase manaCost or reduce basePower.";
+                validationErrors.Add($"Skill is too mana-efficient ({basePower} power for {manaCost} mana). Increase manaCost or reduce basePower.");
 
             // Cooldown should increase with power
             if (basePower > 100 && cooldown < 5f)
-                return $"High damage skill ({basePower}) needs longer cooldown. Increase cooldown to at least 5 seconds.";
+                validationErrors.Add($"High damage skill ({basePower}) needs longer cooldown. Increase cooldown to at least 5 seconds.");
 
             // AoE balance check
             if (areaRadius > 5f && maxTargets > 5)
-                return $"Large AoE ({areaRadius}m) with many targets ({maxTargets}) is too powerful. Reduce areaRadius or maxTargets.";
+                validationErrors.Add($"Large AoE ({areaRadius}m) with many targets ({maxTargets}) is too powerful. Reduce areaRadius or maxTargets.");
 
             // DoT/HoT logical consistency
             if (duration > 0 && tickInterval > 0)
             {
                 int ticks = Mathf.FloorToInt(duration / tickInterval);
                 if (ticks < 2)
-                    return $"DoT/HoT must tick at least twice. Reduce tickInterval or increase duration.";
+                    validationErrors.Add($"DoT/HoT must tick at least twice. Reduce tickInterval or increase duration.");
                 
                 // DoT total damage should be balanced
                 int totalDotDamage = basePower * ticks;
                 if (totalDotDamage > basePower * 5)
-                    return $"DoT total damage ({totalDotDamage}) is excessive. Reduce basePower, duration, or increase tickInterval.";
+                    validationErrors.Add($"DoT total damage ({totalDotDamage}) is excessive. Reduce basePower, duration, or increase tickInterval.");
             }
 
             // Duration without ticks is instant
             if (duration > 0 && tickInterval == 0)
-                return "Skills with duration must have tickInterval > 0, or set duration to 0 for instant effects.";
+                validationErrors.Add("Skills with duration must have tickInterval > 0, or set duration to 0 for instant effects.");
 
             // Targeting consistency
             if (targetType == SkillTargetType.Self && range > 0)
-                return "Self-targeted skills should have range = 0. Set range to 0 or change targetType.";
+                validationErrors.Add("Self-targeted skills should have range = 0. Set range to 0 or change targetType.");
 
             if ((targetType == SkillTargetType.AllEnemies || targetType == SkillTargetType.AllAllies) && maxTargets == 1)
-                return $"'{targetType}' skills should affect multiple targets. Increase maxTargets or change targetType.";
+                validationErrors.Add($"'{targetType}' skills should affect multiple targets. Increase maxTargets or change targetType.");
 
             // Status effect logic
             if (statusEffect != StatusEffectType.None && statusChance == 0)
-                return $"Skill has status effect '{statusEffect}' but statusChance is 0. Set statusChance > 0 or remove status effect.";
+                validationErrors.Add($"Skill has status effect '{statusEffect}' but statusChance is 0. Set statusChance > 0 or remove status effect.");
 
             if (statusEffect == StatusEffectType.None && statusChance > 0)
-                return "statusChance is set but no status effect is selected. Set statusEffect or reduce statusChance to 0.";
+                validationErrors.Add("statusChance is set but no status effect is selected. Set statusEffect or reduce statusChance to 0.");
 
             // Crit multiplier logic
             if (critMultiplier < 1.5f)
-                return "Critical multiplier should be at least 1.5x. Increase critMultiplier.";
+                validationErrors.Add("Critical multiplier should be at least 1.5x. Increase critMultiplier.");
 
             if (critChance > 0.5f)
-                return "Critical chance above 50% is too high. Reduce critChance to 0.5 or lower.";
+                validationErrors.Add("Critical chance above 50% is too high. Reduce critChance to 0.5 or lower.");
 
             // Charge system logic
             if (charges > 0 && cooldown == 0)
-                return "Charge-based skills need cooldown > 0. Set cooldown or remove charges.";
+                validationErrors.Add("Charge-based skills need cooldown > 0. Set cooldown or remove charges.");
 
             // Level requirement should match power
             int powerLevel = basePower / 25;
             if (levelRequirement < powerLevel && levelRequirement > 1)
-                return $"Skill power ({basePower}) suggests level requirement should be around {powerLevel}. Adjust levelRequirement or basePower.";
-
-            return null; // All validation passed
+                validationErrors.Add($"Skill power ({basePower}) suggests level requirement should be around {powerLevel}. Adjust levelRequirement or basePower.");
         }
     }
 

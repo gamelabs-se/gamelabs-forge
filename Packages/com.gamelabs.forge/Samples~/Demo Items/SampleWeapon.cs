@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using GameLabs.Forge.Editor;
 
@@ -40,47 +41,43 @@ namespace GameLabs.Forge.Demo
         public ItemRarity rarity;
 
         /// <summary>
-        /// Validates the weapon data. Returns null if valid, error message if invalid.
+        /// Validates the weapon data. Adds error messages to the list for any validation failures.
         /// FORGE will automatically retry generation with this feedback if validation fails.
         /// </summary>
-        public string ValidateForgeItem()
+        public void ValidateForgeItem(List<string> validationErrors)
         {
             // Name must be present and reasonable length
             if (string.IsNullOrWhiteSpace(name))
-                return "Weapon name cannot be empty";
-            
-            if (name.Length < 3)
-                return "Weapon name must be at least 3 characters";
-            
-            if (name.Length > 50)
-                return "Weapon name is too long (max 50 characters)";
+                validationErrors.Add("Weapon name cannot be empty");
+            else if (name.Length < 3)
+                validationErrors.Add("Weapon name must be at least 3 characters");
+            else if (name.Length > 50)
+                validationErrors.Add("Weapon name is too long (max 50 characters)");
 
             // Damage-to-value ratio check (heavier weapons should be more valuable)
             float damagePerGold = (float)damage / value;
             if (damagePerGold > 1f)
-                return $"Weapon is underpriced: {damage} damage for {value} gold is too cheap. Increase value or decrease damage.";
+                validationErrors.Add($"Weapon is underpriced: {damage} damage for {value} gold is too cheap. Increase value or decrease damage.");
 
             // Weight-to-damage ratio check (realistic physics)
             if (weight > 10f && damage < 30)
-                return $"Heavy weapon ({weight}kg) should deal more damage. Either reduce weight or increase damage above 30.";
+                validationErrors.Add($"Heavy weapon ({weight}kg) should deal more damage. Either reduce weight or increase damage above 30.");
 
             // Attack speed should match weapon type
             if (weaponType == MeleeWeaponType.Dagger && attackSpeed < 2f)
-                return "Daggers should have fast attack speed (2.0+). Increase attackSpeed or change weaponType.";
+                validationErrors.Add("Daggers should have fast attack speed (2.0+). Increase attackSpeed or change weaponType.");
 
             if ((weaponType == MeleeWeaponType.Hammer || weaponType == MeleeWeaponType.Axe) && attackSpeed > 2f)
-                return $"{weaponType} should have slower attack speed (under 2.0). Decrease attackSpeed.";
+                validationErrors.Add($"{weaponType} should have slower attack speed (under 2.0). Decrease attackSpeed.");
 
             // Rarity should match power level
             int powerScore = damage + durability / 10 + value / 50;
             
             if (rarity == ItemRarity.Common && powerScore > 150)
-                return $"Stats too powerful for Common rarity (power score: {powerScore}). Reduce stats or increase rarity.";
+                validationErrors.Add($"Stats too powerful for Common rarity (power score: {powerScore}). Reduce stats or increase rarity.");
             
             if (rarity == ItemRarity.Legendary && powerScore < 200)
-                return $"Stats too weak for Legendary rarity (power score: {powerScore}). Increase stats or reduce rarity.";
-
-            return null; // All validation passed
+                validationErrors.Add($"Stats too weak for Legendary rarity (power score: {powerScore}). Increase stats or reduce rarity.");
         }
     }
 
