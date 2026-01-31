@@ -32,6 +32,7 @@ namespace GameLabs.Forge.Editor
         private bool _useCustomFolder = false;
         private bool _autoSaveAsAsset = true;
         private bool _showAdvanced = false; // Collapse advanced options by default
+        private bool _interactiveMode = false; // Interactive review mode
 
         // ========= Blueprint & Window-Level Settings =========
         private string _blueprintInstructions = "";
@@ -46,6 +47,10 @@ namespace GameLabs.Forge.Editor
         // Separate instructions per mode so they don't carry over
         private string _newItemsInstructions = "";
         private string _variantsInstructions = "";
+        
+        // Interactive mode state
+        private ForgeReviewWindow _reviewWindow;
+        private List<string> _interactiveFeedback = new(); // Accumulated feedback from interactive review
 
         private bool _isGenerating = false;
         private string _status = "";
@@ -711,6 +716,22 @@ namespace GameLabs.Forge.Editor
                 var bc = GUI.color; GUI.color = Color.white;
                 GUI.Label(badge, _itemCount.ToString(), UI.Pill);
                 GUI.color = bc;
+                
+                GUILayout.Space(8);
+                
+                // Interactive mode toggle
+                EditorGUILayout.BeginHorizontal();
+                _interactiveMode = EditorGUILayout.Toggle(_interactiveMode, GUILayout.Width(16));
+                EditorGUILayout.LabelField(
+                    new GUIContent("Interactive Review", 
+                        "Review each generated item before saving. Accept, discard, or provide feedback for better results."),
+                    GUILayout.ExpandWidth(true));
+                EditorGUILayout.EndHorizontal();
+                
+                if (_interactiveMode)
+                {
+                    EditorGUILayout.LabelField("Review items one-by-one and provide feedback for continuous improvement", UI.Hint);
+                }
 
                 EditorGUIUtility.labelWidth = old;
             }
@@ -1428,10 +1449,6 @@ namespace GameLabs.Forge.Editor
                 return;
             }
 
-            _lastGenerated.Clear();
-            _itemSavedState.Clear();
-            _lastGenerated.AddRange(result.items);
-
             // Record statistics - use effective model from blueprint if available
             ForgeAIModel effectiveModel;
             if (_blueprint != null)
@@ -1455,6 +1472,43 @@ namespace GameLabs.Forge.Editor
             
             // Record cost tracking
             ForgeCostTracker.Instance.RecordGeneration(result.items.Count, result.estimatedCost, result.promptTokens, result.completionTokens);
+
+            // Interactive mode: open review window
+            if (_interactiveMode && result.items.Count > 0)
+            {
+                // If review window is already open, add items to it
+                if (_reviewWindow != null)
+                {
+                    _reviewWindow.AddItems(result.items);
+                    _status = $"Added {result.items.Count} item(s) to review queue";
+                }
+                else
+                {
+                    // Open new review window
+                    string currentInstructions = _mode == GenerationMode.Variants 
+                        ? _variantsInstructions 
+                        : _newItemsInstructions;
+                    
+                    _reviewWindow = ForgeReviewWindow.Open(
+                        result.items,
+                        OnInteractiveReviewComplete,
+                        OnGenerateMoreFromReview,
+                        _itemCount,
+                        currentInstructions
+                    );
+                    
+                    _status = $"Generated {result.items.Count} item(s) - Review in progress...";
+                }
+                
+                _statusType = MessageType.Info;
+                Repaint();
+                return;
+            }
+
+            // Non-interactive mode: normal flow
+            _lastGenerated.Clear();
+            _itemSavedState.Clear();
+            _lastGenerated.AddRange(result.items);
 
             // Mark all as unsaved initially
             foreach (var item in result.items)
@@ -1484,6 +1538,107 @@ namespace GameLabs.Forge.Editor
 
             _statusType = MessageType.Info;
             Repaint();
+        }
+        
+        /// <summary>
+        /// Called when the interactive review window is closed.
+        /// </summary>
+        private void OnInteractiveReviewComplete(List<ScriptableObject> acceptedItems, List<string> feedback)
+        {
+            _reviewWindow = null;
+            _interactiveFeedback = feedback;
+            
+            if (acceptedItems.Count == 0)
+            {
+                _status = "Review complete - no items accepted";
+                _statusType = MessageType.Info;
+                Repaint();
+                return;
+            }
+            
+            // Save accepted items
+            _lastGenerated.Clear();
+            _itemSavedState.Clear();
+            _lastGenerated.AddRange(acceptedItems);
+            
+            foreach (var item in acceptedItems)
+                _itemSavedState[item] = false;
+            
+            if (_autoSaveAsAsset && HasValidTemplate)
+            {
+                string folder = _useCustomFolder && !string.IsNullOrEmpty(_customFolderName)
+                    ? _customFolderName
+                    : GetEffectiveTemplateType()?.Name ?? "Unknown";
+
+                var saved = SaveGeneratedAssets(acceptedItems, folder);
+
+                for (int i = 0; i < saved && i < acceptedItems.Count; i++)
+                    _itemSavedState[acceptedItems[i]] = true;
+
+                _status = $"✓ Review complete: saved {saved} accepted item(s)";
+                
+                if (feedback.Count > 0)
+                {
+                    _status += $"\n{feedback.Count} feedback message(s) collected for future generations";
+                }
+            }
+            else
+            {
+                _status = $"Review complete: {acceptedItems.Count} item(s) accepted (not auto-saved)";
+            }
+            
+            _statusType = MessageType.Info;
+            Repaint();
+        }
+        
+        /// <summary>
+        /// Called from the review window to generate more items.
+        /// </summary>
+        private void OnGenerateMoreFromReview()
+        {
+            if (_isGenerating) return;
+            
+            // Build combined instructions with feedback
+            string instructions = _mode == GenerationMode.Variants 
+                ? _variantsInstructions 
+                : _newItemsInstructions;
+            
+            // Append accumulated feedback from review
+            if (_reviewWindow != null)
+            {
+                var feedback = _reviewWindow.GetAccumulatedFeedback();
+                if (feedback.Count > 0)
+                {
+                    string feedbackText = "\n\nUser feedback from previous generations (IMPORTANT - address these issues):\n";
+                    for (int i = 0; i < feedback.Count; i++)
+                    {
+                        feedbackText += $"- {feedback[i]}\n";
+                    }
+                    instructions += feedbackText;
+                }
+            }
+            
+            _isGenerating = true;
+            _status = "Generating more items...";
+            Repaint();
+            
+            var generator = ForgeTemplateGenerator.Instance;
+            if (generator == null)
+            {
+                _isGenerating = false;
+                _status = "Error: Failed to initialize generator";
+                _statusType = MessageType.Error;
+                return;
+            }
+            
+            if (_mode == GenerationMode.Variants && _sourceItem != null)
+            {
+                generator.GenerateVariants(_sourceItem, _itemCount, instructions, OnGenerationComplete);
+            }
+            else if (HasValidTemplate)
+            {
+                generator.Generate(GetEffectiveTemplateType(), _itemCount, instructions, _blueprint, OnGenerationComplete);
+            }
         }
 
         private int SaveGeneratedAssets(List<ScriptableObject> items, string folder)
