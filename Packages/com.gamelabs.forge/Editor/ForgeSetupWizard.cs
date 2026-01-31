@@ -36,6 +36,9 @@ namespace GameLabs.Forge.Editor
         // Validation
         private bool apiKeyValid = false;
         
+        // Session flag to prevent re-opening during same editor session
+        private static bool hasCheckedThisSession = false;
+        
         // Auto-open on first run
         static ForgeSetupWizard()
         {
@@ -45,6 +48,11 @@ namespace GameLabs.Forge.Editor
         private static void CheckFirstRun()
         {
             EditorApplication.update -= CheckFirstRun;
+            
+            // Only check once per editor session
+            if (hasCheckedThisSession)
+                return;
+            hasCheckedThisSession = true;
             
             // Only open if user has never completed the wizard
             if (!EditorPrefs.GetBool(HasCompletedWizardKey, false))
