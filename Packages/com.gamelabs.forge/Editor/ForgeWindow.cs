@@ -58,7 +58,6 @@ namespace GameLabs.Forge.Editor
 
         private readonly List<ScriptableObject> _lastGenerated = new();
         private readonly Dictionary<ScriptableObject, bool> _itemSavedState = new(); // track saved/unsaved
-        private bool _showPreview = false; // Show preview panel when generation completes
 
         private const float LABEL_W = 120f; // unified label width
         private const float CONTENT_PADDING = 16f; // canonical horizontal padding everywhere
