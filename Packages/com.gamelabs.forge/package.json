@@ -1,7 +1,7 @@
 {
   "name": "com.gamelabs.forge",
   "displayName": "GameLabs FORGE",
-  "version": "0.1.5",
+  "version": "0.3.0",
   "unity": "2021.3",
   "description": "Unity editor tool for generating ScriptableObject assets from existing templates using Unity metadata.",
   "keywords": [
